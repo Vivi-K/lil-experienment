@@ -85,6 +85,20 @@ section.block{display:grid;gap:14px}
 /* Logger */
 .logger{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
 @media (max-width:760px){.logger{grid-template-columns:1fr}}
+.meal-done{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--sunk);font-size:14px}
+.meal-done.all{background:color-mix(in srgb,var(--good) 12%,var(--surface));color:var(--good);font-weight:500}
+.meal-dots{display:flex;gap:6px;flex:none}
+.meal-dots i{font-style:normal;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:12px;background:var(--surface);color:var(--ink2);border:1px solid var(--line)}
+.meal-dots i.on{background:var(--good);color:#fff;border-color:var(--good)}
+.food-log{display:grid;gap:12px;align-content:start}
+.food-log-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:10px}
+.food-log-head h3{margin:0 0 2px}
+.ex-log{display:grid;gap:12px}
+.ex-log summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;list-style:none}
+.ex-log summary::-webkit-details-marker{display:none}
+.ex-log summary::after{content:'›';margin-left:auto;transition:transform .2s;color:var(--ink2)}
+.ex-log[open] summary::after{transform:rotate(90deg)}
+.ex-log[open]>*+*{margin-top:12px}
 .daybar{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
 .daybar input[type=date]{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 10px}
 .toggle{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:5px 12px 5px 8px;background:var(--surface);font-size:14px}
@@ -353,9 +367,18 @@ details.paste textarea{width:100%;min-height:120px;border:1px solid var(--line);
 .wk-title{font-size:26px;font-weight:700;letter-spacing:-.02em}
 .wk-meta{display:flex;flex-wrap:wrap;gap:6px}
 .wk-meta span{font-size:13px;border-radius:980px;background:var(--sunk);padding:3px 10px;color:var(--ink2)}
-.wk-pick{display:flex;flex-wrap:wrap;gap:6px}
-.wk-pick button{border:0;border-radius:980px;padding:5px 12px;font-size:13px;background:var(--sunk);color:var(--ink)}
-.wk-pick button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.wk-pick{display:grid;gap:14px;padding:14px;border-radius:14px;background:var(--sunk)}
+.pick-row{display:grid;gap:8px}
+.wk-seg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:3px;border-radius:12px;background:rgba(118,118,128,.14)}
+.wk-seg button{border:0;border-radius:9px;padding:8px 4px;font-size:14px;font-weight:500;background:transparent;color:var(--ink);transition:background .2s,box-shadow .2s}
+.wk-seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.combo-pick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:760px){.combo-pick{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.combo-pick button{border:1px solid transparent;border-radius:12px;padding:12px;background:var(--surface);color:var(--ink);text-align:left;display:grid;gap:3px;transition:border-color .2s}
+.combo-pick button b{font-size:17px}
+.combo-pick button span{font-size:13px;line-height:1.35}
+.combo-pick button small{font-size:12px;color:var(--ink2)}
+.combo-pick button[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
 .wk-prog{display:none;height:6px;border-radius:3px;background:var(--sunk);overflow:hidden}
 .wk-prog div{height:100%;background:var(--good);border-radius:3px}
 .wk-block{display:grid;gap:6px}
@@ -453,10 +476,15 @@ details.paste textarea{width:100%;min-height:120px;border:1px solid var(--line);
 .pc-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .pc-row input,.pc-row select{padding:6px 10px;font-size:15px;background:var(--bg);color:var(--ink);min-width:0}
 .pc .btn.primary.stop{background:var(--p-men)}
+.cd-groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.cd-groups>div{display:grid;gap:6px;align-content:start}
+.cd-opts{display:flex;flex-wrap:wrap;gap:6px}
+.cd-opts button{border:0;border-radius:980px;padding:6px 12px;font-size:14px;background:var(--surface);color:var(--ink)}
+.cd-opts button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 .confirm{display:inline-flex;gap:8px;align-items:center;font-size:14px}
 @media (prefers-reduced-motion:no-preference){.meter div,.hbar{transition:width .3s ease}}
 /* ===== Apple-style layer ===== */
-.wrap>*,.tab-panel>*,.block>*,.part>*,.panel>*,.coach>*,.grid2>*,.logger>*,.checkin>*,.hero>*{min-width:0}
+.wrap>*,.tab-panel>*,.block>*,.part>*,.panel>*,.coach>*,.grid2>*,.food-log>*,.ex-log>*,.checkin>*,.hero>*{min-width:0}
 .ev-list,.refs,.msg{overflow-wrap:anywhere}
 .moves .mv-dose{white-space:normal}
 body{font-size:17px;line-height:1.47;letter-spacing:-.022em;-webkit-font-smoothing:antialiased}
@@ -572,40 +600,20 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
   <!-- MEALS -->
   <section class="block" aria-labelledby="mealH">
     <div class="sec-head">
-      <h2 id="mealH">今日饮食推荐</h2>
+      <h2 id="mealH">今日饮食 · 推荐与记录</h2>
       <span class="small muted" id="mealWhy"></span>
     </div>
     <div class="panel meals" id="meals"></div>
-  </section>
-
-  <!-- TODAY'S WORKOUT -->
-  <section class="block" aria-labelledby="wkH">
-    <div class="sec-head">
-      <h2 id="wkH">今日训练</h2>
-      <span class="small muted" id="wkWhy"></span>
-    </div>
-    <div class="panel wk" id="wk"></div>
-  </section>
-  <div class="toast" id="toast" hidden role="status" aria-live="polite"><span id="toastMsg"></span><button class="btn ghost" type="button" id="toastUndo">撤销</button></div>
-  <div class="rest-bar" id="restBar" hidden role="status" aria-live="polite">
-    <div><b id="restTime">0:00</b> <span id="restNext" class="small"></span></div>
-    <div style="display:flex;gap:8px"><button class="btn" type="button" id="restAdd">+30 秒</button><button class="btn primary" type="button" id="restSkip">开始下一组</button></div>
-  </div>
-
-  <!-- LOGGER -->
-  <section class="block" aria-labelledby="logH">
-    <div class="sec-head">
-      <h2 id="logH">饮食记录</h2>
-      <div class="daybar">
+    <div class="panel food-log">
+      <div class="food-log-head">
+        <div><h3 id="logH">其他吃的 · 全部记录</h3><span class="small muted">三餐点「吃了」会自动记在这里；零食、饮料、奶茶在这里补记</span></div>
+        <div class="daybar">
         <button class="btn ghost" id="prevDay" type="button" aria-label="前一天">←</button>
         <input type="date" id="logDate" aria-label="记录日期">
         <button class="btn ghost" id="nextDay" type="button" aria-label="后一天">→</button>
         <button class="toggle" id="periodToggle" type="button" aria-pressed="false"><span class="dot"></span>这天是经期</button>
       </div>
-    </div>
-    <div class="logger">
-      <div class="panel" style="display:grid;gap:12px;align-content:start">
-        <h3>饮食摄入</h3>
+      </div>
         <form class="row" id="foodForm">
           <input class="grow" id="foodName" list="foodList" placeholder="吃了什么" required aria-label="食物名称">
           <input class="w num" id="foodKcal" type="number" min="0" max="5000" placeholder="kcal" required aria-label="热量">
@@ -615,9 +623,18 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
         <datalist id="foodList"></datalist>
         <div class="quick" id="foodQuick"></div>
         <ul class="entries" id="foodEntries"></ul>
-      </div>
-      <div class="panel" style="display:grid;gap:12px;align-content:start">
-        <h3>其他运动记录</h3>
+    </div>
+  </section>
+
+  <!-- TODAY'S WORKOUT -->
+  <section class="block" aria-labelledby="wkH">
+    <div class="sec-head">
+      <h2 id="wkH">今日训练</h2>
+      <span class="small muted" id="wkWhy"></span>
+    </div>
+    <div class="panel wk" id="wk"></div>
+    <details class="panel ex-log">
+      <summary><b>其他运动记录</b><span class="small muted">走路、爬山、跳舞等计划外的运动</span></summary>
         <form class="row" id="exForm">
           <select class="grow" id="exType" aria-label="运动类型"></select>
           <input class="w num" id="exMin" type="number" min="1" max="600" placeholder="分钟" required aria-label="时长（分钟）">
@@ -625,9 +642,13 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
         </form>
         <div class="small muted" id="exPreview">按 MET × 体重 × 时长估算消耗</div>
         <ul class="entries" id="exEntries"></ul>
-      </div>
-    </div>
+    </details>
   </section>
+  <div class="toast" id="toast" hidden role="status" aria-live="polite"><span id="toastMsg"></span><button class="btn ghost" type="button" id="toastUndo">撤销</button></div>
+  <div class="rest-bar" id="restBar" hidden role="status" aria-live="polite">
+    <div><b id="restTime">0:00</b> <span id="restNext" class="small"></span></div>
+    <div style="display:flex;gap:8px"><button class="btn" type="button" id="restAdd">+30 秒</button><button class="btn primary" type="button" id="restSkip">开始下一组</button></div>
+  </div>
 
   <!-- AI COACH -->
   <section class="block" aria-labelledby="coachH">
@@ -1153,7 +1174,7 @@ const FOODS = [
 ];
 const QUICK = ['鸡蛋 一个', '鸡胸肉 100g', '豆浆 250ml', '隔夜燕麦（植物奶）', '食堂清淡套餐', '奶茶 中杯'];
 const EX = [
-  ['臀腿训练', 5.0], ['肩背训练', 5.0], ['核心训练', 3.8],
+  ['臀腿训练', 5.0], ['上肢训练', 5.0], ['核心训练', 3.8],
   ['快走', 4.3], ['慢跑', 7.0], ['跑步（较快）', 9.8], ['骑行', 7.5], ['游泳', 6.0], ['力量训练', 5.0],
   ['HIIT', 8.0], ['跳绳', 11.0], ['瑜伽', 2.5], ['普拉提', 3.0], ['舞蹈', 5.0], ['爬楼梯', 8.0], ['拉伸散步', 2.8]
 ];
@@ -1841,7 +1862,7 @@ const RULES = `你是一位懂女性生理周期的营养与运动教练，用�
 · 动作选择：臀部以臀推、罗马尼亚硬拉、髋外展、臀向分腿蹲等髋主导动作为主，臀推做力量主项（5×5）和增肌（10–12 次）；为了腿细，少做大重量深蹲、腿举、腿屈伸，深蹲会让大腿前侧和内收肌长得更多 [E10]。背部用中等重量、10–15 次、控制离心练线条，不做耸肩和大重量杠铃划船。腰部练抗旋转和腹横肌，不做负重侧弯和大重量负重转体。
 · 重量：用【重量基础】里的估算 1RM 给出具体公斤数，没填时请她先填。
 · 训练量：每个动作 2–4 组，每次目标部位约 10–15 个有效组，更多收益递减 [E17]；组数分到一周 2–3 次 [E18]；女性更耐疲劳，组间休息可以短一些 [E19]；有氧和力量分开在不同的日子 [E20]。
-· 频率：臀部每周 2–3 次，肩背每周 2 次，有氧每周 2 天（单独的日子），腰腹每周 2–3 次短时。渐进超负荷，每组 6–20 次、离力竭 1–3 次。卵泡期冲重量，经前一周总量减 20–30%。
+· 课表：每周 2 天完全休息；默认 4 天力量（臀 2 次、上肢综合 2 次，上肢以背为主，肩、手臂、胸少量）+ 1 天有氧，也可以 3 天力量 + 2 天有氧；每次力量训练约 60 分钟，有氧约 45 分钟，有氧和力量不在同一天；腰腹附在力量日最后。渐进超负荷，每组 6–20 次、离力竭 1–3 次。卵泡期冲重量，经前一周总量减 20–30%。
 · 平坦小腹靠全身减脂，不存在局部减脂；少腹胀（经前、外卖、酒精、高盐）会让肚子明显更平。
 · 饮食：蛋白质每公斤体重约 2 g，分 4 餐左右吃；温和热量缺口，训练日和卵泡期多给碳水，黄体期缺口放小；不为了掉秤牺牲肌肉。体重不降但腰围降、臀围和肩围不掉，就是进步。
 有 WHOOP 数据时，用恢复分数、HRV、静息心率、睡眠来判断当天训练强度（例如恢复低于 34% 建议恢复性训练），并说明黄体期 HRV 下降、静息心率和体温升高是正常的周期现象。
@@ -1880,7 +1901,7 @@ async function run(label, prompt, { tier = 'default', live = false, chat = false
 
 $('aiToday').addEventListener('click', () => run('点评今天', '点评我今天的饮食和运动：先一句话总结，再给 2–3 条结合当前周期阶段、围绕翘臀、薄背、细腿细腰的具体建议，最后告诉我今天剩下的时间怎么吃/动。220 字以内，关键建议标注研究编号。'));
 $('aiWeek').addEventListener('click', () => run('周期分析', '分析最近 14 天和各阶段均值：找出我的饮食和运动在不同周期阶段的规律（例如黄体期是否吃得多、经期是否运动少），指出 1 个做得好的地方和 2 个最值得改的地方，并给出下一个周期每个阶段的安排。350 字以内。', { tier: 'complex' }));
-$('aiTrain').addEventListener('click', () => run('今天练什么', '根据今天的周期阶段、WHOOP 恢复和睡眠、本周各部位已经练了几次，安排今天的训练：练哪个部位（优先补本周落后的臀部/肩背/腰腹），优先从 app 里的训练组合中选（写明是哪个部位的哪个组合，比如“翘臀 A + 平腹 C”），需要时做小调整，写出每个动作的组数×次数和休息时间，总时长控制在 60 分钟内。如果今天更适合休息或轻练，直接说并给替代方案。'));
+$('aiTrain').addEventListener('click', () => run('今天练什么', '根据今天的周期阶段、WHOOP 恢复和睡眠、本周各部位已经练了几次，安排今天的训练：练哪个部位（优先补本周落后的臀部/上肢/腰腹），优先从 app 里的训练组合中选（写明是哪个部位的哪个组合，比如“翘臀 A + 平腹 C”），需要时做小调整，写出每个动作的组数×次数和休息时间，总时长控制在 60 分钟内。如果今天更适合休息或轻练，直接说并给替代方案。'));
 $('aiPlan').addEventListener('click', () => {
   const tmr = addDays(TODAY, 1), k = phaseOf(tmr);
   run('明天的计划', `明天是 ${tmr}，预计处于${PHASES[k.key].name}（周期第 ${k.cd ?? '?'} 天）。按这个阶段给我明天的三餐加一次加餐（每项写食物和大约 kcal，总热量贴近我的目标），再给一个适合这个阶段的运动安排（类型、时长、强度）。`);
@@ -2095,50 +2116,65 @@ const PARTS = [
         ['燃烧组：臀桥 → 弹力带外展', '1 轮 × 20 + 20', 60, '臀桥 20 次，不休息立刻坐姿弹力带外展 20 次', '', 1]
       ], alt: '器械被占：分腿蹲换后撤步，也保持上身前倾' },
       { id: 'C', name: '居家哑铃', min: 40, when: '没去健身房的日子', moves: [
-        ['哑铃臀推（背靠沙发）', '4 × 12–15', 75, '重量不够就做慢：下放 3 秒、顶端停 2 秒，最后一组做到力竭', '', 1],
+        ['哑铃臀推（背靠沙发）', '3 × 12–15', 75, '重量不够就做慢：下放 3 秒、顶端停 2 秒，最后一组做到力竭', '', 1],
         ['哑铃罗马尼亚硬拉', '3 × 12', 75, '想更难就换单腿 3 × 8/腿', '', 1],
-        ['臀向分腿蹲（椅子）', '3 × 10/腿', 75, '上身前倾，下放 3 秒', 'bss', 0.8],
-        ['弹力带蚌式 + 侧卧抬腿', '3 × 20/侧', 30, '两个动作连着做，练臀侧', '', 1],
-        ['单腿臀桥', '2 × 15/腿', 45, '支撑脚跟发力', '', 1]
+        ['臀向分腿蹲（椅子）', '2 × 10/腿', 75, '上身前倾，下放 3 秒', 'bss', 0.8],
+        ['弹力带蚌式 + 侧卧抬腿', '2 × 20/侧', 30, '两个动作连着做，练臀侧', '', 1],
+        ['单腿臀桥', '2 × 15/腿', 45, '支撑脚跟发力', '', 1],
+        ['弹力带跪姿后踢', '2 × 15/腿', 30, '顶端停 1 秒，腰不要塌', '', 1],
+        ['弹力带臀桥', '2 × 25', 45, '收尾泵感，顶端夹紧', '', 1]
       ], alt: '只有弹力带：所有臀推、臀桥都在膝上套弹力带' },
       { id: 'D', name: '经前轻量', min: 35, when: '经前一周、恢复低于 34%、经期没精神', moves: [
         ['杠铃臀推', '3 × 10', 90, '平时 75% 左右的重量，不做到力竭', 'hipthrust', 0.75],
         ['哑铃罗马尼亚硬拉', '2 × 12', 75, '轻重量找臀部拉伸感', '', 1],
         ['弹力带侧向走', '3 × 15 步/侧', 45, '保持半蹲、膝盖别内扣', '', 1],
+        ['坐姿髋外展机', '2 × 15', 45, '轻重量', 'abductor', 0.7],
+        ['45° 臀向背伸', '2 × 12', 45, '自重就好', '', 1],
+        ['单腿臀桥', '2 × 12/腿', 45, '', '', 1],
         ['鸟狗式', '2 × 8/侧', 30, '腰背稳定，缓解腰酸', '', 1]
       ], alt: '实在累就换 30 分钟快走，一样算动了' }
     ] },
-  { k: 'shoulder', name: '薄背有形 · 肩线', goal: 2, re: /肩|背|推举|引体|下拉|划船|shoulder|back|pull|press|row/i, log: ['肩背训练', 5.0],
-    note: '背要薄：中等重量、10–15 次、顶峰停 1 秒、下放 2–3 秒，练线条不堆厚度；不做耸肩和大重量杠铃划船，上斜方肌变大会让肩颈显得壮（经验建议）。侧平举让肩线更开，腰就显得更细。',
+  { k: 'shoulder', name: '上肢综合 · 重点练背', goal: 2, re: /肩|背|推举|引体|下拉|划船|上肢|shoulder|back|pull|press|row/i, log: ['上肢训练', 5.0],
+    note: '重点练背，肩、手臂、胸只做少量：中等重量、10–15 次、顶峰停 1 秒、下放 2–3 秒，练线条不堆厚度；不做耸肩和大重量杠铃划船（经验建议）。侧平举让肩线打开，腰会显得更细。',
     combos: [
-      { id: 'A', name: '背阔线条 + 肩', min: 45, when: '恢复好的时候', moves: [
-        ['中握高位下拉', '3 × 10–12', 75, '先沉肩再拉，拉到锁骨，下放 3 秒；练出背阔下部的线条', 'pulldown', 1],
-        ['坐姿哑铃推举', '3 × 8–10', 90, '手肘在身体稍前方，不要后仰', 'dbpress', 1],
-        ['哑铃侧平举', '3 × 12–20', 45, '小指一侧略高，耳朵远离肩膀，下放 2–3 秒', 'lateral', 1],
-        ['俯身反向飞鸟', '2 × 15', 45, '练后束和上背，站姿更挺', 'lateral', 0.7],
-        ['绳索面拉', '2 × 15', 45, '拉向额头并外旋，保护肩关节、改善圆肩', '', 1],
-        ['单臂绳索下拉', '2 × 12/侧', 45, '从侧上方往髋部方向拉，练背阔外侧的线条', '', 1]
-      ], alt: '没有器械：下拉换弹力带下拉' },
-      { id: 'B', name: '背部轮廓 + 体态', min: 45, when: '想让背部更有型', moves: [
-        ['辅助引体或反手下拉', '3 × 8–10', 90, '做不了引体就用辅助机，慢慢减辅助', 'pulldown', 1],
-        ['单臂哑铃划船', '2 × 12/侧', 60, '中等重量、往髋部方向拉、顶峰停 1 秒；练线条不追重量', 'row', 1],
+      { id: 'A', name: '背阔 + 肩 + 手臂', min: 60, when: '恢复好的时候', moves: [
+        ['中握高位下拉', '3 × 8–12', 90, '先沉肩再拉，拉到锁骨，下放 3 秒；练出背阔下部的线条', 'pulldown', 1],
+        ['单臂哑铃划船', '3 × 10–12/侧', 60, '往髋部方向拉、顶峰停 1 秒；中等重量练线条', 'row', 1],
+        ['坐姿哑铃推举', '2 × 8–10', 90, '手肘在身体稍前方，不要后仰', 'dbpress', 1],
+        ['哑铃侧平举', '2 × 12–20', 45, '小指一侧略高，耳朵远离肩膀，下放 2–3 秒', 'lateral', 1],
         ['直臂下压', '2 × 12–15', 45, '手臂微弯固定，用背阔把绳子压到大腿，背部轮廓更清楚', '', 1],
+        ['绳索面拉', '2 × 15', 45, '拉向额头并外旋，改善圆肩', '', 1],
+        ['绳索下压（三头）', '2 × 12–15', 45, '大臂贴身体不动，练手臂后侧，告别“拜拜肉”', '', 1],
+        ['哑铃弯举', '2 × 10–12', 45, '不甩身体，下放慢', '', 1]
+      ], alt: '没有器械：下拉换弹力带下拉，下压换弹力带臂屈伸' },
+      { id: 'B', name: '背部轮廓 + 胸 + 手臂', min: 60, when: '想让背部更有型', moves: [
+        ['辅助引体或反手下拉', '3 × 6–10', 90, '做不了引体就用辅助机，慢慢减辅助', 'pulldown', 1],
+        ['窄握坐姿绳索划船', '3 × 10–12', 75, '挺胸、肩胛往后下方收，顶峰停 1 秒', '', 1],
+        ['上斜哑铃卧推', '2 × 8–10', 90, '凳子调 30°，练上胸让上半身更挺', '', 1],
         ['绳索单侧侧平举', '3 × 15/侧', 30, '绳索从身体前方交叉，全程有张力', '', 1],
-        ['俯身 Y 字举', '2 × 12', 45, '练下斜方肌，把肩胛往下收，脖子显得更长', '', 1],
-        ['坐姿哑铃推举', '2 × 10', 75, '中等重量，控制下放', 'dbpress', 0.9]
-      ], alt: '家里：门上固定弹力带做下拉和直臂下压' },
-      { id: 'C', name: '居家', min: 35, when: '没去健身房的日子', moves: [
-        ['哑铃站姿推举', '3 × 10', 90, '臀和腹部收紧，别往后仰', 'dbpress', 0.9],
-        ['哑铃侧平举', '4 × 15–20', 45, '轻重量也能练，靠次数和慢速', 'lateral', 0.8],
+        ['俯身反向飞鸟', '2 × 15', 45, '练后束和上背，站姿更挺', 'lateral', 0.7],
+        ['俯身 Y 字举', '2 × 12', 30, '练下斜方肌，把肩胛往下收，脖子显得更长', '', 1],
+        ['过头绳索臂屈伸', '2 × 12', 45, '大臂贴耳朵，拉伸手臂后侧', '', 1],
+        ['锤式弯举', '2 × 10–12', 45, '拳眼朝上，手臂线条更顺', '', 1]
+      ], alt: '家里：门上固定弹力带做下拉和划船' },
+      { id: 'C', name: '居家', min: 60, when: '没去健身房的日子', moves: [
+        ['单臂哑铃划船（扶椅子）', '3 × 12/侧', 60, '背部平直，顶峰停 1 秒', 'row', 0.8],
         ['弹力带下拉', '3 × 15', 45, '门上固定，跪姿做', '', 1],
-        ['俯身哑铃划船', '3 × 12', 60, '背部平直，顶峰停 1 秒', 'row', 0.8],
-        ['弹力带拉开', '3 × 20', 30, '手臂伸直往两侧拉开，练后束和上背', '', 1]
+        ['哑铃站姿推举', '3 × 10', 75, '臀和腹部收紧，别往后仰', 'dbpress', 0.9],
+        ['哑铃侧平举', '2 × 15–20', 45, '轻重量也能练，靠次数和慢速', 'lateral', 0.8],
+        ['俯卧撑（跪姿也可以）', '2 × 8–12', 60, '身体成一直线，胸口贴近地面', '', 1],
+        ['弹力带拉开', '2 × 20', 30, '手臂伸直往两侧拉开，练后束和上背', '', 1],
+        ['哑铃弯举', '2 × 12', 45, '', '', 1],
+        ['椅子臂屈伸', '2 × 10', 45, '手撑椅子边，肘往后弯', '', 1]
       ], alt: '' },
-      { id: 'D', name: '经前轻量', min: 30, when: '经前一周或恢复低', moves: [
+      { id: 'D', name: '经前轻量', min: 60, when: '经前一周或恢复低', moves: [
+        ['高位下拉', '3 × 10', 75, '平时 75% 左右的重量', 'pulldown', 0.75],
+        ['单臂哑铃划船', '3 × 12/侧', 60, '轻重量，找背部发力感', 'row', 0.7],
         ['哑铃侧平举', '3 × 15', 45, '轻重量，做好动作', 'lateral', 0.75],
         ['绳索面拉', '3 × 15', 45, '', '', 1],
-        ['高位下拉', '3 × 10', 75, '平时 75% 左右的重量', 'pulldown', 0.75],
-        ['俯身 Y 字举', '2 × 12', 30, '徒手或 1 kg 小哑铃', '', 1]
+        ['上斜俯卧撑（手扶凳子）', '2 × 10', 45, '比普通俯卧撑轻松', '', 1],
+        ['俯身 Y 字举', '2 × 12', 30, '徒手或 1 kg 小哑铃', '', 1],
+        ['弹力带拉开', '2 × 20', 30, '', '', 1]
       ], alt: '' }
     ] },
   { k: 'core', name: '细腰 · 平腹', goal: 3, re: /核心|腹|平板|core|abs|plank/i, log: ['核心训练', 3.8],
@@ -2149,7 +2185,7 @@ const PARTS = [
         ['Pallof 抗旋推', '2 × 12/侧', 45, '推出去时身体不被拉转，练腹横肌和深层核心', '', 1],
         ['RKC 平板支撑', '2 × 20–30 秒', 45, '全身用力：手肘往脚的方向拉、臀部夹紧，比普通平板更有效', '', 1]
       ], alt: '' },
-      { id: 'B', name: '下腹', min: 15, when: '接在肩背训练后面', moves: [
+      { id: 'B', name: '下腹', min: 15, when: '接在上肢训练后面', moves: [
         ['悬垂举膝（或仰卧反向卷腹）', '2 × 10–12', 60, '用腹部把骨盆卷起来，不要甩腿', '', 1],
         ['跪姿绳索卷腹', '2 × 12–15', 60, '中等重量，把肋骨往骨盆方向卷', '', 1],
         ['侧平板（自重）', '2 × 30 秒/侧', 30, '只用自重，不加负重', '', 1]
@@ -2166,11 +2202,6 @@ const PARTS = [
       ], alt: '' }
     ] }
 ];
-const WEEK_PLANS = {
-  3: [['周一', ['翘臀 A 力量日', '细腰 A']], ['周三', ['肩背 A', '细腰 B']], ['周五', ['翘臀 B 增肌日', '肩背：侧平举 4 组 + 面拉 3 组', '细腰 C']], ['其他日子', ['有氧日 2 天，每次 30–40 分钟', '每天 8000 步以上']]],
-  4: [['周一', ['翘臀 A 力量日', '细腰 A']], ['周二', ['肩背 A']], ['周四', ['翘臀 B 增肌日', '细腰 C']], ['周五', ['肩背 B', '细腰 B']], ['其他日子', ['有氧日 1–2 天', '细腰 D 随时做']]],
-  5: [['周一', ['翘臀 A 力量日']], ['周二', ['肩背 A', '细腰 A']], ['周三', ['有氧日']], ['周四', ['翘臀 B 增肌日', '细腰 B']], ['周五', ['肩背 B']], ['周六', ['翘臀 C 或臀推加练', '细腰 C']], ['周日', ['休息或轻松散步']]]
-};
 let planDays = 4;
 const restTxt = r => r < 60 ? `${r} 秒` : r % 60 ? `${Math.floor(r / 60)} 分 ${r % 60} 秒` : `${r / 60} 分`;
 const comboSel = {};
@@ -2210,6 +2241,8 @@ const LOAD_REF = {
   '哑铃罗马尼亚硬拉': ['rdl', 0.3, 'hand', '哑铃'],
   '弹力带蚌式 + 侧卧抬腿': ['bw', '中等阻力弹力带'],
   '单腿臀桥': ['bw', '自重'],
+  '弹力带跪姿后踢': ['bw', '中等阻力弹力带'],
+  '弹力带臀桥': ['bw', '自重 + 中等弹力带'],
   '弹力带侧向走': ['bw', '中等阻力弹力带'],
   '鸟狗式': ['bw', '自重'],
   '绳索面拉': ['pulldown', 0.3, '', '绳索'],
@@ -2229,7 +2262,18 @@ const LOAD_REF = {
   '双手农夫行走': ['rdl', 0.35, 'hand', '哑铃'],
   '90/90 呼吸': ['bw', '自重'],
   '猫牛式': ['bw', '自重'],
-  '辅助引体或反手下拉': ['pulldown', 1, '', '反手下拉']
+  '辅助引体或反手下拉': ['pulldown', 1, '', '反手下拉'],
+  '绳索下压（三头）': ['pulldown', 0.35, '', '绳索'],
+  '哑铃弯举': ['row', 0.4, 'hand', '哑铃'],
+  '窄握坐姿绳索划船': ['pulldown', 0.8, '', '绳索'],
+  '上斜哑铃卧推': ['dbpress', 1.2, 'hand', '哑铃'],
+  '过头绳索臂屈伸': ['pulldown', 0.3, '', '绳索'],
+  '锤式弯举': ['row', 0.45, 'hand', '哑铃'],
+  '俯卧撑（跪姿也可以）': ['bw', '自重'],
+  '椅子臂屈伸': ['bw', '自重'],
+  '上斜俯卧撑（手扶凳子）': ['bw', '自重'],
+  '高位下拉': ['pulldown', 0.75, '', ''],
+  '单臂哑铃划船（扶椅子）': ['row', 0.8, 'hand', '哑铃']
 };
 function moveLoad(name, dose, lk, f) {
   if (lk && name !== '辅助引体或反手下拉') { const x = loadFor(lk, dose, f); return x ? { ...x, label: '' } : null; }
@@ -2289,7 +2333,7 @@ function renderTraining() {
         <div class="pips" title="本周 ${c[p.k]} / ${p.goal} 次">${Array.from({ length: p.goal }, (_, i) => `<i class="${i < c[p.k] ? 'on' : ''}"></i>`).join('')}<span class="cnt" style="margin-left:6px">本周 ${c[p.k]}/${p.goal}</span></div>
       </div>
       <div class="combos" role="group" aria-label="${p.name}训练组合">${p.combos.map(x => `<button type="button" data-combo="${p.k}:${x.id}" aria-pressed="${x.id === cb.id}">${x.id} ${x.name}${x.id === recId ? '<span class="rec">今天推荐</span>' : ''}</button>`).join('')}</div>
-      <span class="combo-meta">约 ${cb.min} 分钟 · 适合：${cb.when}</span>
+      <span class="combo-meta">约 ${cb.min} 分钟（含热身和腰腹收尾）· 适合：${cb.when}</span>
       <ol class="moves">${cb.moves.map(([n, d, r, cue, lk, f]) => { const ld = moveLoad(n, d, lk, f); return `<li><span class="mv-name">${n}</span><span class="mv-dose">${d}${r ? `<span class="small muted"> · 休 ${restTxt(r)}</span>` : ''}</span>${ld ? `<span class="mv-load">${ld.bw ? '' : '建议 '}${loadText(ld)}</span>` : ''}${cue ? `<span class="mv-cue">${cue.replace(/ \[E\d+\]/g, '')}</span>` : ''}</li>`; }).join('')}</ol>
       ${cb.alt ? `<span class="small mv-alt">替换：${cb.alt}</span>` : ''}
       <div class="part-foot">
@@ -2300,10 +2344,10 @@ function renderTraining() {
   }).join('');
   renderLifts();
   $('trOther').textContent = c.other ? `本周还有 ${c.other} 次没标部位的力量训练（比如 WHOOP 导入的），在记录里新加一条对应部位就能算进来。` : '';
-  $('planTabs').innerHTML = [3, 4, 5].map(n => `<button class="btn${n === trainDays() ? ' primary' : ''}" type="button" data-plan="${n}">每周 ${n} 天力量</button>`).join('');
+  $('planTabs').innerHTML = [4, 3].map(n => `<button class="btn${n === trainDays() ? ' primary' : ''}" type="button" data-plan="${n}">${n} 天力量 + ${5 - n} 天有氧 + 2 天休息</button>`).join('');
   const core = { glute: '细腰 A', shoulder: '细腰 B', cardio: '细腰 C', off: '细腰 D（可选）' };
   $('planBody').innerHTML = TEMPLATES[trainDays()].map((t, i) => { const [f, c] = t.split(':'); const sl = { f, c }; const p = PARTS.find(x => x.k === f), cb = p && p.combos.find(x => x.id === c);
-    return `<tr${i === (parse(TODAY).getDay() + 6) % 7 ? ' style="background:var(--sunk)"' : ''}><td>${WD[i]}</td><td><span class="tag">${slotLabel(sl)}${cb ? ' · ' + cb.name : ''}</span><span class="tag">${f === 'cardio' ? '有氧 30–40 分钟' : f === 'off' ? '休息，想动就散步 20 分钟' : core[f]}</span>${f !== 'off' && f !== 'cardio' ? '' : `<span class="tag">${core[f]}</span>`}</td></tr>`; }).join('');
+    return `<tr${i === (parse(TODAY).getDay() + 6) % 7 ? ' style="background:var(--sunk)"' : ''}><td>${WD[i]}</td><td><span class="tag">${slotLabel(sl)}${cb ? ' · ' + cb.name : ''}</span><span class="tag">${f === 'cardio' ? '有氧约 45 分钟' : f === 'off' ? '休息，想动就散步 20 分钟' : '约 60 分钟 · ' + core[f]}</span>${f !== 'off' && f !== 'cardio' ? '' : `<span class="tag">${core[f]}</span>`}</td></tr>`; }).join('');
   $('planNote').textContent = '按周期换组合：卵泡期、排卵期多用 A（力量日），黄体期用 B（增肌日），经前一周或恢复低于 34% 换成 D（轻量）。没去健身房就用 C（居家）。有氧不和力量放在同一天。';
 }
 $('parts').addEventListener('click', e => {
@@ -2316,7 +2360,7 @@ $('parts').addEventListener('click', e => {
   ensure(TODAY).ex.push({ type, met: p.log[1], min: cb.min }); commit(); offerUndo(`已记录：${type}`, snap);
   onLogged(`${type} ${cb.min} 分钟`);
 });
-$('planTabs').addEventListener('click', e => { const b = e.target.closest('[data-plan]'); if (!b) return; const snap = JSON.stringify(state); state.profile.trainDays = Number(b.dataset.plan); const r = ensure(TODAY); if (r.session && !r.session.finished && !r.session.confirmed && !Object.values(r.session.sets || {}).some(v => v.d)) delete r.session; save(); offerUndo(`已改成每周 ${trainDays()} 天力量`, snap); renderWorkout(); renderMeals(); renderTraining(); });
+$('planTabs').addEventListener('click', e => { const b = e.target.closest('[data-plan]'); if (!b) return; const snap = JSON.stringify(state); state.profile.trainDays = Number(b.dataset.plan); const r = ensure(TODAY); if (r.session && !r.session.finished && !r.session.confirmed && !Object.values(r.session.sets || {}).some(v => v.d)) delete r.session; save(); offerUndo(`已改成 ${trainDays()} 天力量 + ${5 - trainDays()} 天有氧`, snap); renderWorkout(); renderMeals(); renderTraining(); });
 
 function progCells(k) {
   const x = liftLatest(k); if (!x) return '<td class="small muted" colspan="4">填了以后显示进度目标</td>';
@@ -2367,6 +2411,7 @@ const WARMUPS = {
   rest: ['5 分钟慢走热身']
 };
 const FINISHER = { glute: 'A', shoulder: 'B', rest: 'C' };
+PARTS.forEach(p => { if (p.k === 'glute' || p.k === 'shoulder') p.combos.forEach(cb => { cb.min = comboMinutes(p.k, cb.id); }); });
 const cardioDaysThisWeek = () => { const ws = weekStart(TODAY); let n = 0; for (let i = 0; i < 7; i++) { const d = addDays(ws, i); if (d > TODAY) break; if (day(d).ex.some(e => /有氧|快走|慢跑|游泳|骑行|椭圆|划船机|跳绳|行山|徒步/.test(e.type))) n++; } return n; };
 function parseDose(d) {
   const m = String(d).match(/^(\d+)\s*(?:轮)?\s*×\s*(.+)$/);
@@ -2378,23 +2423,23 @@ function parseDose(d) {
 }
 function trainedOn(d) { return day(d).ex.map(e => PARTS.find(p => p.k !== 'core' && p.re.test(e.type))).filter(Boolean).map(p => p.k); }
 // Fixed weekly schedule (Mon..Sun). 'cardio' = cardio day, 'off' = rest day. Strength and cardio never share a day.
+// Always two rest days a week
 const TEMPLATES = {
-  3: ['glute:A', 'cardio', 'shoulder:A', 'off', 'glute:B', 'cardio', 'off'],
-  4: ['glute:A', 'shoulder:A', 'cardio', 'glute:B', 'shoulder:B', 'cardio', 'off'],
-  5: ['glute:A', 'shoulder:A', 'cardio', 'glute:B', 'shoulder:B', 'glute:C', 'cardio']
+  4: ['glute:A', 'shoulder:A', 'cardio', 'glute:B', 'shoulder:B', 'off', 'off'],
+  3: ['glute:A', 'shoulder:A', 'cardio', 'off', 'glute:B', 'cardio', 'off']
 };
 const WD = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
-const trainDays = () => [3, 4, 5].includes(Number(P().trainDays)) ? Number(P().trainDays) : 4;
+const trainDays = () => [3, 4].includes(Number(P().trainDays)) ? Number(P().trainDays) : 4;
 function slotFor(d) { const i = (parse(d).getDay() + 6) % 7; const [f, c] = TEMPLATES[trainDays()][i].split(':'); return { f, c: c || null, i }; }
 function slotLabel(sl, short) {
   if (sl.f === 'glute') return short ? '臀' : `练臀 ${sl.c}`;
-  if (sl.f === 'shoulder') return short ? '背' : `练肩背 ${sl.c}`;
+  if (sl.f === 'shoulder') return short ? '上' : `练上肢 ${sl.c}`;
   if (sl.f === 'cardio') return short ? '氧' : '有氧日';
   return short ? '休' : '休息日';
 }
 function planToday() {
   const ph = phaseOf(TODAY), w = wh(TODAY) || wh(addDays(TODAY, -1)), sl = slotFor(TODAY);
-  const why = [`每周 ${trainDays()} 天力量课表：今天${WD[sl.i]}是${slotLabel(sl)}`];
+  const why = [`课表 ${trainDays()} 天力量 + ${5 - trainDays()} 天有氧 + 2 天休息：今天${WD[sl.i]}是${slotLabel(sl)}`];
   let focus, combo = sl.c || 'A', light = false;
   if (sl.f === 'glute' || sl.f === 'shoulder') {
     focus = sl.f;
@@ -2423,6 +2468,7 @@ function currentSession() {
   return r.session;
 }
 // Cardio options. MET values are typical for the activity; notes keep legs slim (low resistance, no heavy pushing).
+const CARDIO_GROUPS = [['低冲击、对膝盖友好', ['incline', 'elliptical', 'swim', 'walk']], ['燃脂效率高', ['stairs', 'rower', 'rope', 'jog']], ['户外', ['hike']], ['好玩、坚持得住', ['dance', 'bike']]];
 const CARDIO = [
   { k: 'incline', name: '上坡快走（跑步机）', met: 5.5, note: '坡度 8–12%、速度 4.5–5.5 km/h，不扶扶手；能练到臀，又不会练粗大腿' },
   { k: 'elliptical', name: '椭圆机', met: 5.0, note: '低阻力、较快踏频，对膝盖友好' },
@@ -2441,10 +2487,11 @@ function defaultCardio(ss) {
   const doy = diffDays(TODAY, TODAY.slice(0, 4) + '-01-01');
   const pool = light ? ['walk', 'elliptical', 'swim', 'incline'] : ss.focus === 'rest' ? ['incline', 'swim', 'hike', 'dance', 'jog', 'elliptical', 'rower'] : ['incline', 'elliptical', 'rower', 'stairs', 'bike', 'rope'];
   if (ss.light) return { k: 'walk', min: 20, d: false };
-  return { k: pool[doy % pool.length], min: light ? 30 : 40, d: false };
+  return { k: pool[doy % pool.length], min: 30, d: false };
 }
 function cardioOf(ss) { if (!ss.cardio) ss.cardio = defaultCardio(ss); return ss.cardio; }
 function cardioKcal(c) { const o = CARDIO.find(x => x.k === c.k) || CARDIO[0]; return Math.round(o.met * P().weight * (Number(c.min) || 0) / 60); }
+function comboMinutes(focus, id) { const bl = sessionMoves({ focus, combo: id }); return estMinutes(bl[0].moves, true) + estMinutes(bl[1].moves, false); }
 function sessionMoves(ss) {
   const blocks = [];
   if (ss.focus === 'rest') {
@@ -2473,20 +2520,22 @@ function renderWorkout() {
     <div class="wk-meta"><span>约 ${mins} 分钟</span>${(ss.why || []).map(t => `<span>${t}</span>`).join('')}</div></div>
     ${ss.finished ? '<span class="pill ok">✓ 今天已完成</span>' : ''}</div>
     <div class="confirm-row">${ss.confirmed ? `<span class="pill ok">✓ 已确认今天的安排 · ${hhmm(ss.confirmed)}</span>${ss.finished ? '' : '<button class="btn ghost" type="button" id="wkUnconfirm">修改安排</button>'}` : '<button class="btn primary" type="button" id="wkConfirm">确认今天的训练安排</button><span class="small muted">不合适可以先在下面换</span>'}</div>
-    <div class="wk-pick" role="group" aria-label="换一个安排" ${ss.confirmed ? 'hidden' : ''}>${[['glute', '练臀'], ['shoulder', '练肩背'], ['rest', '有氧日'], ['off', '休息日']].map(([k, n]) => `<button type="button" data-focus="${k}" aria-pressed="${k === 'off' ? ss.focus === 'rest' && !!ss.light : k === 'rest' ? ss.focus === 'rest' && !ss.light : ss.focus === k}">${n}</button>`).join('')}
-      ${ss.focus !== 'rest' ? ['A', 'B', 'C', 'D'].map(id => { const cb = PARTS.find(x => x.k === ss.focus).combos.find(x => x.id === id); return `<button type="button" data-wcombo="${id}" aria-pressed="${ss.combo === id}">${id} ${cb.name}</button>`; }).join('') : ''}</div>
+    <div class="wk-pick" role="group" aria-label="换一个安排" ${ss.confirmed ? 'hidden' : ''}>
+      <div class="pick-row"><span class="label">今天做什么</span><div class="wk-seg">${[['glute', '练臀'], ['shoulder', '练上肢'], ['rest', '有氧'], ['off', '休息']].map(([k, n]) => `<button type="button" data-focus="${k}" aria-pressed="${k === 'off' ? ss.focus === 'rest' && !!ss.light : k === 'rest' ? ss.focus === 'rest' && !ss.light : ss.focus === k}">${n}</button>`).join('')}</div></div>
+      ${ss.focus !== 'rest' ? `<div class="pick-row"><span class="label">选一个组合</span><div class="combo-pick">${['A', 'B', 'C', 'D'].map(id => { const cb = PARTS.find(x => x.k === ss.focus).combos.find(x => x.id === id); return `<button type="button" data-wcombo="${id}" aria-pressed="${ss.combo === id}"><b>${id}</b><span>${cb.name}</span><small>约 ${comboMinutes(ss.focus, id)} 分钟</small></button>`; }).join('')}</div></div>` : ''}
+    </div>
     <div class="dk" id="dk"></div>
     <div class="wk-prog"><div id="wkProg"></div></div>
     <div class="wk-block"><h4>热身 · 约 8 分钟</h4>${warm.map((t, i) => { const k = `w${i}`; const v = ss.sets[k]; total++; if (v && v.d) done++; return `<label class="chk"><input type="checkbox" data-set="${k}" ${v && v.d ? 'checked' : ''}><span>${t}</span></label>`; }).join('')}</div>`;
   const cardioHtml = () => { const c = cardio, o = CARDIO.find(x => x.k === c.k) || CARDIO[0]; total++; if (c.d) done++;
-    return `<div class="wk-block"><h4>${ss.light ? '可选：轻松散步' : '有氧 · 今天的主角'}</h4><div class="wk-ex">
-      <div class="cardio-row"><select id="cdSel" aria-label="有氧方式">${CARDIO.map(x => `<option value="${x.k}" ${x.k === c.k ? 'selected' : ''}>${x.name}</option>`).join('')}</select>
-      <span class="io"><input type="number" id="cdMin" min="5" max="180" step="5" value="${c.min}" aria-label="有氧分钟"> 分钟 · 约 ${cardioKcal(c)} kcal</span></div>
+    return `<div class="wk-block"><h4>${ss.light ? '可选：轻松散步' : '有氧 · 今天的主角（30 分钟 + 热身 + 腰腹 ≈ 45 分钟）'}</h4><div class="wk-ex">
+      ${ss.light ? '' : `<div class="cd-groups">${CARDIO_GROUPS.map(([g, ks]) => `<div><span class="label">${g}</span><div class="cd-opts">${ks.map(k => { const o2 = CARDIO.find(x => x.k === k); return `<button type="button" data-cd="${k}" aria-pressed="${k === c.k}">${o2.name}</button>`; }).join('')}</div></div>`).join('')}</div>`}
+      <div class="cardio-row"><select id="cdSel" aria-label="有氧方式" ${ss.light ? '' : 'hidden'}>${CARDIO.map(x => `<option value="${x.k}" ${x.k === c.k ? 'selected' : ''}>${x.name}</option>`).join('')}</select>
+      <b>${o.name}</b><span class="io"><input type="number" id="cdMin" min="5" max="180" step="5" value="${c.min}" aria-label="有氧分钟"> 分钟 · 约 ${cardioKcal(c)} kcal</span></div>
       <span class="wk-cue">${o.note}</span>
       <label class="chk"><input type="checkbox" id="cdDone" ${c.d ? 'checked' : ''}><span>${c.d ? '有氧已完成' : '做完了就勾上'}</span></label></div></div>`; };
   blocks.forEach(b => {
     if (b.key === 'c' && ss.focus === 'rest') html += cardioHtml();
-    if (b.key === 'c' && ss.focus !== 'rest') html += `<div class="wk-block"><span class="small muted">今天只练力量，有氧放在单独的有氧日：同一天做有氧（尤其跑步）可能让肌纤维增粗略少。</span></div>`;
     if (!b.moves.length) return;
     html += `<div class="wk-block"><h4>${b.title}</h4>`;
     b.moves.forEach(([n, d, r, cue, lk, f], mi) => {
@@ -2587,6 +2636,8 @@ $('wk').addEventListener('click', e => {
   if (c) { if (Object.values(ss.sets).some(v => v.d)) { $('wkMsg').textContent = '已经开始的训练先完成，或点「重新开始」再换。'; return; } ss.combo = c.dataset.wcombo; ss.sets = {}; save(); renderWorkout(); return; }
   if (e.target.id === 'wkReset') { ss.sets = {}; ss.started = null; save(); renderWorkout(); return; }
   if (e.target.id === 'wkDone') finishWorkout();
+  const cdb = e.target.closest('[data-cd]');
+  if (cdb) { const c = cardioOf(ss); c.k = cdb.dataset.cd; save(); renderWorkout(); return; }
   if (e.target.id === 'goPlan') { $('planWrap').open = true; $('planWrap').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
   if (e.target.id === 'wkConfirm') { const snap = JSON.stringify(state); ss.confirmed = Date.now(); save(); renderWorkout(); offerUndo('已确认今天的训练安排', snap); return; }
   if (e.target.id === 'wkUnconfirm') { ss.confirmed = null; save(); renderWorkout(); return; }
@@ -2620,7 +2671,7 @@ function renderCheckinSummary(ss, blocks, done, total) {
       <div class="dk-stats"><div><span class="label">完成组数</span><b>${sets}/${setsAll}</b></div><div><span class="label">总训练量</span><b>${fmt(vol)}</b><span class="small muted">kg</span></div><div><span class="label">用时</span><b>${mins}</b><span class="small muted">分钟</span></div></div></div>
     <div class="dk-moves">${rows.map(r => `<div class="dk-mv"><span><span>${esc(r.n)}</span><span class="muted">${r.dn}/${r.all}${r.top ? ` · ${r.top} kg` : ''}</span></span><i><em style="width:${r.all ? r.dn / r.all * 100 : 0}%"></em></i></div>`).join('')}</div>
     <div class="week" aria-label="本周打卡">${week}</div>
-    <span class="small muted" style="grid-column:1/-1">${ss.focus === 'rest' ? '' : `今天目标部位有效组 ${effSets} 组（每次 10–15 组左右就够，更多收益递减） · `}本周已打卡 ${nWeek} 天 · 臀：练臀；背：练肩背；氧：有氧日；休：休息日 · <button class="btn ghost" type="button" id="goPlan" style="padding:0;font-size:13px">改每周天数</button></span>`;
+    <span class="small muted" style="grid-column:1/-1">${ss.focus === 'rest' ? '' : `今天目标部位有效组 ${effSets} 组（每次 10–15 组左右就够，更多收益递减） · `}本周已打卡 ${nWeek} 天 · 臀：练臀；上：练上肢；氧：有氧日；休：休息日 · <button class="btn ghost" type="button" id="goPlan" style="padding:0;font-size:13px">改每周天数</button></span>`;
 }
 function finishWorkout() {
   const ss = currentSession(), blocks = sessionMoves(ss);
@@ -2724,15 +2775,16 @@ function renderMeals() {
       <div class="${bal.cls} hl"><span class="label">热量差（目标 ${goalDef >= 0 ? '−' : '+'}${fmt(Math.abs(goalDef))}）</span><b>${bal.def >= 0 ? '−' : '+'}${fmt(Math.abs(bal.def))}</b><span class="small">${bal.text}</span></div>
     </div>
     <div class="bal-legend"><span><i style="background:var(--good)"></i>达到目标差</span><span><i style="background:var(--warn)"></i>差距还小</span><span><i style="background:var(--p-men)"></i>超过消耗</span><span><i style="background:var(--accent)"></i>缺口偏大</span><span>热量差 = 总消耗（含运动）− 已吃</span></div>
+    ${(() => { const n = ['breakfast', 'lunch', 'dinner'].filter(k => logged[k]).length; return `<div class="meal-done${n === 3 ? ' all' : ''}"><div class="meal-dots">${['早', '午', '晚'].map((t, k) => `<i class="${logged[['breakfast', 'lunch', 'dinner'][k]] ? 'on' : ''}">${t}</i>`).join('')}</div><span>${n === 3 ? '三餐都记好了，今天的饮食记录已完成 🎉 零食饮料可在下面补记' : `三餐已记录 ${n} / 3 · 每吃完一餐点「吃了，记录」就同时完成记录`}</span></div>`; })()}
     <div class="meal-grid">${plan.map((m, i) => `<div class="meal${logged[m.slot || i] ? ' logged' : ''}">
       <div class="meal-head"><b>${m.name} · ${actual[m.slot] ? '实际吃的' : esc(m.title)}</b><span>${fmt(actual[m.slot] ? actual[m.slot].reduce((a, x) => a + x.kcal, 0) : m.kcal)} kcal · 蛋白 ${actual[m.slot] ? actual[m.slot].reduce((a, x) => a + x.prot, 0) : m.prot} g</span></div>
       ${actual[m.slot] ? `<span class="actual">已按实际记录（推荐是：${esc(m.title)}）</span>` : ''}
       <ul>${(actual[m.slot] || m.items).map(x => `<li><span>${esc(x.name)}</span><span>${x.kcal} kcal · ${x.prot} g</span></li>`).join('')}</ul>
       ${m.tip ? `<span class="meal-tip">${esc(m.tip)}</span>` : ''}
       ${logged[m.slot || i] ? '' : mealDiffHtml(m.slot, m.name)}
-      <div class="meal-foot">${logged[m.slot || i] ? `<span class="pill ok">✓ 已记录</span><button class="btn ghost" type="button" data-meal-unlog="${m.slot || i}">撤销记录</button>` : `<button class="btn primary" type="button" data-meal-log="${i}">按推荐吃了，记录</button><button class="btn" type="button" data-diff-open="${m.slot}">我吃的不一样</button>`}${ai || conf ? '' : `<button class="btn" type="button" data-meal-swap="${m.slot}">换一个</button>`}</div>
+      <div class="meal-foot">${logged[m.slot || i] ? `<span class="pill ok">✓ 已记录</span><button class="btn ghost" type="button" data-meal-unlog="${m.slot || i}">撤销记录</button>` : `<button class="btn primary" type="button" data-meal-log="${i}">✓ 吃了，记录</button><button class="btn" type="button" data-diff-open="${m.slot}">我吃的不一样</button>`}${ai || conf ? '' : `<button class="btn" type="button" data-meal-swap="${m.slot}">换一个</button>`}</div>
     </div>`).join('')}</div>
-    <div class="confirm-row">${conf ? `<span class="pill ok">✓ 已确认今天的饮食计划 · ${hhmm(conf)}</span><button class="btn ghost" type="button" id="mealUnconfirm">修改计划</button>` : '<button class="btn primary" type="button" id="mealConfirm">确认今天的饮食计划</button><span class="small muted">确认后照着吃，每吃一餐点「吃了，记录」</span>'}</div>
+    <div class="confirm-row">${conf ? `<span class="pill ok">✓ 已确认今天的饮食计划 · ${hhmm(conf)}</span><button class="btn ghost" type="button" id="mealUnconfirm">修改计划</button>` : '<button class="btn primary" type="button" id="mealConfirm">确认今天的饮食计划</button><span class="small muted">确认后照着吃，吃完点「吃了，记录」</span>'}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center" ${conf ? 'hidden' : ''}>
       <button class="btn" type="button" id="mealAI">让 AI 按我的背景定制一套</button>${ai ? '<button class="btn ghost" type="button" id="mealReset">换回默认推荐</button>' : ''}
       <span class="small muted" id="mealMsg" role="status">${ai ? 'AI 定制的一套，数字是估算。' : '默认不含乳制品；份量按今天的热量目标自动调整。'}</span>
@@ -2873,7 +2925,7 @@ function combosCtx() { return '\n【app 里的训练组合】' + PARTS.map(p => 
 function bodyCtx() {
   const rows = (state.body || []).slice().sort((a, b) => a.date.localeCompare(b.date));
   const c = partCounts();
-  let t = `\n【本周训练】臀部 ${c.glute}/3 次，肩背 ${c.shoulder}/2 次，腰腹 ${c.core}/3 次，未标部位的力量训练 ${c.other} 次。`;
+  let t = `\n【本周训练】臀部 ${c.glute}/3 次，上肢 ${c.shoulder}/2 次，腰腹 ${c.core}/3 次，未标部位的力量训练 ${c.other} 次。`;
   if (rows.length) { const f = rows[0], l = rows[rows.length - 1]; t += `\n【身材进度】起点 ${f.date}：体重${f.weight ?? '-'} 腰${f.waist ?? '-'} 臀${f.hip ?? '-'} 肩${f.shoulder ?? '-'}；最近 ${l.date}：体重${l.weight ?? '-'} 腰${l.waist ?? '-'} 臀${l.hip ?? '-'} 肩${l.shoulder ?? '-'}。`; }
   return t;
 }
@@ -3496,7 +3548,7 @@ $('evList').innerHTML = EVIDENCE.map(e => `<li><b>[${e.id}]</b> ${esc(e.cite)} �
 const WHY = [
   ['每个动作 2–4 组就够。', '训练量越多效果越好，但收益递减，力量的递减更明显', ['E17']],
   ['把组数分到一周 2–3 次，而不是一次做很多组。', '总量相同，一周练几次对增肌影响不大；但每次组数太多，后面几组质量会下降。所以臀部分 3 次、每次 10–15 组', ['E18', 'E8']],
-  ['每个部位每周约 10–20 个有效组。', '有效组是接近力竭（只留 1–3 次余力）的正式组，热身组不算。app 里臀部每周约 15–20 组，肩背约 10–14 组', ['E7']],
+  ['每个部位每周约 10–20 个有效组。', '有效组是接近力竭（只留 1–3 次余力）的正式组，热身组不算。app 里臀部每周约 15–20 组，上肢每周约 12–16 组（背部占一半以上）', ['E7']],
   ['女性不需要“专用轻重量”。', '女性相对增肌幅度和男性相近，用能做 6–15 次的重量', ['E9']],
   ['组间休息可以短一点。', '同等强度下女性通常更耐疲劳，所以主项休息 2–2.5 分钟、辅助动作 45–75 秒，训练更省时间（这一条是根据研究的推论）', ['E19']],
   ['有氧和力量分开练。', '同一天做可能让肌纤维增粗略少，跑步比骑车更明显；所以有氧放在单独的有氧日', ['E20']],
