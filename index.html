@@ -260,6 +260,10 @@ td.bar-cell{width:34%;min-width:110px}
 @media (prefers-reduced-motion:no-preference){.about-card{transition:box-shadow .6s,border-color .6s}}
 .coach-bg{font-size:13px;color:var(--ink2);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .coach-bg button{border:0;background:none;color:var(--accent);text-decoration:underline;padding:0;font-size:13px}
+/* Profile lock */
+.lock-bar{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.lock-form{display:grid;gap:10px;max-width:420px}
+.lock-form input{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:9px 12px;font-size:16px;color:var(--ink)}
 .confirm{display:inline-flex;gap:8px;align-items:center;font-size:14px}
 @media (prefers-reduced-motion:no-preference){.meter div,.hbar{transition:width .3s ease}}
 </style>
@@ -554,8 +558,34 @@ td.bar-cell{width:34%;min-width:110px}
 
   <!-- SETTINGS -->
   <section class="block" aria-labelledby="setH">
-    <h2 id="setH">我的资料</h2>
-    <div class="panel" style="display:grid;gap:16px">
+    <div class="lock-bar">
+      <div style="display:grid;gap:4px">
+        <h2 id="setH">我的资料</h2>
+        <span class="small muted" id="lockHint"></span>
+      </div>
+      <button class="btn" type="button" id="lockToggle" aria-expanded="false" aria-controls="setBody"></button>
+    </div>
+    <form class="panel lock-form" id="lockForm" hidden autocomplete="off">
+      <h3 id="lockTitle"></h3>
+      <p class="small muted" id="lockDesc" style="margin:0"></p>
+      <input type="password" id="pw1" autocomplete="current-password" aria-label="密码">
+      <input type="password" id="pw2" autocomplete="new-password" aria-label="再输入一次密码" placeholder="再输入一次" hidden>
+      <span class="err-text" id="pwErr" role="alert"></span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn primary" type="submit" id="pwGo"></button>
+        <button class="btn ghost" type="button" id="pwCancel">取消</button>
+        <button class="btn ghost" type="button" id="pwForgot" hidden style="margin-left:auto">忘记密码</button>
+      </div>
+      <div id="forgotBox" hidden class="small" style="display:grid;gap:8px;border-top:1px solid var(--line);padding-top:10px">
+        <span>重设密码会<b>清空「给 AI 教练的背景」</b>里的内容（那里有你的健康信息），身高体重等其他资料和所有记录都会保留。确定吗？</span>
+        <div style="display:flex;gap:8px"><button class="btn" type="button" id="forgotYes" style="color:var(--p-men)">清空背景并重设密码</button><button class="btn ghost" type="button" id="forgotNo">算了</button></div>
+      </div>
+    </form>
+    <div class="panel" id="setBody" hidden style="display:grid;gap:16px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+        <button class="btn ghost" type="button" id="pwChange">修改密码</button>
+        <button class="btn" type="button" id="lockNow">锁上并收起</button>
+      </div>
       <div class="settings">
         <label class="field">身高 cm<input id="sHeight" type="number" min="120" max="220" class="num"></label>
         <label class="field">体重 kg<input id="sWeight" type="number" min="30" max="200" step="0.1" class="num"></label>
@@ -1222,7 +1252,7 @@ $('importBtn').addEventListener('click', () => {
   try {
     const s = JSON.parse($('backupText').value);
     if (!s || typeof s.days !== 'object' || typeof s.profile !== 'object') throw 0;
-    state = { profile: { ...DEFAULT_PROFILE, ...s.profile }, days: s.days, whoop: s.whoop || {}, journal: s.journal || {}, labs: s.labs || [], reasons: s.reasons || [], sample: false, onboarded: true };
+    state = { profile: { ...DEFAULT_PROFILE, ...s.profile }, days: s.days, whoop: s.whoop || {}, journal: s.journal || {}, labs: s.labs || [], reasons: s.reasons || [], lock: s.lock || state.lock || null, sample: false, onboarded: true };
     commit(); renderSettings(); $('backupMsg').textContent = '已恢复';
   } catch (e) { $('backupMsg').textContent = '恢复失败：文本不是有效的备份，请粘贴完整的备份内容'; }
 });
@@ -1232,7 +1262,7 @@ function renderClear(asking) {
     ? `<span>确定清空全部记录？</span><button class="btn" id="clearYes" type="button" style="color:var(--p-men)">清空</button><button class="btn ghost" id="clearNo" type="button">取消</button>`
     : `<button class="btn" id="clearBtn" type="button">清空所有数据</button>`;
   if (asking) {
-    $('clearYes').onclick = () => { const p = state.profile; state = blank(); state.profile = p; commit(); renderClear(false); $('backupMsg').textContent = '已清空'; };
+    $('clearYes').onclick = () => { const p = state.profile, lk = state.lock; state = blank(); state.profile = p; state.lock = lk; commit(); renderClear(false); $('backupMsg').textContent = '已清空'; };
     $('clearNo').onclick = () => renderClear(false);
   } else $('clearBtn').onclick = () => renderClear(true);
 }
@@ -1602,6 +1632,72 @@ $('sosTalk').addEventListener('click', () => {
 });
 $('reasonForm').addEventListener('submit', e => { e.preventDefault(); const t = $('reasonIn').value.trim(); if (!t) return; state.reasons.push(t.slice(0, 120)); $('reasonIn').value = ''; save(); renderReasons(); });
 $('reasons').addEventListener('click', e => { const b = e.target.closest('[data-del-reason]'); if (!b) return; state.reasons.splice(Number(b.dataset.delReason), 1); save(); renderReasons(); });
+/* ---------- profile lock (a privacy screen on this device, not encryption) ---------- */
+let unlocked = false, afterUnlock = null, lockMode = 'unlock';
+const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
+async function hashPw(pw, salt) {
+  if (window.crypto && crypto.subtle) {
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
+    return b64(await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: new TextEncoder().encode(salt), iterations: 150000, hash: 'SHA-256' }, key, 256));
+  }
+  let h = 2166136261; const str = salt + pw; for (let r = 0; r < 5000; r++) for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i) + r; h = Math.imul(h, 16777619) >>> 0; }
+  return 'f' + h.toString(36);
+}
+function renderLock() {
+  const has = !!(state.lock && state.lock.hash);
+  $('setBody').hidden = !unlocked;
+  $('lockToggle').textContent = unlocked ? '收起' : has ? '🔒 输入密码展开' : '🔒 设置密码后展开';
+  $('lockToggle').setAttribute('aria-expanded', String(unlocked));
+  $('lockHint').textContent = unlocked ? '已解锁。收起或刷新页面后会自动锁上。' : '身高体重、健康背景、备份和清空数据都在这里，已加锁。';
+}
+function showLockForm(mode) {
+  lockMode = mode;
+  const f = $('lockForm'); f.hidden = false; $('forgotBox').hidden = true; $('pwErr').textContent = '';
+  $('pw1').value = ''; $('pw2').value = '';
+  const setting = mode !== 'unlock';
+  $('pw2').hidden = !setting; $('pwForgot').hidden = setting;
+  $('lockTitle').textContent = mode === 'unlock' ? '输入密码' : mode === 'change' ? '设置新密码' : '先设一个密码';
+  $('lockDesc').textContent = mode === 'unlock' ? '' : '至少 4 位。密码只保存在这台设备上，别人打开这台设备上的 app 也需要它才能看到你的资料。';
+  $('pw1').placeholder = setting ? '新密码' : '密码';
+  $('pwGo').textContent = mode === 'unlock' ? '解锁' : '保存密码';
+  $('pw1').focus();
+}
+function requestUnlock(then) {
+  if (unlocked) { then && then(); return; }
+  afterUnlock = then || null;
+  showLockForm(state.lock && state.lock.hash ? 'unlock' : 'set');
+  $('lockForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function lockNow() { unlocked = false; $('lockForm').hidden = true; if (!$('aboutEditor').hidden) closeAbout(); renderLock(); }
+$('lockToggle').addEventListener('click', () => unlocked ? lockNow() : requestUnlock());
+$('lockNow').addEventListener('click', () => { lockNow(); document.getElementById('setH').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+$('pwChange').addEventListener('click', () => showLockForm('change'));
+$('pwCancel').addEventListener('click', () => { $('lockForm').hidden = true; afterUnlock = null; });
+$('lockForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const pw = $('pw1').value, err = m => { $('pwErr').textContent = m; };
+  if (lockMode === 'unlock') {
+    const ok = (await hashPw(pw, state.lock.salt)) === state.lock.hash;
+    if (!ok) { err('密码不对，再试一次。'); $('pw1').select(); return; }
+  } else {
+    if (pw.length < 4) return err('密码至少 4 位。');
+    if (pw !== $('pw2').value) return err('两次输入的密码不一样。');
+    const salt = b64(crypto.getRandomValues ? crypto.getRandomValues(new Uint8Array(16)) : new TextEncoder().encode(String(Date.now())));
+    state.lock = { salt, hash: await hashPw(pw, salt) }; save();
+  }
+  $('lockForm').hidden = true;
+  const wasChange = lockMode === 'change';
+  unlocked = true; renderLock();
+  if (wasChange) { $('backupMsg').textContent = ''; $('lockHint').textContent = '密码已更新。收起或刷新页面后会自动锁上。'; }
+  const then = afterUnlock; afterUnlock = null; then && then();
+});
+$('pwForgot').addEventListener('click', () => { $('forgotBox').hidden = false; });
+$('forgotNo').addEventListener('click', () => { $('forgotBox').hidden = true; });
+$('forgotYes').addEventListener('click', () => {
+  state.profile.about = ''; state.profile.aboutAt = 0; state.lock = null; save(); renderAbout();
+  showLockForm('set'); $('lockDesc').textContent = '健康背景已经清空。设一个新密码，之后可以重新填写。';
+});
+
 /* ---------- AI background card: collapsed by default, explicit save ---------- */
 const fmtStamp = t => { const d = new Date(t); return `${d.getMonth() + 1}月${d.getDate()}日 ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 let aboutJustSaved = false;
@@ -1615,7 +1711,7 @@ function renderAbout() {
   $('aboutEdit').textContent = editing ? '收起' : a ? '更新' : '填写';
   $('coachBg').innerHTML = a ? `<span class="pill ok">✓ 已读取你的背景资料</span><span>${at ? fmtStamp(at) + ' 更新' : ''}</span><button type="button" id="coachBgEdit">查看或修改</button>`
     : `<span class="pill warn">还没有背景资料</span><span>AI 不知道你的健康情况和饮食限制</span><button type="button" id="coachBgEdit">去填写</button>`;
-  $('coachBgEdit').onclick = () => { $('aboutCard').scrollIntoView({ behavior: 'smooth', block: 'center' }); openAbout(); };
+  $('coachBgEdit').onclick = () => requestUnlock(() => { $('aboutCard').scrollIntoView({ behavior: 'smooth', block: 'center' }); openAbout(); });
 }
 function openAbout() { $('sAbout').value = P().about || ''; $('aboutEditor').hidden = false; aboutJustSaved = false; updateCount(); renderAbout(); $('sAbout').focus(); }
 function closeAbout() { $('aboutEditor').hidden = true; renderAbout(); }
@@ -1984,6 +2080,7 @@ $('onbDone').addEventListener('click', () => { closeOnboarding(); window.scrollT
 $('onbDemo').addEventListener('click', () => { if (!state.sample) { const ob = state.onboarded; state = makeSample(); state.onboarded = ob; } state.demoSeen = true; closeOnboarding(); commit(); renderSettings(); });
 
 renderSettings();
+renderLock();
 renderAll();
 setAIEnabled(false);
 AI.ready = initAI();
