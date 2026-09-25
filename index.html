@@ -335,6 +335,15 @@ details.paste textarea{width:100%;min-height:120px;border:1px solid var(--line);
 .plan td{padding:9px 8px;vertical-align:top;border-bottom:1px solid color-mix(in srgb,var(--line) 55%,transparent);text-align:left;white-space:normal}
 .plan td:first-child{width:64px;font-weight:600;white-space:nowrap}
 .plan .tag{display:inline-block;border-radius:6px;padding:1px 7px;margin:0 4px 3px 0;background:var(--sunk);font-size:13px}
+/* Strength base */
+.lift-tbl input{width:76px;padding:5px 8px;font-size:15px;text-align:right;background:var(--bg);color:var(--ink)}
+.lift-tbl td{padding:6px 8px}
+.gstr{display:grid;gap:6px}
+.gstr-bar{position:relative;height:10px;border-radius:5px;background:var(--sunk);overflow:visible}
+.gstr-bar div{height:100%;border-radius:5px;background:var(--accent)}
+.gstr-marks{position:relative;height:16px;font-size:11px;color:var(--ink3)}
+.gstr-marks span{position:absolute;transform:translateX(-50%)}
+.mv-load{grid-column:2/4;font-size:14px;font-weight:600;color:var(--accent)}
 .confirm{display:inline-flex;gap:8px;align-items:center;font-size:14px}
 @media (prefers-reduced-motion:no-preference){.meter div,.hbar{transition:width .3s ease}}
 /* ===== Apple-style layer ===== */
@@ -413,7 +422,7 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
     </div>
     <form class="cd-edit" id="cdEdit" hidden>
       <label class="small">开始日期 <input type="date" id="cdStart" required></label>
-      <input id="cdGoalIn" placeholder="这 100 天的目标，默认：瘦瘦的肚子 · 翘翘的屁股 · 宽宽的肩" maxlength="40" style="flex:1 1 220px" aria-label="100 天目标">
+      <input id="cdGoalIn" placeholder="这 100 天的目标，默认：翘臀和强大的臀部力量 · 薄而有型的背 · 细腿细腰" maxlength="40" style="flex:1 1 220px" aria-label="100 天目标">
       <button class="btn primary" type="submit">保存</button>
       <button class="btn ghost" type="button" id="cdCancel">取消</button>
     </form>
@@ -475,7 +484,7 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
       <details><summary class="small muted" style="cursor:pointer">AI 引用的 16 篇研究（均在 PubMed 核实）</summary><ol class="ev-list" id="evList"></ol></details>
       <div class="suggest" id="suggest">
         <button type="button">怎么练出翘臀？</button>
-        <button type="button">肩膀怎么练宽？</button>
+        <button type="button">怎么练出薄而有型的背？</button>
         <button type="button">黄体期总想吃甜的怎么办？</button>
                 <button type="button">我今天晚饭怎么吃比较好？</button>
       </div>
@@ -497,8 +506,17 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
   <!-- TRAINING -->
   <section class="block" aria-labelledby="trH">
     <div class="sec-head">
-      <h2 id="trH">本周训练 · 目标部位</h2>
+      <h2 id="trH">本周训练</h2>
       <span class="small muted" id="trPhase"></span>
+    </div>
+    <div class="panel" style="display:grid;gap:12px">
+      <details id="liftWrap">
+        <summary style="cursor:pointer;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline"><h3 style="display:inline">我的重量基础</h3><span class="small muted" id="liftSum"></span></summary>
+        <p class="small muted" style="margin:10px 0">每个动作填最近一组做得比较好的重量和次数（哑铃填单手重量）。app 用它估算你的最大力量，再给每个训练动作算建议重量。以后变强了随时更新。</p>
+        <div class="tbl-wrap"><table class="lift-tbl"><thead><tr><th style="text-align:left">动作</th><th>重量 kg</th><th>次数</th><th>估算 1RM</th><th>变化</th></tr></thead><tbody id="liftBody"></tbody></table></div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap"><button class="btn primary" type="button" id="liftSave">保存重量基础</button><span class="small" id="liftMsg" role="status"></span></div>
+      </details>
+      <div id="gluteStr"></div>
     </div>
     <div class="parts" id="parts"></div>
     <span class="small muted" id="trOther"></span>
@@ -1006,11 +1024,11 @@ let logDate = TODAY;
 let range = 30;
 let calMonth = TODAY.slice(0, 7);
 
-function blank() { return { profile: { ...DEFAULT_PROFILE }, days: {}, whoop: {}, journal: {}, labs: [], reasons: [], body: [], sample: false, onboarded: false }; }
+function blank() { return { profile: { ...DEFAULT_PROFILE }, days: {}, whoop: {}, journal: {}, labs: [], reasons: [], body: [], lifts: {}, sample: false, onboarded: false }; }
 function load() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) { const s = JSON.parse(raw); if (s && s.days && s.profile) { s.profile = { ...DEFAULT_PROFILE, ...s.profile }; s.whoop = s.whoop || {}; s.journal = s.journal || {}; s.labs = s.labs || []; s.reasons = s.reasons || []; s.body = s.body || []; return s; } }
+    if (raw) { const s = JSON.parse(raw); if (s && s.days && s.profile) { s.profile = { ...DEFAULT_PROFILE, ...s.profile }; s.whoop = s.whoop || {}; s.journal = s.journal || {}; s.labs = s.labs || []; s.reasons = s.reasons || []; s.body = s.body || []; s.lifts = s.lifts || {}; return s; } }
   } catch (e) { /* storage unavailable */ }
   return makeSample();
 }
@@ -1470,7 +1488,7 @@ $('importBtn').addEventListener('click', () => {
   try {
     const s = JSON.parse($('backupText').value);
     if (!s || typeof s.days !== 'object' || typeof s.profile !== 'object') throw 0;
-    state = { profile: { ...DEFAULT_PROFILE, ...s.profile }, days: s.days, whoop: s.whoop || {}, journal: s.journal || {}, labs: s.labs || [], reasons: s.reasons || [], lock: s.lock || state.lock || null, countdown: s.countdown || state.countdown, body: s.body || [], sample: false, onboarded: true };
+    state = { profile: { ...DEFAULT_PROFILE, ...s.profile }, days: s.days, whoop: s.whoop || {}, journal: s.journal || {}, labs: s.labs || [], reasons: s.reasons || [], lock: s.lock || state.lock || null, countdown: s.countdown || state.countdown, body: s.body || [], lifts: s.lifts || {}, sample: false, onboarded: true };
     commit(); renderSettings(); $('backupMsg').textContent = '已恢复';
   } catch (e) { $('backupMsg').textContent = '恢复失败：文本不是有效的备份，请粘贴完整的备份内容'; }
 });
@@ -1587,7 +1605,7 @@ function context() {
 【最近14天】
 ${recent.join('\n')}
 【各阶段均值】
-${agg.join('\n')}${whAgg.length ? '\n【WHOOP 各阶段均值】\n' + whAgg.join('\n') : ''}${bodyCtx()}${combosCtx()}${labsCtx()}${moodCtx()}${P().about ? '\n【用户自述背景】\n' + P().about : ''}${state.sample ? '\n（注意：这些是示例数据）' : ''}`;
+${agg.join('\n')}${whAgg.length ? '\n【WHOOP 各阶段均值】\n' + whAgg.join('\n') : ''}${bodyCtx()}${liftsCtx()}${combosCtx()}${labsCtx()}${moodCtx()}${P().about ? '\n【用户自述背景】\n' + P().about : ''}${state.sample ? '\n（注意：这些是示例数据）' : ''}`;
 }
 function labsCtx() {
   const by = {}; for (const x of state.labs || []) if (!by[x.name] || by[x.name].date < x.date) by[x.name] = x;
@@ -1636,8 +1654,10 @@ function renderRefs(bodyEl, text, papers) {
 
 const RULES = `你是一位懂女性生理周期的营养与运动教练，用简体中文回答。语气温和、直接、具体，不说教，不制造焦虑，不鼓励极端节食。
 结合用户当前的周期阶段解释她的数据（例如黄体期代谢和食欲上升、经期精力偏低、卵泡期适合高强度训练）。给出可以马上执行的建议，数字要具体（kcal、克数、分钟数）。
-【最高目标】这个 app 的核心是帮她减脂增肌（身体重组），具体想要：瘦瘦的肚子、翘翘的屁股、宽宽的肩。所有饮食和训练建议都围绕这三点，并说明和目标的关系。
-· 训练：翘臀每周 2–3 次（臀推、罗马尼亚硬拉、保加利亚分腿蹲、髋外展、臀桥）；宽肩每周 2 次，侧平举是肩宽关键，配合推举、高位下拉/引体、反向飞鸟、划船，背阔变宽会让腰显得更细；平腹核心每周 2–3 次短时（死虫、Pallof 推、悬垂举腿、侧平板）。渐进超负荷，每组 6–20 次、离力竭 1–3 次。卵泡期冲重量，经前一周总量减 20–30%。
+【最高目标】这个 app 的核心是帮她减脂增肌（身体重组），具体想要：圆翘的臀部和很强的臀部力量；薄但有线条的背（不要厚、不要壮）；纤细的腿和腰。所有饮食和训练建议都围绕这些，并说明和目标的关系。
+· 动作选择：臀部以臀推、罗马尼亚硬拉、髋外展、臀向分腿蹲等髋主导动作为主，臀推做力量主项（5×5）和增肌（10–12 次）；为了腿细，少做大重量深蹲、腿举、腿屈伸，深蹲会让大腿前侧和内收肌长得更多 [E10]。背部用中等重量、10–15 次、控制离心练线条，不做耸肩和大重量杠铃划船。腰部练抗旋转和腹横肌，不做负重侧弯和大重量负重转体。
+· 重量：用【重量基础】里的估算 1RM 给出具体公斤数，没填时请她先填。
+· 频率：臀部每周 2–3 次，肩背每周 2 次，腰腹每周 2–3 次短时。渐进超负荷，每组 6–20 次、离力竭 1–3 次。卵泡期冲重量，经前一周总量减 20–30%。
 · 平坦小腹靠全身减脂，不存在局部减脂；少腹胀（经前、外卖、酒精、高盐）会让肚子明显更平。
 · 饮食：蛋白质每公斤体重约 2 g，分 4 餐左右吃；温和热量缺口，训练日和卵泡期多给碳水，黄体期缺口放小；不为了掉秤牺牲肌肉。体重不降但腰围降、臀围和肩围不掉，就是进步。
 有 WHOOP 数据时，用恢复分数、HRV、静息心率、睡眠来判断当天训练强度（例如恢复低于 34% 建议恢复性训练），并说明黄体期 HRV 下降、静息心率和体温升高是正常的周期现象。
@@ -1674,9 +1694,9 @@ async function run(label, prompt, { tier = 'default', live = false, chat = false
   }
 }
 
-$('aiToday').addEventListener('click', () => run('点评今天', '点评我今天的饮食和运动：先一句话总结，再给 2–3 条结合当前周期阶段、围绕瘦肚子/翘臀/宽肩的具体建议，最后告诉我今天剩下的时间怎么吃/动。220 字以内，关键建议标注研究编号。'));
+$('aiToday').addEventListener('click', () => run('点评今天', '点评我今天的饮食和运动：先一句话总结，再给 2–3 条结合当前周期阶段、围绕翘臀、薄背、细腿细腰的具体建议，最后告诉我今天剩下的时间怎么吃/动。220 字以内，关键建议标注研究编号。'));
 $('aiWeek').addEventListener('click', () => run('周期分析', '分析最近 14 天和各阶段均值：找出我的饮食和运动在不同周期阶段的规律（例如黄体期是否吃得多、经期是否运动少），指出 1 个做得好的地方和 2 个最值得改的地方，并给出下一个周期每个阶段的安排。350 字以内。', { tier: 'complex' }));
-$('aiTrain').addEventListener('click', () => run('今天练什么', '根据今天的周期阶段、WHOOP 恢复和睡眠、本周各部位已经练了几次，安排今天的训练：练哪个部位（优先补本周落后的翘臀/宽肩/平腹），优先从 app 里的训练组合中选（写明是哪个部位的哪个组合，比如“翘臀 A + 平腹 C”），需要时做小调整，写出每个动作的组数×次数和休息时间，总时长控制在 60 分钟内。如果今天更适合休息或轻练，直接说并给替代方案。'));
+$('aiTrain').addEventListener('click', () => run('今天练什么', '根据今天的周期阶段、WHOOP 恢复和睡眠、本周各部位已经练了几次，安排今天的训练：练哪个部位（优先补本周落后的臀部/肩背/腰腹），优先从 app 里的训练组合中选（写明是哪个部位的哪个组合，比如“翘臀 A + 平腹 C”），需要时做小调整，写出每个动作的组数×次数和休息时间，总时长控制在 60 分钟内。如果今天更适合休息或轻练，直接说并给替代方案。'));
 $('aiPlan').addEventListener('click', () => {
   const tmr = addDays(TODAY, 1), k = phaseOf(tmr);
   run('明天的计划', `明天是 ${tmr}，预计处于${PHASES[k.key].name}（周期第 ${k.cd ?? '?'} 天）。按这个阶段给我明天的三餐加一次加餐（每项写食物和大约 kcal，总热量贴近我的目标），再给一个适合这个阶段的运动安排（类型、时长、强度）。`);
@@ -1890,97 +1910,110 @@ $('sosTalk').addEventListener('click', () => {
 $('reasonForm').addEventListener('submit', e => { e.preventDefault(); const t = $('reasonIn').value.trim(); if (!t) return; state.reasons.push(t.slice(0, 120)); $('reasonIn').value = ''; save(); renderReasons(); });
 $('reasons').addEventListener('click', e => { const b = e.target.closest('[data-del-reason]'); if (!b) return; state.reasons.splice(Number(b.dataset.delReason), 1); save(); renderReasons(); });
 /* ---------- body goals: weekly training by target area ---------- */
-// Workout combos per target area. Doses are sets × reps; rest in seconds; cues are the points people most often miss.
+// Workout combos per target area, built around: round, strong glutes; a lean but defined back;
+// slim legs and waist. Moves: [name, dose, rest s, cue, liftKey, loadFactor]
+const LIFTS = [
+  { k: 'hipthrust', name: '杠铃臀推', step: 2.5, note: '含杠' },
+  { k: 'rdl', name: '罗马尼亚硬拉', step: 2.5, note: '含杠' },
+  { k: 'bss', name: '保加利亚分腿蹲', step: 1, note: '单手哑铃' },
+  { k: 'abductor', name: '坐姿髋外展机', step: 2.5, note: '' },
+  { k: 'pulldown', name: '高位下拉', step: 2.5, note: '' },
+  { k: 'dbpress', name: '坐姿哑铃推举', step: 1, note: '单手' },
+  { k: 'lateral', name: '哑铃侧平举', step: 1, note: '单手' },
+  { k: 'row', name: '单臂哑铃划船', step: 1, note: '单手' }
+];
 const PARTS = [
-  { k: 'glute', name: '翘臀', goal: 3, re: /臀|腿|深蹲|硬拉|桥|分腿|glute|leg|squat|deadlift/i, log: ['臀腿训练', 5.0],
+  { k: 'glute', name: '翘臀 · 臀部力量', goal: 3, re: /臀|腿|深蹲|硬拉|桥|分腿|glute|leg|squat|deadlift/i, log: ['臀腿训练', 5.0],
+    note: '腿要细：以臀推、硬拉这类髋主导动作为主，少做大重量深蹲、腿举和腿屈伸。臀推和深蹲练臀效果相近，但深蹲会让大腿前侧和内侧长得更多 [E10]。',
     combos: [
-      { id: 'A', name: '重量日', min: 55, when: '卵泡期、排卵期，恢复好的时候', moves: [
-        ['杠铃臀推', '4 × 6–8', 150, '顶端停 1 秒；下巴微收、肋骨下压，胫骨在顶端接近垂直；主项，每周争取加重 [E10]'],
-        ['罗马尼亚硬拉', '3 × 8', 120, '屁股往后推，杠贴着腿走；腘绳肌有拉伸感就停，背保持平直'],
-        ['保加利亚分腿蹲', '3 × 8/腿', 90, '前脚离凳子远一点、上身前倾约 30°，重心在前脚跟，更吃臀'],
-        ['坐姿髋外展机', '3 × 12–15', 60, '上身前倾趴在机器上，练臀中肌上部，让臀部侧面更圆'],
-        ['45° 臀向背伸', '2 × 12–15', 60, '脚尖外八、微微含胸，用臀把身体推起来，不要用腰']
-      ], alt: '没有杠铃：臀推机或史密斯臀推；硬拉换哑铃' },
-      { id: 'B', name: '容量日', min: 50, when: '黄体期前段，或想要泵感的时候', moves: [
-        ['宽站距深蹲（杠铃/史密斯）', '4 × 10', 120, '蹲到大腿低于平行，膝盖朝脚尖方向打开；深蹲和臀推练臀效果相近 [E10]'],
-        ['单腿臀推', '3 × 12/腿', 75, '弱侧先做，两侧次数一样'],
-        ['绳索后踢', '3 × 15/腿', 45, '上身前倾、骨盆不转，腿往斜后上方踢，顶端停 1 秒'],
-        ['哑铃反向箭步蹲', '3 × 10/腿', 75, '后退一大步，前腿发力站起'],
-        ['燃烧组：臀桥 → 弹力带外展', '2 轮 × 20 + 20', 60, '臀桥做 20 次，不休息立刻坐姿弹力带外展 20 次']
-      ], alt: '器械被占：深蹲换腿举（脚放高、宽站距）' },
+      { id: 'A', name: '力量日', min: 55, when: '卵泡期、排卵期，恢复好的时候', moves: [
+        ['杠铃臀推', '5 × 5', 180, '力量主项：顶端停 1 秒，下巴微收、肋骨下压；每周争取加 2.5 kg', 'hipthrust', 1],
+        ['罗马尼亚硬拉', '3 × 6–8', 150, '屁股往后推，杠贴腿走，腘绳肌拉伸到位就停，背保持平直', 'rdl', 1],
+        ['B 式臀推（单腿主导）', '3 × 8/腿', 90, '主力脚在前、另一只脚尖轻点地，用臀推约 45% 的重量', 'hipthrust', 0.45],
+        ['坐姿髋外展机', '3 × 12–15', 60, '上身前倾趴在机器上，练臀中肌上部，让臀部侧面更圆', 'abductor', 1],
+        ['45° 臀向背伸', '2 × 12–15', 60, '脚尖外八、微微含胸，用臀把身体推起来', '', 1]
+      ], alt: '没有杠铃：臀推机或史密斯臀推' },
+      { id: 'B', name: '增肌日', min: 50, when: '黄体期前段，或想要泵感的时候', moves: [
+        ['杠铃臀推', '4 × 10–12', 120, '比力量日轻，控制下放 2 秒，顶端停 1 秒', 'hipthrust', 1],
+        ['臀向保加利亚分腿蹲', '3 × 10/腿', 90, '前脚离凳子远、上身前倾约 30°，只蹲到大腿平行：多练臀、少练大腿前侧', 'bss', 1],
+        ['单腿罗马尼亚硬拉', '3 × 10/腿', 75, '一手扶墙也行，感觉臀部拉伸', 'rdl', 0.3],
+        ['绳索后踢', '3 × 15/腿', 45, '上身前倾、骨盆不转，往斜后上方踢，顶端停 1 秒', '', 1],
+        ['燃烧组：臀桥 → 弹力带外展', '2 轮 × 20 + 20', 60, '臀桥 20 次，不休息立刻坐姿弹力带外展 20 次', '', 1]
+      ], alt: '器械被占：分腿蹲换后撤步，也保持上身前倾' },
       { id: 'C', name: '居家哑铃', min: 40, when: '没去健身房的日子', moves: [
-        ['哑铃臀推（背靠沙发）', '4 × 12–15', 75, '重量不够就做慢：下放 3 秒、顶端停 2 秒，最后一组做到力竭'],
-        ['哑铃罗马尼亚硬拉', '3 × 12', 75, '单腿版更难：换单腿 3 × 8/腿'],
-        ['哑铃保加利亚分腿蹲（椅子）', '3 × 10/腿', 75, '下放 3 秒'],
-        ['弹力带蚌式 + 侧卧抬腿', '3 × 20/侧', 30, '两个动作连着做，练臀侧'],
-        ['单腿臀桥', '2 × 15/腿', 45, '支撑脚跟发力']
+        ['哑铃臀推（背靠沙发）', '4 × 12–15', 75, '重量不够就做慢：下放 3 秒、顶端停 2 秒，最后一组做到力竭', '', 1],
+        ['哑铃罗马尼亚硬拉', '3 × 12', 75, '想更难就换单腿 3 × 8/腿', '', 1],
+        ['臀向分腿蹲（椅子）', '3 × 10/腿', 75, '上身前倾，下放 3 秒', 'bss', 0.8],
+        ['弹力带蚌式 + 侧卧抬腿', '3 × 20/侧', 30, '两个动作连着做，练臀侧', '', 1],
+        ['单腿臀桥', '2 × 15/腿', 45, '支撑脚跟发力', '', 1]
       ], alt: '只有弹力带：所有臀推、臀桥都在膝上套弹力带' },
       { id: 'D', name: '经前轻量', min: 35, when: '经前一周、恢复低于 34%、经期没精神', moves: [
-        ['臀推', '3 × 10', 90, '用平时 70–80% 的重量，不做到力竭'],
-        ['高脚杯深蹲', '3 × 10', 75, '慢下快起'],
-        ['弹力带侧向走', '3 × 15 步/侧', 45, '保持半蹲、膝盖别内扣'],
-        ['鸟狗式', '2 × 8/侧', 30, '腰背稳定，缓解腰酸']
+        ['杠铃臀推', '3 × 10', 90, '平时 75% 左右的重量，不做到力竭', 'hipthrust', 0.75],
+        ['哑铃罗马尼亚硬拉', '2 × 12', 75, '轻重量找臀部拉伸感', '', 1],
+        ['弹力带侧向走', '3 × 15 步/侧', 45, '保持半蹲、膝盖别内扣', '', 1],
+        ['鸟狗式', '2 × 8/侧', 30, '腰背稳定，缓解腰酸', '', 1]
       ], alt: '实在累就换 30 分钟快走，一样算动了' }
     ] },
-  { k: 'shoulder', name: '宽肩', goal: 2, re: /肩|背|推举|引体|下拉|划船|shoulder|back|pull|press|row/i, log: ['肩背训练', 5.0],
+  { k: 'shoulder', name: '薄背有形 · 肩线', goal: 2, re: /肩|背|推举|引体|下拉|划船|shoulder|back|pull|press|row/i, log: ['肩背训练', 5.0],
+    note: '背要薄：中等重量、10–15 次、顶峰停 1 秒、下放 2–3 秒，练线条不堆厚度；不做耸肩和大重量杠铃划船，上斜方肌变大会让肩颈显得壮（经验建议）。侧平举让肩线更开，腰就显得更细。',
     combos: [
-      { id: 'A', name: '推举 + 侧束', min: 50, when: '恢复好的时候', moves: [
-        ['坐姿哑铃推举', '4 × 6–10', 120, '手肘在身体稍前方，不要后仰塌腰'],
-        ['哑铃侧平举', '4 × 12–20', 60, '肩宽的关键；小指一侧略高，耳朵远离肩膀，下放 2–3 秒'],
-        ['宽握高位下拉', '4 × 8–12', 90, '胸口迎向把手，先沉肩再拉；背阔变宽，腰就显细'],
-        ['俯身/器械反向飞鸟', '3 × 15', 60, '练后束，肩膀更立体、站姿更挺'],
-        ['绳索面拉', '3 × 15', 60, '拉向额头并外旋，保护肩关节']
-      ], alt: '没有器械：推举和侧平举都用哑铃，下拉换弹力带下拉' },
-      { id: 'B', name: '背宽 + 侧束', min: 50, when: '想练出倒三角', moves: [
-        ['辅助引体或反手下拉', '4 × 6–10', 120, '引体做不了就用辅助机或弹力带，慢慢减辅助'],
-        ['单臂哑铃划船', '3 × 10/侧', 75, '往髋部方向拉，不要耸肩'],
-        ['绳索单侧侧平举', '3 × 15/侧', 45, '绳索从身体前方交叉，全程有张力'],
-        ['直臂下压', '3 × 12–15', 60, '手臂微弯固定，用背阔把绳子压到大腿'],
-        ['侧平举递减组', '2 轮', 90, '做到力竭后立刻减重 30% 再做到力竭']
+      { id: 'A', name: '背阔线条 + 肩', min: 45, when: '恢复好的时候', moves: [
+        ['中握高位下拉', '3 × 10–12', 90, '先沉肩再拉，拉到锁骨，下放 3 秒；练出背阔下部的线条', 'pulldown', 1],
+        ['坐姿哑铃推举', '3 × 8–10', 120, '手肘在身体稍前方，不要后仰', 'dbpress', 1],
+        ['哑铃侧平举', '4 × 12–20', 60, '小指一侧略高，耳朵远离肩膀，下放 2–3 秒', 'lateral', 1],
+        ['俯身反向飞鸟', '3 × 15', 60, '练后束和上背，站姿更挺', 'lateral', 0.7],
+        ['绳索面拉', '3 × 15', 60, '拉向额头并外旋，保护肩关节、改善圆肩', '', 1]
+      ], alt: '没有器械：下拉换弹力带下拉' },
+      { id: 'B', name: '背部轮廓 + 体态', min: 45, when: '想让背部更有型', moves: [
+        ['辅助引体或反手下拉', '3 × 8–10', 120, '做不了引体就用辅助机，慢慢减辅助', 'pulldown', 1],
+        ['单臂哑铃划船', '3 × 12/侧', 75, '中等重量、往髋部方向拉、顶峰停 1 秒；练线条不追重量', 'row', 1],
+        ['直臂下压', '3 × 12–15', 60, '手臂微弯固定，用背阔把绳子压到大腿，背部轮廓更清楚', '', 1],
+        ['绳索单侧侧平举', '3 × 15/侧', 45, '绳索从身体前方交叉，全程有张力', '', 1],
+        ['俯身 Y 字举', '2 × 12', 45, '练下斜方肌，把肩胛往下收，脖子显得更长', '', 1]
       ], alt: '家里：门上固定弹力带做下拉和直臂下压' },
       { id: 'C', name: '居家', min: 35, when: '没去健身房的日子', moves: [
-        ['哑铃站姿推举', '4 × 10', 90, '臀和腹部收紧，别往后仰'],
-        ['哑铃侧平举', '4 × 15–20', 45, '轻重量也能练，靠次数和慢速'],
-        ['弹力带下拉', '3 × 15', 45, '门上固定，跪姿做'],
-        ['俯身哑铃划船', '3 × 12', 60, '背部平直'],
-        ['弹力带拉开', '3 × 20', 30, '手臂伸直往两侧拉开，练后束和上背']
+        ['哑铃站姿推举', '3 × 10', 90, '臀和腹部收紧，别往后仰', 'dbpress', 0.9],
+        ['哑铃侧平举', '4 × 15–20', 45, '轻重量也能练，靠次数和慢速', 'lateral', 0.8],
+        ['弹力带下拉', '3 × 15', 45, '门上固定，跪姿做', '', 1],
+        ['俯身哑铃划船', '3 × 12', 60, '背部平直，顶峰停 1 秒', 'row', 0.8],
+        ['弹力带拉开', '3 × 20', 30, '手臂伸直往两侧拉开，练后束和上背', '', 1]
       ], alt: '' },
       { id: 'D', name: '经前轻量', min: 30, when: '经前一周或恢复低', moves: [
-        ['哑铃侧平举', '3 × 15', 45, '用轻重量，做好动作'],
-        ['绳索面拉', '3 × 15', 45, ''],
-        ['高位下拉', '3 × 10', 75, '平时 70–80% 的重量'],
-        ['俯身 Y 字举', '2 × 12', 30, '徒手或 1 kg 小哑铃']
+        ['哑铃侧平举', '3 × 15', 45, '轻重量，做好动作', 'lateral', 0.75],
+        ['绳索面拉', '3 × 15', 45, '', '', 1],
+        ['高位下拉', '3 × 10', 75, '平时 75% 左右的重量', 'pulldown', 0.75],
+        ['俯身 Y 字举', '2 × 12', 30, '徒手或 1 kg 小哑铃', '', 1]
       ], alt: '' }
     ] },
-  { k: 'core', name: '平腹', goal: 3, re: /核心|腹|平板|core|abs|plank/i, log: ['核心训练', 3.8],
+  { k: 'core', name: '细腰 · 平腹', goal: 3, re: /核心|腹|平板|core|abs|plank/i, log: ['核心训练', 3.8],
+    note: '只练腹肌减不掉小腹脂肪 [E11]；细腰靠整体减脂、睡够觉 [E13]、少腹胀，核心训练负责收紧和姿态。不做负重侧弯和大重量负重转体，腹斜肌练粗会让腰显宽（经验建议）。',
     combos: [
       { id: 'A', name: '抗伸展 + 抗旋转', min: 15, when: '接在臀腿训练后面', moves: [
-        ['死虫', '3 × 8/侧', 45, '下背贴地，边伸腿边慢慢呼气'],
-        ['Pallof 抗旋推', '3 × 12/侧', 45, '绳索或弹力带在侧面，推出去时身体不被拉转'],
-        ['平板支撑', '3 × 30–45 秒', 45, '肋骨下压、臀部收紧，屁股不要翘高']
+        ['死虫', '3 × 8/侧', 45, '下背贴地，边伸腿边慢慢呼气', '', 1],
+        ['Pallof 抗旋推', '3 × 12/侧', 45, '推出去时身体不被拉转，练腹横肌和深层核心', '', 1],
+        ['RKC 平板支撑', '3 × 20–30 秒', 45, '全身用力：手肘往脚的方向拉、臀部夹紧，比普通平板更有效', '', 1]
       ], alt: '' },
-      { id: 'B', name: '下腹 + 侧腹', min: 15, when: '接在肩背训练后面', moves: [
-        ['悬垂举腿（或仰卧反向卷腹）', '3 × 10–12', 60, '用腹部把骨盆卷起来，不要甩腿'],
-        ['跪姿绳索卷腹', '3 × 12–15', 60, '把肋骨往骨盆方向卷，髋关节不动'],
-        ['侧平板', '3 × 30 秒/侧', 30, '身体成一直线，练腰线']
+      { id: 'B', name: '下腹', min: 15, when: '接在肩背训练后面', moves: [
+        ['悬垂举膝（或仰卧反向卷腹）', '3 × 10–12', 60, '用腹部把骨盆卷起来，不要甩腿', '', 1],
+        ['跪姿绳索卷腹', '3 × 12–15', 60, '中等重量，把肋骨往骨盆方向卷', '', 1],
+        ['侧平板（自重）', '2 × 30 秒/侧', 30, '只用自重，不加负重', '', 1]
       ], alt: '' },
-      { id: 'C', name: '负重行走', min: 12, when: '任何一天的收尾', moves: [
-        ['农夫行走', '4 × 30 米', 60, '双手重哑铃，挺胸收腹走直线'],
-        ['单侧提重物行走', '3 × 20 米/侧', 60, '只提一边，身体不能歪，练侧腹'],
-        ['熊爬', '3 × 10 米', 45, '膝盖离地一拳高，背上像放了一杯水']
+      { id: 'C', name: '腹横肌 + 体态', min: 12, when: '任何一天的收尾', moves: [
+        ['腹部真空', '5 × 15–20 秒', 20, '呼尽气后把肚脐往脊柱方向吸住，练腹横肌，让腰腹更收', '', 1],
+        ['鸟狗式', '3 × 8/侧', 30, '背上像放了一杯水', '', 1],
+        ['双手农夫行走', '3 × 30 米', 60, '两手对称提重物，挺胸收腹走直线，练核心稳定和体态', '', 1]
       ], alt: '' },
       { id: 'D', name: '呼吸 + 收腹', min: 6, when: '每天都能做，经前腹胀时特别有用', moves: [
-        ['90/90 呼吸', '5 次', 0, '仰卧、小腿放在椅子上，鼻吸 4 秒、嘴呼 6–8 秒，呼气时肋骨往下收'],
-        ['腹部真空', '5 × 15 秒', 15, '呼尽气后把肚脐往脊柱方向吸住'],
-        ['猫牛式', '10 次', 0, '配合呼吸，放松下背']
+        ['90/90 呼吸', '5 次', 0, '仰卧、小腿放在椅子上，鼻吸 4 秒、嘴呼 6–8 秒，呼气时肋骨往下收', '', 1],
+        ['腹部真空', '5 × 15 秒', 15, '', '', 1],
+        ['猫牛式', '10 次', 0, '配合呼吸，放松下背', '', 1]
       ], alt: '' }
     ] }
 ];
-const PART_NOTE = { glute: '', shoulder: '侧平举是肩宽最直接的动作，每次肩背训练都做。', core: '只练腹肌减不掉小腹脂肪 [E11]；平坦小腹靠整体减脂、睡够觉 [E13]、少腹胀，核心训练负责收紧和姿态。' };
 const WEEK_PLANS = {
-  3: [['周一', ['翘臀 A', '平腹 A']], ['周三', ['宽肩 A', '平腹 B']], ['周五', ['翘臀 B', '宽肩：侧平举 4 组', '平腹 C']], ['其他日子', ['每天 8000 步以上', '平腹 D 随时做']]],
-  4: [['周一', ['翘臀 A', '平腹 A']], ['周二', ['宽肩 A']], ['周四', ['翘臀 B', '平腹 C']], ['周五', ['宽肩 B', '平腹 B']], ['其他日子', ['快走或轻松有氧 30 分钟', '平腹 D']]],
-  5: [['周一', ['翘臀 A']], ['周二', ['宽肩 A', '平腹 A']], ['周三', ['休息或快走']], ['周四', ['翘臀 B', '平腹 B']], ['周五', ['宽肩 B']], ['周六', ['翘臀 C（居家）', '平腹 C']], ['周日', ['休息']]]
+  3: [['周一', ['翘臀 A 力量日', '细腰 A']], ['周三', ['肩背 A', '细腰 B']], ['周五', ['翘臀 B 增肌日', '肩背：侧平举 4 组 + 面拉 3 组', '细腰 C']], ['其他日子', ['每天 8000 步以上', '细腰 D 随时做']]],
+  4: [['周一', ['翘臀 A 力量日', '细腰 A']], ['周二', ['肩背 A']], ['周四', ['翘臀 B 增肌日', '细腰 C']], ['周五', ['肩背 B', '细腰 B']], ['其他日子', ['快走或上坡走 30 分钟', '细腰 D']]],
+  5: [['周一', ['翘臀 A 力量日']], ['周二', ['肩背 A', '细腰 A']], ['周三', ['快走或休息']], ['周四', ['翘臀 B 增肌日', '细腰 B']], ['周五', ['肩背 B']], ['周六', ['翘臀 C 或臀推加练', '细腰 C']], ['周日', ['休息']]]
 };
 let planDays = 4;
 const restTxt = r => r < 60 ? `${r} 秒` : r % 60 ? `${Math.floor(r / 60)} 分 ${r % 60} 秒` : `${r / 60} 分`;
@@ -1989,6 +2022,20 @@ function recCombo(ph, w) {
   if ((w && w.recovery != null && w.recovery < 34) || (ph.key === 'lut' && ph.cd && ph.cd >= CS.len - 6)) return 'D';
   if (ph.key === 'fol' || ph.key === 'ovu') return 'A';
   return 'B';
+}
+/* strength base: estimated 1RM (Epley) and prescribed loads */
+const liftLatest = k => { const h = ((state.lifts || {})[k] || []); return h.length ? h[h.length - 1] : null; };
+const liftFirst = k => { const h = ((state.lifts || {})[k] || []); return h.length ? h[0] : null; };
+const e1rm = x => x && x.w > 0 && x.r > 0 ? x.w * (1 + Math.min(x.r, 15) / 30) : null;
+function loadFor(liftKey, dose, factor) {
+  const L = LIFTS.find(l => l.k === liftKey), x = liftLatest(liftKey), one = e1rm(x);
+  if (!L || !one) return null;
+  const m = String(dose).match(/×\s*(\d+)(?:\s*[–-]\s*(\d+))?/); if (!m) return null;
+  const hi = Number(m[2] || m[1]);
+  // leave about two reps in reserve at the top of the range
+  const raw = one / (1 + (hi + 2) / 30) * (factor || 1);
+  const v = Math.max(L.step, Math.round(raw / L.step) * L.step);
+  return { kg: +v.toFixed(1), perHand: /单手/.test(L.note) };
 }
 function weekStart(d) { const w = parse(d).getDay(); return addDays(d, -((w + 6) % 7)); }
 function partCounts() {
@@ -2018,14 +2065,15 @@ function renderTraining() {
       </div>
       <div class="combos" role="group" aria-label="${p.name}训练组合">${p.combos.map(x => `<button type="button" data-combo="${p.k}:${x.id}" aria-pressed="${x.id === cb.id}">${x.id} ${x.name}${x.id === recId ? '<span class="rec">今天推荐</span>' : ''}</button>`).join('')}</div>
       <span class="combo-meta">约 ${cb.min} 分钟 · 适合：${cb.when}</span>
-      <ol class="moves">${cb.moves.map(([n, d, r, cue]) => `<li><span class="mv-name">${n}</span><span class="mv-dose">${d}${r ? `<span class="small muted"> · 休 ${restTxt(r)}</span>` : ''}</span>${cue ? `<span class="mv-cue">${cue.replace(/ \[E\d+\]/g, '')}</span>` : ''}</li>`).join('')}</ol>
+      <ol class="moves">${cb.moves.map(([n, d, r, cue, lk, f]) => { const ld = lk ? loadFor(lk, d, f) : null; return `<li><span class="mv-name">${n}</span><span class="mv-dose">${d}${r ? `<span class="small muted"> · 休 ${restTxt(r)}</span>` : ''}</span>${ld ? `<span class="mv-load">建议 ${ld.kg} kg${ld.perHand ? '（单手）' : ''}</span>` : ''}${cue ? `<span class="mv-cue">${cue.replace(/ \[E\d+\]/g, '')}</span>` : ''}</li>`; }).join('')}</ol>
       ${cb.alt ? `<span class="small mv-alt">替换：${cb.alt}</span>` : ''}
       <div class="part-foot">
-        <span class="small muted">加重规则：所有组都做到次数上限，下次加重（臀推/硬拉 +2.5–5 kg，哑铃 +1 kg）。${p.k === 'shoulder' ? PART_NOTE.shoulder : p.k === 'core' ? PART_NOTE.core.replace(/ \[E\d+\]/g, '') : ''}</span>
+        <span class="small muted">${p.note.replace(/ \[E\d+\]/g, '')} 加重规则：所有组都做到次数上限，就在「我的重量基础」更新，建议重量会自动变。</span>
         <button class="btn primary" type="button" data-part="${p.k}:${cb.id}">完成这组训练 · ${cb.min} 分钟</button>
       </div>
     </div>`;
   }).join('');
+  renderLifts();
   $('trOther').textContent = c.other ? `本周还有 ${c.other} 次没标部位的力量训练（比如 WHOOP 导入的），在记录里新加一条对应部位就能算进来。` : '';
   $('planTabs').innerHTML = [3, 4, 5].map(n => `<button class="btn${n === planDays ? ' primary' : ''}" type="button" data-plan="${n}">每周 ${n} 天</button>`).join('');
   $('planBody').innerHTML = WEEK_PLANS[planDays].map(([d, items]) => `<tr><td>${d}</td><td>${items.map(t => `<span class="tag">${t}</span>`).join('')}</td></tr>`).join('');
@@ -2041,6 +2089,41 @@ $('parts').addEventListener('click', e => {
   onLogged(`${type} ${cb.min} 分钟`);
 });
 $('planTabs').addEventListener('click', e => { const b = e.target.closest('[data-plan]'); if (!b) return; planDays = Number(b.dataset.plan); renderTraining(); });
+
+function renderLifts() {
+  const have = LIFTS.filter(l => liftLatest(l.k));
+  $('liftSum').textContent = have.length ? `已填 ${have.length}/${LIFTS.length} 个动作，训练动作会显示建议重量` : '还没填，填了以后每个动作会显示建议重量';
+  if (!$('liftWrap').open || !$('liftBody').children.length) {
+    $('liftBody').innerHTML = LIFTS.map(l => { const x = liftLatest(l.k), f = liftFirst(l.k), one = e1rm(x), d = x && f && x !== f ? e1rm(x) - e1rm(f) : null;
+      return `<tr><td style="text-align:left">${l.name}${l.note ? ` <span class="small muted">${l.note}</span>` : ''}</td><td><input type="number" step="0.5" min="0" data-lw="${l.k}" value="${x ? x.w : ''}" aria-label="${l.name} 重量"></td><td><input type="number" step="1" min="1" max="30" data-lr="${l.k}" value="${x ? x.r : ''}" aria-label="${l.name} 次数"></td><td class="num">${one ? one.toFixed(1) : '—'}</td><td class="num small ${d > 0 ? 'good' : ''}" style="${d > 0 ? 'color:var(--good)' : ''}">${d ? (d > 0 ? '+' : '') + d.toFixed(1) : '—'}</td></tr>`; }).join('');
+  }
+  // glute strength relative to body weight
+  const ht = e1rm(liftLatest('hipthrust')), bw = Number(P().weight) || 0;
+  if (ht && bw) {
+    const ratio = ht / bw, max = 2.7, pct = Math.min(100, ratio / max * 100);
+    const next = [1, 1.5, 2, 2.5].find(m => m > ratio);
+    $('gluteStr').innerHTML = `<div class="gstr"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>臀部力量：臀推估算 1RM ${ht.toFixed(0)} kg = 体重的 ${ratio.toFixed(2)} 倍</b><span class="small muted">${next ? `下一个目标 ${next} 倍（${Math.round(next * bw)} kg）` : '已经超过 2.5 倍体重，非常强'}</span></div>
+      <div class="gstr-bar"><div style="width:${pct}%"></div></div>
+      <div class="gstr-marks">${[1, 1.5, 2, 2.5].map(m => `<span style="left:${m / max * 100}%">${m}×</span>`).join('')}</div></div>`;
+  } else $('gluteStr').innerHTML = '<span class="small muted">填上杠铃臀推的重量和次数，这里会显示你的臀部力量是体重的几倍。</span>';
+}
+$('liftSave').addEventListener('click', () => {
+  state.lifts = state.lifts || {}; let n = 0;
+  for (const l of LIFTS) {
+    const w = Number(document.querySelector(`[data-lw="${l.k}"]`).value), r = Number(document.querySelector(`[data-lr="${l.k}"]`).value);
+    if (!(w > 0 && r > 0)) continue;
+    const h = state.lifts[l.k] || (state.lifts[l.k] = []), last = h[h.length - 1];
+    if (last && last.w === w && last.r === r) continue;
+    if (last && last.date === TODAY) h.pop();
+    h.push({ date: TODAY, w, r }); n++;
+  }
+  save(); $('liftBody').innerHTML = ''; renderTraining();
+  $('liftMsg').textContent = n ? `已更新 ${n} 个动作，建议重量已重新计算` : '没有变化';
+});
+function liftsCtx() {
+  const have = LIFTS.map(l => { const x = liftLatest(l.k); return x ? `${l.name}${l.note ? '(' + l.note + ')' : ''} ${x.w}kg×${x.r}（估算1RM ${e1rm(x).toFixed(1)}kg）` : null; }).filter(Boolean);
+  return have.length ? '\n【重量基础】' + have.join('；') : '\n【重量基础】还没填写';
+}
 
 /* ---------- body progress ---------- */
 const BODY = [
@@ -2077,7 +2160,7 @@ function combosCtx() { return '\n【app 里的训练组合】' + PARTS.map(p => 
 function bodyCtx() {
   const rows = (state.body || []).slice().sort((a, b) => a.date.localeCompare(b.date));
   const c = partCounts();
-  let t = `\n【本周训练】翘臀 ${c.glute}/3 次，宽肩 ${c.shoulder}/2 次，平腹核心 ${c.core}/3 次，未标部位的力量训练 ${c.other} 次。`;
+  let t = `\n【本周训练】臀部 ${c.glute}/3 次，肩背 ${c.shoulder}/2 次，腰腹 ${c.core}/3 次，未标部位的力量训练 ${c.other} 次。`;
   if (rows.length) { const f = rows[0], l = rows[rows.length - 1]; t += `\n【身材进度】起点 ${f.date}：体重${f.weight ?? '-'} 腰${f.waist ?? '-'} 臀${f.hip ?? '-'} 肩${f.shoulder ?? '-'}；最近 ${l.date}：体重${l.weight ?? '-'} 腰${l.waist ?? '-'} 臀${l.hip ?? '-'} 肩${l.shoulder ?? '-'}。`; }
   return t;
 }
@@ -2123,7 +2206,7 @@ async function deepAsk(q) {
     const plan = await askJSON(`把下面这个健康问题转换成 PubMed 英文检索式，用于查找人体研究（优先系统综述、荟萃分析、随机对照试验）。
 只回复 JSON：{"queries":["...","..."]}，给 1–2 条，每条 3–6 个英文关键词，可以用 AND/OR；和女性相关时加 (women OR female)。不要加日期和期刊限制。
 问题：${q}
-背景：31 岁女性，目标减脂增肌（瘦小腹、翘臀、宽肩），规律力量训练。`, { modelTier: 'quick', signal });
+背景：31 岁女性，目标减脂增肌（翘臀和臀部力量、薄而有型的背、细腿细腰），规律力量训练。`, { modelTier: 'quick', signal });
     const queries = (Array.isArray(plan && plan.queries) ? plan.queries : []).map(String).filter(Boolean).slice(0, 2);
     if (!queries.length) queries.push(q);
     body.textContent = `正在检索 PubMed：${queries.join('  /  ')}`;
@@ -2146,7 +2229,7 @@ async function deepAsk(q) {
     body.textContent = papers.length ? `正在阅读 ${papers.length} 篇论文摘要并整理回答…` : '没检索到合适的论文，改用内置证据库回答…';
     const lit = papers.map(x => `[${x.id}] ${x.cite}（${x.types || '文章'}）《${x.title}》\n摘要：${x.abstract}`).join('\n\n');
     const prompt = `${RULES}\n\n${context()}\n\n【PubMed 实时检索结果】\n${lit || '（没有检索到相关论文）'}\n\n【任务】回答用户的问题：${q}
-要求：优先依据上面的 [P#] 论文摘要，也可以用证据库里的 [E#]。每个关键结论后标编号，并说明研究类型（荟萃分析、随机对照试验、综述、观察性研究）、受试者是谁（是否女性、是否有训练经验）以及主要数字。只使用摘要里真实出现的信息，不要补充摘要里没有的数字或结论。最后用 2–3 条告诉她结合自己的目标（瘦小腹、翘臀、宽肩）具体怎么做，并说明证据强弱和局限。450 字以内。`;
+要求：优先依据上面的 [P#] 论文摘要，也可以用证据库里的 [E#]。每个关键结论后标编号，并说明研究类型（荟萃分析、随机对照试验、综述、观察性研究）、受试者是谁（是否女性、是否有训练经验）以及主要数字。只使用摘要里真实出现的信息，不要补充摘要里没有的数字或结论。最后用 2–3 条告诉她结合自己的目标（翘臀和臀部力量、薄而有型的背、细腿细腰）具体怎么做，并说明证据强弱和局限。450 字以内。`;
     const { text } = await ask(prompt, { signal, modelTier: 'default', cache: false, onText: ({ text }) => { body.textContent = text; $('feed').scrollTop = $('feed').scrollHeight; } });
     body.textContent = text; renderRefs(body, text, byId);
     AI.turns.push({ role: 'user', content: q }, { role: 'assistant', content: text });
@@ -2205,7 +2288,7 @@ function renderCountdown() {
   const done = Math.max(0, Math.min(100, n));
   $('cdDay').textContent = n < 1 ? `还有 ${1 - n} 天开始` : n > 100 ? '100 天完成' : `第 ${n} 天`;
   $('cdOf').textContent = n >= 1 && n <= 100 ? `/ 100 · 还剩 ${100 - n} 天` : '';
-  $('cdGoal').textContent = `目标：${c.goal || '瘦瘦的肚子 · 翘翘的屁股 · 宽宽的肩'}`;
+  $('cdGoal').textContent = `目标：${c.goal || '翘臀和强大的臀部力量 · 薄而有型的背 · 细腿细腰'}`;
   $('cdRange').textContent = `${fmtMD(c.start)} → ${fmtMD(end)}`;
   let g = ''; for (let i = 1; i <= 100; i++) g += `<i class="${i < n ? 'done' : i === n ? 'now' : ''}"></i>`;
   $('cdGrid').innerHTML = g;
