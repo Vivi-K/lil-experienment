@@ -468,6 +468,20 @@ details.paste textarea{width:100%;min-height:120px;border:1px solid var(--line);
 .why-list{margin:10px 0 0;padding-left:20px;display:grid;gap:8px;font-size:15px}
 .why-list a{color:var(--accent);text-decoration:none;font-size:13px}
 /* Period card */
+.wq{display:grid;gap:12px}
+.wq-head{display:flex;gap:12px;align-items:center}
+.wq-head>div{flex:1}
+.wq-head b{font-size:19px;letter-spacing:-.02em}
+.wq-ring{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;color:#fff;flex:none;background:var(--ink3)}
+.wq-ring.g{background:#16A34A}.wq-ring.y{background:#D4A106}.wq-ring.r{background:#DC2626}
+.wq-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:560px){.wq-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.wq-grid label{display:grid;gap:4px;font-size:13px;color:var(--ink2)}
+.wq-grid input{width:100%;padding:9px 12px;font-size:17px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);min-width:0}
+.wq-grid .grp{grid-column:1/-1;font-size:12px;font-weight:600;color:var(--ink2);letter-spacing:.02em;margin-top:2px}
+.wq-sum{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;color:var(--ink2)}
+.wq-sum b{color:var(--ink)}
+.wq-foot{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .pc{display:grid;gap:12px}
 .pc-head{display:flex;gap:12px;align-items:center}
 .pc-head b{font-size:19px;letter-spacing:-.02em}
@@ -595,6 +609,11 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
         <span class="small muted" id="pcSaved" role="status"></span>
       </div>
     </div>
+  </section>
+
+  <!-- DAILY WHOOP -->
+  <section class="block" aria-label="今天的 WHOOP">
+    <div class="panel wq" id="wq"></div>
   </section>
 
   <!-- MEALS -->
@@ -1621,7 +1640,7 @@ function renderSettings() { for (const [id, k] of Object.entries(SETS)) $(id).va
 function renderAll() {
   CS = cycleStats();
   $('sampleBar').hidden = !state.sample;
-  renderCountdown(); renderPeriod(); renderHero(); renderWorkout(); renderMeals(); renderTraining(); renderBody(); renderCheckin(); renderLogger(); renderChart(); renderWhoop(); renderPhases(); renderCalendar(); renderLabs();
+  renderCountdown(); renderPeriod(); renderWhoopQuick(); renderHero(); renderWorkout(); renderMeals(); renderTraining(); renderBody(); renderCheckin(); renderLogger(); renderChart(); renderWhoop(); renderPhases(); renderCalendar(); renderLabs();
 }
 function commit() { save(); renderAll(); }
 function setLogDate(d) { logDate = d > TODAY ? TODAY : d; calMonth = logDate.slice(0, 7); renderLogger(); renderCalendar(); }
@@ -2883,6 +2902,62 @@ $('pcToggle').addEventListener('click', () => {
   const snap = JSON.stringify(state), r = ensure(pcDate); r.period = !r.period;
   if (!r.period) { delete r.flow; delete r.pain; delete r.periodSavedAt; }
   commit(); offerUndo(r.period ? `已标记 ${fmtMD(pcDate)} 是经期` : `已取消 ${fmtMD(pcDate)} 的经期标记`, snap);
+});
+/* ---------- daily WHOOP quick entry: today's morning numbers + yesterday's strain/burn ---------- */
+let wqEdit = false;
+const recCls = v => v == null ? '' : v >= 67 ? 'g' : v >= 34 ? 'y' : 'r';
+function parseSleep(v) {
+  const t = String(v || '').trim(); if (!t) return null;
+  let m = t.match(/^(\d{1,2})\s*[:：h小时]\s*(\d{1,2})?\s*(m|分钟?)?$/i); if (m) return Number(m[1]) * 60 + Number(m[2] || 0);
+  const n = Number(t); return n > 0 && n < 24 ? Math.round(n * 60) : null;
+}
+const sleepTxt = m => m == null ? '' : `${Math.floor(m / 60)}:${pad(m % 60)}`;
+function renderWhoopQuick() {
+  const yd = addDays(TODAY, -1), w = wh(TODAY) || {}, wy = wh(yd) || {};
+  const has = w.recovery != null || w.hrv != null || w.sleepMin != null;
+  const cls = recCls(w.recovery);
+  const tip = w.recovery == null ? '' : w.recovery >= 67 ? '恢复很好，今天可以冲重量' : w.recovery >= 34 ? '恢复一般，按计划练，别硬冲最后几次' : '恢复偏低，今天练轻量或散步就好';
+  if (has && !wqEdit) {
+    $('wq').innerHTML = `<div class="wq-head"><span class="wq-ring ${cls}">${w.recovery != null ? w.recovery + '%' : '—'}</span><div style="display:grid;gap:2px;min-width:0"><b>今天的 WHOOP</b><span class="small muted">${tip || '已记录'}${w.at ? ` · ${hhmm(w.at)} 同步` : ''}</span></div></div>
+      <div class="wq-sum">${w.hrv != null ? `<span>HRV <b>${w.hrv}</b> ms</span>` : ''}${w.rhr != null ? `<span>静息心率 <b>${w.rhr}</b></span>` : ''}${w.sleepMin != null ? `<span>睡眠 <b>${(w.sleepMin / 60).toFixed(1)}</b> h</span>` : ''}${wy.strain != null ? `<span>昨天 Strain <b>${wy.strain}</b></span>` : ''}${wy.kcal != null ? `<span>昨天消耗 <b>${fmt(wy.kcal)}</b> kcal</span>` : ''}</div>
+      <div class="wq-foot"><span class="pill ok">✓ 今天已同步</span><button class="btn ghost" type="button" id="wqEdit">修改</button></div>`;
+    return;
+  }
+  const v = x => x == null ? '' : x;
+  $('wq').innerHTML = `<div class="wq-head"><span class="wq-ring ${cls}">${w.recovery != null ? w.recovery + '%' : 'W'}</span><div style="display:grid;gap:2px;min-width:0"><b>今天的 WHOOP</b><span class="small muted">起床后打开 WHOOP，照着填，约 20 秒；不知道的可以空着</span></div></div>
+    <div class="wq-grid">
+      <span class="grp">今天早上</span>
+      <label>恢复 %<input id="wqRec" type="number" inputmode="numeric" min="0" max="100" value="${v(w.recovery)}" placeholder="例如 62"></label>
+      <label>HRV（ms）<input id="wqHrv" type="number" inputmode="numeric" min="5" max="250" value="${v(w.hrv)}" placeholder="例如 55"></label>
+      <label>静息心率<input id="wqRhr" type="number" inputmode="numeric" min="30" max="120" value="${v(w.rhr)}" placeholder="例如 58"></label>
+      <label>睡眠时长<input id="wqSleep" type="text" inputmode="decimal" value="${sleepTxt(w.sleepMin)}" placeholder="7:20 或 7.3"></label>
+      <span class="grp">昨天全天</span>
+      <label>Strain<input id="wqStrain" type="number" inputmode="decimal" step="0.1" min="0" max="21" value="${v(wy.strain)}" placeholder="例如 11.4"></label>
+      <label>消耗 kcal<input id="wqKcal" type="number" inputmode="numeric" min="800" max="6000" value="${v(wy.kcal)}" placeholder="例如 2050"></label>
+    </div>
+    <div class="wq-foot"><button class="btn primary" type="button" id="wqSave">确认同步</button>${has ? '<button class="btn ghost" type="button" id="wqCancel">取消</button>' : ''}<span class="small muted" id="wqMsg" role="status">昨天的消耗会替代估算，用来算昨天的热量差</span></div>`;
+}
+$('wq').addEventListener('click', e => {
+  if (e.target.id === 'wqEdit') { wqEdit = true; renderWhoopQuick(); return; }
+  if (e.target.id === 'wqCancel') { wqEdit = false; renderWhoopQuick(); return; }
+  if (e.target.id !== 'wqSave') return;
+  const n = (id, lo, hi, dec) => { const t = $(id).value.trim(); if (!t) return undefined; const x = Number(t); return x >= lo && x <= hi ? (dec ? +x.toFixed(1) : Math.round(x)) : NaN; };
+  const vals = { recovery: n('wqRec', 0, 100), hrv: n('wqHrv', 5, 250), rhr: n('wqRhr', 30, 120) };
+  const st = n('wqStrain', 0, 21, true), kc = n('wqKcal', 800, 6000);
+  const sl = $('wqSleep').value.trim() ? parseSleep($('wqSleep').value) : undefined;
+  if (Object.values(vals).concat([st, kc]).some(x => Number.isNaN(x)) || sl === null) { $('wqMsg').textContent = '有个数字看起来不对，检查一下范围（恢复 0–100，Strain 0–21，睡眠像 7:20）。'; return; }
+  if (Object.values(vals).concat([st, kc, sl]).every(x => x === undefined)) { $('wqMsg').textContent = '至少填一个数字。'; return; }
+  const snap = JSON.stringify(state), W = state.whoop || (state.whoop = {}), yd = addDays(TODAY, -1);
+  const t = W[TODAY] || (W[TODAY] = {});
+  for (const [k, x] of Object.entries(vals)) if (x !== undefined) t[k] = x;
+  if (sl !== undefined) t.sleepMin = sl;
+  t.at = Date.now(); t.manual = true;
+  if (st !== undefined || kc !== undefined) { const y = W[yd] || (W[yd] = {}); if (st !== undefined) y.strain = st; if (kc !== undefined) y.kcal = kc; y.manual = true; }
+  // re-plan today's workout with the new recovery, unless it was already started or confirmed
+  const r = ensure(TODAY), ss = r.session, fresh = ss && !ss.finished && !ss.confirmed && !Object.values(ss.sets || {}).some(v => v.d) && !(ss.cardio && ss.cardio.d);
+  if (fresh) delete r.session;
+  wqEdit = false; commit();
+  offerUndo(`已同步今天的 WHOOP${t.recovery != null ? ` · 恢复 ${t.recovery}%` : ''}${fresh && t.recovery != null && t.recovery < 34 ? '，训练已换成轻量' : ''}`, snap);
 });
 $('pcSave').addEventListener('click', () => {
   const snap = JSON.stringify(state), r = ensure(pcDate);
