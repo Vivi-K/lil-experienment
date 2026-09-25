@@ -264,24 +264,83 @@ td.bar-cell{width:34%;min-width:110px}
 .lock-bar{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
 .lock-form{display:grid;gap:10px;max-width:420px}
 .lock-form input{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:9px 12px;font-size:16px;color:var(--ink)}
+/* Countdown */
+.cd{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px 24px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+@media (max-width:640px){.cd{grid-template-columns:1fr}}
+.cd-top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.cd-day{font-family:var(--display);font-weight:700;font-size:40px;line-height:1}
+.cd-goal{font-size:14px;color:var(--ink2)}
+.cd-grid{display:grid;grid-template-columns:repeat(20,12px);gap:3px}
+@media (max-width:640px){.cd-side{justify-items:stretch!important}.cd-grid{grid-template-columns:repeat(20,minmax(0,1fr));width:100%}.cd-side .btn{justify-self:start}}
+.cd-grid i{aspect-ratio:1/1;border-radius:3px;background:var(--sunk)}
+.cd-grid i.done{background:var(--accent)}
+.cd-grid i.now{background:var(--surface);outline:2px solid var(--accent);outline-offset:-2px}
+.quote{grid-column:1/-1;border-top:1px solid var(--line);padding-top:12px;display:grid;gap:4px}
+.quote q{font-family:var(--display);font-size:17px;line-height:1.5;quotes:"“" "”"}
+.quote cite{font-style:normal;font-size:12px;color:var(--ink3)}
+.quote .qbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.cd-edit{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.cd-edit input{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 10px;color:var(--ink)}
+/* Tabs */
+.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;display:flex;gap:4px;background:var(--bg);padding-block:6px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{border:0;background:transparent;padding:8px 14px;border-radius:8px;font-size:15px;color:var(--ink2);white-space:nowrap}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.tab-panel{display:grid;gap:28px}
+/* Lab comparison */
+.lab-tbl td.v{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.lab-tbl td.v.hi{color:var(--warn);font-weight:600}
+.lab-tbl td.v.lo{color:var(--p-fol);font-weight:600}
+.lab-tbl th.d{font-family:var(--mono)}
+.lab-tbl td.v button{opacity:.25}
+.lab-tbl tr:hover td.v button,.lab-tbl td.v button:focus-visible{opacity:1}
+.lab-tbl td.name{white-space:normal;min-width:120px}
+details.paste summary{cursor:pointer;font-size:14px;color:var(--ink2)}
+details.paste textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-family:var(--mono);font-size:12px;padding:8px;margin-top:8px}
 .confirm{display:inline-flex;gap:8px;align-items:center;font-size:14px}
 @media (prefers-reduced-motion:no-preference){.meter div,.hbar{transition:width .3s ease}}
 </style>
 
 <div class="wrap">
   <header class="top">
-    <div>
-      <h1>月相能量账本</h1>
-      <p class="muted">把每天吃进去的、动掉的热量，放回你的月经周期里看。</p>
-    </div>
+    <h1>月相能量账本</h1>
     <div class="label" id="todayLabel"></div>
   </header>
+
+  <section class="cd" aria-label="100 天倒数">
+    <div style="display:grid;gap:8px;min-width:0">
+      <div class="cd-top"><span class="cd-day" id="cdDay"></span><span class="muted" id="cdOf"></span></div>
+      <span class="cd-goal" id="cdGoal"></span>
+      <span class="small muted" id="cdRange"></span>
+    </div>
+    <div class="cd-side" style="display:grid;gap:6px;justify-items:end">
+      <div class="cd-grid" id="cdGrid" aria-hidden="true"></div>
+      <button class="btn ghost" type="button" id="cdEditBtn" style="font-size:13px">修改开始日期和目标</button>
+    </div>
+    <form class="cd-edit" id="cdEdit" hidden>
+      <label class="small">开始日期 <input type="date" id="cdStart" required></label>
+      <input id="cdGoalIn" placeholder="这 100 天的目标，例如：更强壮、更平静" maxlength="40" style="flex:1 1 220px" aria-label="100 天目标">
+      <button class="btn primary" type="submit">保存</button>
+      <button class="btn ghost" type="button" id="cdCancel">取消</button>
+    </form>
+    <div class="quote">
+      <q id="qText"></q>
+      <div class="qbar"><cite id="qSrc"></cite><button class="btn ghost" type="button" id="qNext" style="font-size:13px">换一句</button></div>
+    </div>
+  </section>
+
+  <nav class="tabs" role="tablist" aria-label="页面">
+    <button type="button" role="tab" data-tab="today" aria-selected="true">今天</button>
+    <button type="button" role="tab" data-tab="insight" aria-selected="false">分析</button>
+    <button type="button" role="tab" data-tab="coach" aria-selected="false">AI 教练</button>
+    <button type="button" role="tab" data-tab="me" aria-selected="false">我的</button>
+  </nav>
 
   <div class="sample" id="sampleBar" hidden>
     <span>现在显示的是<b>示例数据</b>（虚构的约 3 个月记录，含 WHOOP 数据），用来演示分析效果。</span>
     <button class="btn primary" id="startReal" type="button">填写我的资料，开始记录</button>
   </div>
 
+  <div class="tab-panel" data-panel="today">
   <!-- HERO -->
   <section class="hero" aria-label="今日概览">
     <svg class="dial" id="dial" viewBox="0 0 300 300" role="img" aria-label="周期表盘"></svg>
@@ -347,40 +406,6 @@ td.bar-cell{width:34%;min-width:110px}
     </div>
   </section>
 
-  <!-- AI COACH -->
-  <section class="block" aria-labelledby="coachH">
-    <div class="sec-head">
-      <h2 id="coachH">AI 教练</h2>
-      <span class="coach-status" id="coachStatus"><i></i><span>正在连接…</span></span>
-    </div>
-    <div class="panel coach">
-      <div class="coach-top">
-        <button class="btn primary" id="aiToday" type="button">点评今天</button>
-        <button class="btn" id="aiWeek" type="button">分析最近一个周期</button>
-        <button class="btn" id="aiPlan" type="button">给我明天的计划</button>
-        <button class="btn ghost" id="aiStop" type="button" hidden>停止</button>
-        <label class="switch" style="margin-left:auto"><input type="checkbox" id="autoFb" checked> 每次记录后即时点评</label>
-      </div>
-      <div class="coach-bg" id="coachBg"></div>
-      <div class="feed" id="feed" aria-live="polite"></div>
-      <div class="suggest" id="suggest">
-        <button type="button">黄体期总想吃甜的怎么办？</button>
-        <button type="button">经期还能做力量训练吗？</button>
-        <button type="button">我今天晚饭怎么吃比较好？</button>
-      </div>
-      <form class="ask" id="askForm">
-        <input id="askIn" placeholder="问问 AI：比如“今天奶茶喝多了，明天怎么调整？”" aria-label="向 AI 提问" autocomplete="off">
-        <button class="btn primary" type="submit">发送</button>
-      </form>
-      <div class="key-row" id="keyRow" hidden>
-        <span class="small muted">在本地打开时，需要填你的 Anthropic API Key：</span>
-        <input id="apiKey" type="password" placeholder="sk-ant-..." aria-label="Anthropic API Key">
-        <button class="btn" id="saveKey" type="button">保存</button>
-        <span class="note" style="flex-basis:100%">Key 只保存在这个浏览器里，请求直接从浏览器发到 Anthropic。不要在别人的电脑上保存。</span>
-      </div>
-    </div>
-  </section>
-
   <!-- LOGGER -->
   <section class="block" aria-labelledby="logH">
     <div class="sec-head">
@@ -426,6 +451,44 @@ td.bar-cell{width:34%;min-width:110px}
     </div>
   </section>
 
+  </div>
+  <div class="tab-panel" data-panel="coach" hidden>
+  <!-- AI COACH -->
+  <section class="block" aria-labelledby="coachH">
+    <div class="sec-head">
+      <h2 id="coachH">AI 教练</h2>
+      <span class="coach-status" id="coachStatus"><i></i><span>正在连接…</span></span>
+    </div>
+    <div class="panel coach">
+      <div class="coach-top">
+        <button class="btn primary" id="aiToday" type="button">点评今天</button>
+        <button class="btn" id="aiWeek" type="button">分析最近一个周期</button>
+        <button class="btn" id="aiPlan" type="button">给我明天的计划</button>
+        <button class="btn ghost" id="aiStop" type="button" hidden>停止</button>
+        <label class="switch" style="margin-left:auto"><input type="checkbox" id="autoFb" checked> 每次记录后即时点评</label>
+      </div>
+      <div class="coach-bg" id="coachBg"></div>
+      <div class="feed" id="feed" aria-live="polite"></div>
+      <div class="suggest" id="suggest">
+        <button type="button">黄体期总想吃甜的怎么办？</button>
+        <button type="button">经期还能做力量训练吗？</button>
+        <button type="button">我今天晚饭怎么吃比较好？</button>
+      </div>
+      <form class="ask" id="askForm">
+        <input id="askIn" placeholder="问问 AI：比如“今天奶茶喝多了，明天怎么调整？”" aria-label="向 AI 提问" autocomplete="off">
+        <button class="btn primary" type="submit">发送</button>
+      </form>
+      <div class="key-row" id="keyRow" hidden>
+        <span class="small muted">在本地打开时，需要填你的 Anthropic API Key：</span>
+        <input id="apiKey" type="password" placeholder="sk-ant-..." aria-label="Anthropic API Key">
+        <button class="btn" id="saveKey" type="button">保存</button>
+        <span class="note" style="flex-basis:100%">Key 只保存在这个浏览器里，请求直接从浏览器发到 Anthropic。不要在别人的电脑上保存。</span>
+      </div>
+    </div>
+  </section>
+
+  </div>
+  <div class="tab-panel" data-panel="insight" hidden>
   <!-- TREND -->
   <section class="block" aria-labelledby="trendH">
     <div class="sec-head">
@@ -527,15 +590,18 @@ td.bar-cell{width:34%;min-width:110px}
     </div>
   </section>
 
+  </div>
+  <div class="tab-panel" data-panel="me" hidden>
   <!-- LABS -->
   <section class="block" aria-labelledby="labH">
     <div class="sec-head">
       <h2 id="labH">化验记录</h2>
+      <span class="small muted">橙色偏高，蓝色偏低</span>
     </div>
     <div class="grid2">
       <div class="panel tbl-wrap">
-        <table>
-          <thead><tr><th>项目</th><th>最近一次</th><th>参考范围</th><th>日期</th><th>变化</th><th></th></tr></thead>
+        <table class="lab-tbl">
+          <thead id="labHead"></thead>
           <tbody id="labBody"></tbody>
         </table>
       </div>
@@ -551,6 +617,12 @@ td.bar-cell{width:34%;min-width:110px}
         </form>
         <datalist id="labList"></datalist>
         <span class="small" id="labMsg" role="status"></span>
+        <details class="paste">
+          <summary>一次粘贴多项（每行一项）</summary>
+          <span class="small muted">格式：日期 | 项目 | 结果 | 单位 | 参考范围，例如 2026-09-05 | TgAb | 155.1 | IU/mL | &lt;4.00。同一天同一项目会覆盖旧值。</span>
+          <textarea id="labPaste" aria-label="批量粘贴化验结果"></textarea>
+          <button class="btn primary" type="button" id="labPasteGo">导入</button>
+        </details>
         <p class="note">数据只保存在这个浏览器里。AI 教练给饮食建议时会参考最近一次的结果。化验单的解读请以医生为准。</p>
       </div>
     </div>
@@ -643,6 +715,7 @@ td.bar-cell{width:34%;min-width:110px}
       </div>
     </div>
   </section>
+  </div>
 </div>
 
 <div class="onb" id="sos" hidden role="dialog" aria-modal="true" aria-labelledby="sosH">
@@ -1185,7 +1258,7 @@ function renderSettings() { for (const [id, k] of Object.entries(SETS)) $(id).va
 function renderAll() {
   CS = cycleStats();
   $('sampleBar').hidden = !state.sample;
-  renderHero(); renderCheckin(); renderLogger(); renderChart(); renderWhoop(); renderPhases(); renderCalendar(); renderLabs();
+  renderCountdown(); renderHero(); renderCheckin(); renderLogger(); renderChart(); renderWhoop(); renderPhases(); renderCalendar(); renderLabs();
 }
 function commit() { save(); renderAll(); }
 function setLogDate(d) { logDate = d > TODAY ? TODAY : d; calMonth = logDate.slice(0, 7); renderLogger(); renderCalendar(); }
@@ -1232,7 +1305,7 @@ $('rangeSeg').addEventListener('click', e => {
 $('cal').addEventListener('click', e => {
   const b = e.target.closest('[data-date]'); if (!b || b.dataset.future) return;
   setLogDate(b.dataset.date);
-  document.getElementById('logH').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  goTab('today'); document.getElementById('logH').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 $('calPrev').addEventListener('click', () => { const [y, m] = calMonth.split('-').map(Number); calMonth = iso(new Date(y, m - 2, 1)).slice(0, 7); renderCalendar(); });
 $('calNext').addEventListener('click', () => { const [y, m] = calMonth.split('-').map(Number); calMonth = iso(new Date(y, m, 1)).slice(0, 7); renderCalendar(); });
@@ -1252,7 +1325,7 @@ $('importBtn').addEventListener('click', () => {
   try {
     const s = JSON.parse($('backupText').value);
     if (!s || typeof s.days !== 'object' || typeof s.profile !== 'object') throw 0;
-    state = { profile: { ...DEFAULT_PROFILE, ...s.profile }, days: s.days, whoop: s.whoop || {}, journal: s.journal || {}, labs: s.labs || [], reasons: s.reasons || [], lock: s.lock || state.lock || null, sample: false, onboarded: true };
+    state = { profile: { ...DEFAULT_PROFILE, ...s.profile }, days: s.days, whoop: s.whoop || {}, journal: s.journal || {}, labs: s.labs || [], reasons: s.reasons || [], lock: s.lock || state.lock || null, countdown: s.countdown || state.countdown, sample: false, onboarded: true };
     commit(); renderSettings(); $('backupMsg').textContent = '已恢复';
   } catch (e) { $('backupMsg').textContent = '恢复失败：文本不是有效的备份，请粘贴完整的备份内容'; }
 });
@@ -1262,7 +1335,7 @@ function renderClear(asking) {
     ? `<span>确定清空全部记录？</span><button class="btn" id="clearYes" type="button" style="color:var(--p-men)">清空</button><button class="btn ghost" id="clearNo" type="button">取消</button>`
     : `<button class="btn" id="clearBtn" type="button">清空所有数据</button>`;
   if (asking) {
-    $('clearYes').onclick = () => { const p = state.profile, lk = state.lock; state = blank(); state.profile = p; state.lock = lk; commit(); renderClear(false); $('backupMsg').textContent = '已清空'; };
+    $('clearYes').onclick = () => { const p = state.profile, lk = state.lock; const cdk = state.countdown; state = blank(); state.profile = p; state.lock = lk; state.countdown = cdk; commit(); renderClear(false); $('backupMsg').textContent = '已清空'; };
     $('clearNo').onclick = () => renderClear(false);
   } else $('clearBtn').onclick = () => renderClear(true);
 }
@@ -1626,12 +1699,67 @@ $('sosDrank').addEventListener('click', () => {
 });
 $('sosTalk').addEventListener('click', () => {
   closeSOS();
-  document.getElementById('coachH').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  goTab('coach'); document.getElementById('coachH').scrollIntoView({ behavior: 'smooth', block: 'start' });
   const q = '我现在很难受，有点想用酒精逃避。先别给我讲道理，陪我说说话，帮我想想接下来一个小时怎么过。';
   if (AI.mode && !AI.busy) { addMsg('me', q); run(null, q, { chat: true }); } else $('askIn').value = q;
 });
 $('reasonForm').addEventListener('submit', e => { e.preventDefault(); const t = $('reasonIn').value.trim(); if (!t) return; state.reasons.push(t.slice(0, 120)); $('reasonIn').value = ''; save(); renderReasons(); });
 $('reasons').addEventListener('click', e => { const b = e.target.closest('[data-del-reason]'); if (!b) return; state.reasons.splice(Number(b.dataset.delReason), 1); save(); renderReasons(); });
+/* ---------- tabs ---------- */
+const TABS = ['today', 'insight', 'coach', 'me'];
+let tab = 'today';
+function goTab(t) {
+  if (!TABS.includes(t)) t = 'today';
+  tab = t;
+  document.querySelectorAll('.tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
+  document.querySelectorAll('[data-panel]').forEach(p => p.hidden = p.dataset.panel !== t);
+  try { localStorage.setItem('moon-energy-tab', t); } catch (e) { /* ignore */ }
+  if (t === 'insight') { renderChart(); renderWhoop(); }
+}
+document.querySelector('.tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; goTab(b.dataset.tab); window.scrollTo({ top: document.querySelector('.tabs').offsetTop - 4, behavior: 'smooth' }); });
+
+/* ---------- 100-day countdown & daily quote ---------- */
+const QUOTES = [
+  ['We are what we repeatedly do. Excellence, then, is not an act, but a habit.', 'Will Durant，《哲学的故事》（1926），概括亚里士多德的思想', '成长'],
+  ['千里之行，始于足下。', '老子《道德经》第六十四章', '成长'],
+  ['不积跬步，无以至千里；不积小流，无以成江海。', '荀子《劝学》', '成长'],
+  ['知人者智，自知者明。胜人者有力，自胜者强。', '老子《道德经》第三十三章', '成长'],
+  ['What we do every day matters more than what we do once in a while.', 'Gretchen Rubin，《The Happiness Project》（2009）', '健康'],
+  ['Almost everything will work again if you unplug it for a few minutes, including you.', 'Anne Lamott，TED 演讲《12 truths I learned from life and writing》（2017）', '健康'],
+  ['Caring for myself is not self-indulgence, it is self-preservation.', 'Audre Lorde，《A Burst of Light》（1988）', '健康'],
+  ['You do not have to be good. You only have to let the soft animal of your body love what it loves.', 'Mary Oliver，诗作《Wild Geese》（1986）', '健康'],
+  ['回首向来萧瑟处，归去，也无风雨也无晴。', '苏轼《定风波》', '成长'],
+  ['竹杖芒鞋轻胜马，谁怕？一蓑烟雨任平生。', '苏轼《定风波》', '成长'],
+  ['Good relationships keep us happier and healthier.', 'Robert Waldinger，TED 演讲《What makes a good life?》（2015），哈佛成人发展研究', '亲密关系'],
+  ['Love is patient, love is kind.', '《圣经·哥林多前书》13:4', '亲密关系'],
+  ['Connection is why we\'re here. It is what gives purpose and meaning to our lives.', 'Brené Brown，TED 演讲《The power of vulnerability》（2010）', '亲密关系'],
+  ['七転び八起き（跌倒七次，第八次站起来）。', '日本谚语', '运动'],
+  ['It never gets easier, you just go faster.', 'Greg LeMond，三届环法自行车赛冠军', '运动'],
+  ['Motivation is what gets you started. Habit is what keeps you going.', 'Jim Ryun，美国中长跑运动员、奥运银牌得主', '运动']
+];
+let qOffset = 0;
+function cdState() {
+  if (!state.countdown || !state.countdown.start) { state.countdown = { start: TODAY, goal: '' }; save(); }
+  return state.countdown;
+}
+function renderCountdown() {
+  const c = cdState(), n = diffDays(TODAY, c.start) + 1, end = addDays(c.start, 99);
+  const done = Math.max(0, Math.min(100, n));
+  $('cdDay').textContent = n < 1 ? `还有 ${1 - n} 天开始` : n > 100 ? '100 天完成' : `第 ${n} 天`;
+  $('cdOf').textContent = n >= 1 && n <= 100 ? `/ 100 · 还剩 ${100 - n} 天` : '';
+  $('cdGoal').textContent = c.goal ? `目标：${c.goal}` : '点「修改开始日期和目标」写下这 100 天想成为的样子';
+  $('cdRange').textContent = `${fmtMD(c.start)} → ${fmtMD(end)}`;
+  let g = ''; for (let i = 1; i <= 100; i++) g += `<i class="${i < n ? 'done' : i === n ? 'now' : ''}"></i>`;
+  $('cdGrid').innerHTML = g;
+  $('cdGrid').setAttribute('title', `已经走过 ${Math.max(0, Math.min(100, n - 1))} 天`);
+  const q = QUOTES[(((Math.max(1, n) - 1) + qOffset) % QUOTES.length + QUOTES.length) % QUOTES.length];
+  $('qText').textContent = q[0]; $('qSrc').textContent = `—— ${q[1]} · ${q[2]}`;
+}
+$('qNext').addEventListener('click', () => { qOffset++; renderCountdown(); });
+$('cdEditBtn').addEventListener('click', () => { const c = cdState(); $('cdStart').value = c.start; $('cdGoalIn').value = c.goal || ''; $('cdEdit').hidden = false; $('cdGoalIn').focus(); });
+$('cdCancel').addEventListener('click', () => { $('cdEdit').hidden = true; });
+$('cdEdit').addEventListener('submit', e => { e.preventDefault(); if (!$('cdStart').value) return; state.countdown = { start: $('cdStart').value, goal: $('cdGoalIn').value.trim().slice(0, 40) }; save(); $('cdEdit').hidden = true; renderCountdown(); });
+
 /* ---------- profile lock (a privacy screen on this device, not encryption) ---------- */
 let unlocked = false, afterUnlock = null, lockMode = 'unlock';
 const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
@@ -1665,6 +1793,7 @@ function showLockForm(mode) {
 function requestUnlock(then) {
   if (unlocked) { then && then(); return; }
   afterUnlock = then || null;
+  goTab('me');
   showLockForm(state.lock && state.lock.hash ? 'unlock' : 'set');
   $('lockForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
@@ -1739,16 +1868,46 @@ function labFlag(x) { const [lo, hi] = refBounds(x.ref); if (hi != null && x.val
 function renderLabs() {
   const labs = state.labs || [];
   const by = {}; for (const x of labs) (by[x.name] || (by[x.name] = [])).push(x);
-  const names = Object.keys(by).sort((a, b) => (labFlag(by[b].slice(-1)[0]) ? 1 : 0) - (labFlag(by[a].slice(-1)[0]) ? 1 : 0) || a.localeCompare(b));
+  const dates = [...new Set(labs.map(x => x.date))].sort().reverse().slice(0, 5);   // newest first, at most 5 visits
+  const names = Object.keys(by).sort((a, b) => {
+    const la = by[a].reduce((m, x) => x.date > m.date ? x : m), lb = by[b].reduce((m, x) => x.date > m.date ? x : m);
+    return (labFlag(lb) ? 1 : 0) - (labFlag(la) ? 1 : 0) || a.localeCompare(b, 'zh');
+  });
+  $('labHead').innerHTML = `<tr><th>项目</th>${dates.map(d => `<th class="d">${d.replace(/-/g, '/')}</th>`).join('')}<th>变化</th><th>参考范围</th><th>单位</th></tr>`;
   $('labBody').innerHTML = names.length ? names.map(n => {
-    const list = by[n].sort((a, b) => a.date.localeCompare(b.date)), last = list[list.length - 1], prev = list[list.length - 2], f = labFlag(last);
-    const trend = prev ? `${last.value > prev.value ? '↑' : last.value < prev.value ? '↓' : '→'} 上次 ${prev.value}` : '—';
-    const idx = labs.indexOf(last);
-    return `<tr><td style="white-space:normal">${esc(n)}</td><td class="num">${last.value}${last.unit ? ' ' + esc(last.unit) : ''}${f ? `<span class="lab-flag ${f}">${f === 'hi' ? '偏高' : '偏低'}</span>` : ''}</td><td class="num">${esc(last.ref || '—')}</td><td class="num">${last.date.slice(5).replace('-', '/')}</td><td class="small">${trend}</td><td><button class="btn ghost" type="button" data-del-lab="${idx}" aria-label="删除 ${esc(n)} 这条">×</button></td></tr>`;
-  }).join('') : `<tr><td colspan="6" style="text-align:left;white-space:normal" class="muted">还没有化验记录。在右边手动添加。</td></tr>`;
+    const list = by[n].slice().sort((a, b) => b.date.localeCompare(a.date)), last = list[0], prev = list[1];
+    const cells = dates.map(d => { const x = list.find(y => y.date === d); if (!x) return '<td class="v muted">—</td>'; const f = labFlag(x); return `<td class="v ${f}" title="${f === 'hi' ? '偏高' : f === 'lo' ? '偏低' : '正常'}">${x.value}<button class="btn ghost" type="button" data-del-lab="${labs.indexOf(x)}" aria-label="删除 ${esc(n)} ${d}" style="padding:0 4px;font-size:12px">×</button></td>`; }).join('');
+    let delta = '—';
+    if (prev) { const dv = last.value - prev.value, pct = prev.value ? Math.round(dv / prev.value * 100) : null; delta = `${dv > 0 ? '↑ +' : dv < 0 ? '↓ ' : '→ '}${+dv.toFixed(2)}${pct != null && dv ? `（${pct > 0 ? '+' : ''}${pct}%）` : ''}`; }
+    return `<tr><td class="name">${esc(n)}</td>${cells}<td class="small num">${delta}</td><td class="num">${esc(last.ref || '—')}</td><td class="small">${esc(last.unit || '')}</td></tr>`;
+  }).join('') : `<tr><td colspan="${dates.length + 4}" style="text-align:left;white-space:normal" class="muted">还没有化验记录。在右边手动添加，或者一次粘贴多项。</td></tr>`;
   $('labList').innerHTML = LAB_NAMES.map(n => `<option value="${n}">`).join('');
   if (!$('labDate').value) $('labDate').value = TODAY;
 }
+function parseLabLines(text) {
+  const out = [];
+  for (const line of text.split(/\n/)) {
+    const parts = line.split(/\s*[|\t｜]\s*/).map(x => x.trim()).filter(Boolean);
+    if (parts.length < 2) continue;
+    let date = null, value = null, unit = '', ref = '', name = [];
+    for (const t of parts) {
+      const dm = t.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+      if (dm && !date) { date = `${dm[1]}-${pad(Number(dm[2]))}-${pad(Number(dm[3]))}`; continue; }
+      if (value == null && /^[<>＜＞]?\s*-?\d+(\.\d+)?$/.test(t)) { value = Number(t.replace(/[<>＜＞\s]/g, '')); continue; }
+      if (/^[<>＜＞≤≥]\s*\d|^\d+(\.\d+)?\s*[-–~]\s*\d/.test(t)) { ref = t.replace(/\s/g, ''); continue; }
+      if (value != null && !unit && /^[a-zA-Zμµ%/][\w/%μµ.·]*$/.test(t)) { unit = t; continue; }
+      name.push(t);
+    }
+    if (name.length && value != null) out.push({ name: name.join(' ').slice(0, 40), value, unit, ref, date: date || TODAY });
+  }
+  return out;
+}
+$('labPasteGo').addEventListener('click', () => {
+  const items = parseLabLines($('labPaste').value);
+  if (!items.length) { $('labMsg').textContent = '没读出内容，请按「日期 | 项目 | 结果 | 单位 | 参考范围」每行一项。'; return; }
+  state.labs = state.labs.filter(o => !items.some(x => x.name === o.name && x.date === o.date)).concat(items);
+  save(); renderLabs(); $('labPaste').value = ''; $('labMsg').textContent = `已导入 ${items.length} 项，请对照化验单核对一遍。`;
+});
 $('labForm').addEventListener('submit', e => {
   e.preventDefault();
   const x = { name: $('labName').value.trim(), value: Number($('labVal').value), unit: $('labUnit').value.trim(), ref: $('labRef').value.trim(), date: $('labDate').value };
@@ -2082,6 +2241,7 @@ $('onbDemo').addEventListener('click', () => { if (!state.sample) { const ob = s
 renderSettings();
 renderLock();
 renderAll();
+{ let t = location.hash.slice(1); if (!TABS.includes(t)) { try { t = localStorage.getItem('moon-energy-tab') || 'today'; } catch (e) { t = 'today'; } } goTab(t); }
 setAIEnabled(false);
 AI.ready = initAI();
 if (!state.onboarded && !state.demoSeen) openOnboarding();
