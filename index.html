@@ -1240,7 +1240,7 @@ async function initAI() {
       AI.mode = 'claude'; AI.sample = sample;
       setStatus('已连接 Claude（使用你自己的 claude.ai 额度）', true);
       const lim = await sample.limits().catch(() => null);
-      AI.imgMax = lim?.images ? lim.images.maxCount : 0; $('aiImgWrap').hidden = !AI.imgMax;
+      AI.imgMax = lim?.images ? lim.images.maxCount : 0;
       setAIEnabled(true); return;
     }
   }
@@ -1400,14 +1400,15 @@ function onLogged(what) {
 
 /* ---------- AI food analysis: text and/or photos → items with kcal & macros ---------- */
 let aiImgs = [], aiItems = [];
+const IMG_UNAVAILABLE = '你现在打开 app 的地方暂时不能把图片发给 AI（常见于手机 App 或较旧的版本），可以换成电脑浏览器打开 claude.ai 再试。';
 function renderThumbs() {
   $('aiThumbs').innerHTML = aiImgs.map((f, i) => `<div><img src="${URL.createObjectURL(f)}" alt="食物照片 ${i + 1}"><button type="button" data-rm-img="${i}" aria-label="移除这张照片">×</button></div>`).join('');
 }
 function addImgs(files) {
   const imgs = Array.from(files || []).filter(f => /^image\//.test(f.type));
   if (!imgs.length) return;
-  if (!AI.imgMax) { $('aiFoodMsg').textContent = '当前环境不能分析图片，请用文字描述。'; return; }
-  aiImgs = aiImgs.concat(imgs).slice(0, AI.imgMax);
+  // accept now; whether this viewer can send images is checked when analysing
+  aiImgs = aiImgs.concat(imgs).slice(0, AI.imgMax || 5);
   renderThumbs(); $('aiFoodMsg').textContent = '';
 }
 $('aiImgIn').addEventListener('change', e => { addImgs(e.target.files); e.target.value = ''; });
@@ -1422,11 +1423,22 @@ $('aiFoodText').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.m
 $('aiFoodGo').addEventListener('click', async () => {
   const text = $('aiFoodText').value.trim();
   if (!text && !aiImgs.length) { $('aiFoodMsg').textContent = '先写一句吃了什么，或者上传一张照片。'; return; }
-  if (!AI.mode || AI.busy) return;
+  if (!AI.mode) { $('aiFoodMsg').textContent = '正在连接 AI…'; await AI.ready; }
+  if (!AI.mode) { $('aiFoodMsg').textContent = 'AI 还没连接上，请稍后再试。'; return; }
+  if (AI.busy) return;
+  let noImg = false;
+  if (aiImgs.length && AI.mode === 'claude') {
+    const lim = AI.noImages ? null : await AI.sample.limits().catch(() => null);
+    AI.imgMax = lim && lim.images ? lim.images.maxCount : 0;
+    if (!AI.imgMax) {
+      if (!text) { $('aiFoodMsg').textContent = IMG_UNAVAILABLE + ' 这次请先用文字描述。'; return; }
+      noImg = true;
+    } else aiImgs = aiImgs.slice(0, AI.imgMax);
+  }
   AI.busy = true; setAIEnabled(true); $('aiRes').hidden = true;
-  $('aiFoodMsg').textContent = aiImgs.length ? '正在看照片、估算份量…' : '正在估算…';
+  $('aiFoodMsg').textContent = aiImgs.length && !noImg ? '正在看照片、估算份量…' : '正在估算…';
   const left = Math.max(0, target(logDate) - intake(logDate)), protLeft = Math.max(0, protTarget() - protein(logDate));
-  const prompt = `你是营养师，帮用户估算一餐的热量和营养素。${aiImgs.length ? `附了 ${aiImgs.length} 张照片。` : ''}
+  const prompt = `你是营养师，帮用户估算一餐的热量和营养素。${aiImgs.length && !noImg ? `附了 ${aiImgs.length} 张照片。` : ''}
 用户描述：${text || '（没有文字，只看照片）'}
 ${P().about ? '用户背景：' + P().about.slice(0, 600) + '\n' : ''}今天（${logDate}）还可以吃约 ${left} kcal，蛋白质还差约 ${protLeft} g，处于${PHASES[phaseOf(logDate).key].name}。
 要求：按中国常见做法和份量估算（食堂、外卖、港式茶餐厅都常见）；描述里说了“吃了一半”“少饭”等要按实际吃下的量算；照片里有参照物（手、筷子、碗）就据此估份量；看不清的按中等份量并在 name 里写明“估”。
@@ -1435,15 +1447,16 @@ ${P().about ? '用户背景：' + P().about.slice(0, 600) + '\n' : ''}今天（$
 name 用简体中文写食物和份量；kcal、prot、carb、fat 为整数（克）；饮品也要算。`;
   try {
     let r;
-    const opts = { modelTier: 'default' }; if (aiImgs.length) opts.images = aiImgs.slice();
+    const opts = { modelTier: 'default' }; if (aiImgs.length && !noImg) opts.images = aiImgs.slice();
     if (AI.mode === 'claude') r = await AI.sample.json(prompt, opts);
     else { const { text: t } = await callKeyAPI(prompt, opts); r = JSON.parse((t.match(/\{[\s\S]*\}/) || ['{}'])[0]); }
     const n = v => Math.max(0, Math.round(Number(v) || 0));
     aiItems = (Array.isArray(r) ? r : (r && r.items) || []).map(x => ({ name: String(x.name || '').slice(0, 40), kcal: n(x.kcal), prot: n(x.prot), carb: n(x.carb), fat: n(x.fat), on: true })).filter(x => x.name && x.kcal < 5000);
     if (!aiItems.length) { $('aiFoodMsg').textContent = '没认出食物，可以写得具体一点，或者换一张更清楚的照片。'; return; }
-    $('aiFoodMsg').textContent = '';
+    $('aiFoodMsg').textContent = noImg ? IMG_UNAVAILABLE + ' 这次只按文字估算。' : '';
     renderAiRes(String((r && r.note) || '').slice(0, 120));
   } catch (err) {
+    if (err && err.code === 'images_unavailable') { AI.imgMax = 0; AI.noImages = true; $('aiFoodMsg').textContent = IMG_UNAVAILABLE + (text ? ' 请再点一次，只按文字估算。' : ' 这次请先用文字描述。'); return; }
     $('aiFoodMsg').textContent = err && err.code === 'invalid_json' ? '这次结果格式不对，再点一次分析试试。' : errCopy(err && err.code);
   } finally { AI.busy = false; setAIEnabled(!!AI.mode); }
 });
@@ -1981,7 +1994,7 @@ $('onbDemo').addEventListener('click', () => { if (!state.sample) { const ob = s
 renderSettings();
 renderAll();
 setAIEnabled(false);
-initAI();
+AI.ready = initAI();
 if (!state.onboarded && !state.demoSeen) openOnboarding();
 })();
 </script>
