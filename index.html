@@ -174,11 +174,6 @@ td.bar-cell{width:34%;min-width:110px}
 .ai-food{border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;gap:10px;background:var(--bg)}
 .ai-food textarea{width:100%;min-height:64px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;padding:8px 10px;resize:vertical}
 .ai-food .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.thumbs{display:flex;flex-wrap:wrap;gap:6px}
-.thumbs div{position:relative;width:64px;height:64px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
-.thumbs img{width:100%;height:100%;object-fit:cover;display:block}
-.thumbs button{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:12px;line-height:20px;padding:0}
-.ai-food.over{border-color:var(--accent);background:var(--accent-soft)}
 .ai-res{display:grid;gap:8px}
 .ai-res table td,.ai-res table th{padding:6px 6px}
 .ai-res input[type=number]{width:64px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);padding:3px 5px;font-family:var(--mono);text-align:right}
@@ -385,11 +380,9 @@ td.bar-cell{width:34%;min-width:110px}
       <div class="panel" style="display:grid;gap:12px;align-content:start">
         <h3>饮食摄入</h3>
         <div class="ai-food" id="aiFood">
-          <textarea id="aiFoodText" placeholder="用一句话描述你吃了什么，AI 帮你算热量和蛋白质。例如：食堂番茄炒蛋盖饭，饭吃了一半，加一杯无糖豆浆。也可以直接粘贴或上传照片。" aria-label="描述吃了什么"></textarea>
-          <div class="thumbs" id="aiThumbs"></div>
+          <textarea id="aiFoodText" placeholder="用一句话描述你吃了什么，AI 帮你算热量和蛋白质。写清楚份量更准，例如：港式烧味双拼饭（叉烧+烧鸭），饭吃了一半，冻柠茶少甜。" aria-label="描述吃了什么"></textarea>
           <div class="bar">
             <button class="btn primary" type="button" id="aiFoodGo">AI 分析</button>
-            <label class="btn photo-btn" id="aiImgWrap">上传照片<input type="file" id="aiImgIn" accept="image/*" multiple aria-label="上传食物照片"></label>
             <span class="small muted" id="aiFoodMsg" role="status"></span>
           </div>
           <div class="ai-res" id="aiRes" hidden></div>
@@ -522,7 +515,6 @@ td.bar-cell{width:34%;min-width:110px}
   <section class="block" aria-labelledby="labH">
     <div class="sec-head">
       <h2 id="labH">化验记录</h2>
-      <label class="btn photo-btn" id="labPhotoWrap" hidden>拍照识别化验单<input type="file" id="labPhoto" accept="image/*" aria-label="上传化验单照片"></label>
     </div>
     <div class="grid2">
       <div class="panel tbl-wrap">
@@ -1239,15 +1231,12 @@ async function initAI() {
     if (sample) {
       AI.mode = 'claude'; AI.sample = sample;
       setStatus('已连接 Claude（使用你自己的 claude.ai 额度）', true);
-      const lim = await sample.limits().catch(() => null);
-      AI.imgMax = lim?.images ? lim.images.maxCount : 0;
-      if (lim && !lim.images) noPhotoMode();
       setAIEnabled(true); return;
     }
   }
   // Opened outside claude.ai: fall back to the viewer's own API key
   $('keyRow').hidden = false;
-  if (getKey()) { AI.mode = 'key'; AI.imgMax = 4; setStatus('已用 API Key 连接', true); $('aiImgWrap').hidden = false; setAIEnabled(true); }
+  if (getKey()) { AI.mode = 'key'; setStatus('已用 API Key 连接', true); setAIEnabled(true); }
   else { AI.mode = null; setStatus('未连接：填入 API Key 后可用', false); setAIEnabled(false); }
 }
 $('saveKey').addEventListener('click', () => {
@@ -1256,15 +1245,8 @@ $('saveKey').addEventListener('click', () => {
   $('apiKey').value = ''; initAI();
 });
 
-const blobToB64 = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(b); });
 async function callKeyAPI(input, opts) {
   const msgs = typeof input === 'string' ? [{ role: 'user', content: input }] : input.map(t => ({ ...t }));
-  if (opts.images) {
-    const last = msgs[msgs.length - 1];
-    const imgs = Array.isArray(opts.images) ? opts.images : [opts.images];
-    const parts = []; for (const img of imgs) parts.push({ type: 'image', source: { type: 'base64', media_type: img.type || 'image/jpeg', data: await blobToB64(img) } });
-    last.content = [...parts, { type: 'text', text: last.content }];
-  }
   // merge consecutive same-role turns
   const merged = [];
   for (const m of msgs) { const prev = merged[merged.length - 1]; if (prev && prev.role === m.role && typeof prev.content === 'string' && typeof m.content === 'string') prev.content += '\n\n' + m.content; else merged.push(m); }
@@ -1348,7 +1330,7 @@ const RULES = `你是一位懂女性生理周期的营养与运动教练，用�
 如果用户流露出伤害自己或不想活的念头，温和而直接地回应，用户住在香港：请她立刻拨打「情绪通」18111 或撒玛利亚防止自杀会 2389 2222，紧急时打 999 或去最近医院急症室，并鼓励她联系身边信任的人。
 不做医疗诊断；遇到异常出血、剧烈疼痛、周期严重紊乱等情况，建议就医。不要用 Markdown 标题或表格，可以用短段落和“·”开头的要点。`;
 
-async function run(label, prompt, { tier = 'default', live = false, chat = false, images } = {}) {
+async function run(label, prompt, { tier = 'default', live = false, chat = false } = {}) {
   if (!AI.mode || AI.busy) return;
   AI.busy = true; setAIEnabled(true); $('aiStop').hidden = false;
   const ctl = new AbortController(); AI.ctl = ctl;
@@ -1359,7 +1341,6 @@ async function run(label, prompt, { tier = 'default', live = false, chat = false
   try {
     const opts = { signal: ctl.signal, modelTier: tier, onText: ({ text }) => { body.textContent = text; $('feed').scrollTop = $('feed').scrollHeight; } };
     if (chat) opts.cache = false;
-    if (images) opts.images = images;
     const { text } = await ask(input, opts);
     body.textContent = text;
     if (chat) AI.turns.push({ role: 'assistant', content: text });
@@ -1400,70 +1381,36 @@ function onLogged(what) {
 }
 
 /* ---------- AI food analysis: text and/or photos → items with kcal & macros ---------- */
-let aiImgs = [], aiItems = [];
-// This Claude viewer cannot send images: hide the photo button and say so once
-function noPhotoMode() {
-  AI.noImages = true; $('aiImgWrap').hidden = true;
-  $('aiFoodText').placeholder = '用一句话描述你吃了什么，AI 帮你算热量和蛋白质。写清楚份量更准，例如：港式烧味双拼饭（叉烧+烧鸭），饭吃了一半，冻柠茶少甜。';
-  if (!$('aiFoodMsg').textContent) $('aiFoodMsg').textContent = '这里暂时不能用照片识别，用文字描述就好。';
-}
-const IMG_UNAVAILABLE = '你现在打开 app 的地方暂时不能把图片发给 AI（常见于手机 App 或较旧的版本），可以换成电脑浏览器打开 claude.ai 再试。';
-function renderThumbs() {
-  $('aiThumbs').innerHTML = aiImgs.map((f, i) => `<div><img src="${URL.createObjectURL(f)}" alt="食物照片 ${i + 1}"><button type="button" data-rm-img="${i}" aria-label="移除这张照片">×</button></div>`).join('');
-}
-function addImgs(files) {
-  const imgs = Array.from(files || []).filter(f => /^image\//.test(f.type));
-  if (!imgs.length) return;
-  // accept now; whether this viewer can send images is checked when analysing
-  aiImgs = aiImgs.concat(imgs).slice(0, AI.imgMax || 5);
-  renderThumbs(); $('aiFoodMsg').textContent = '';
-}
-$('aiImgIn').addEventListener('change', e => { addImgs(e.target.files); e.target.value = ''; });
-$('aiThumbs').addEventListener('click', e => { const b = e.target.closest('[data-rm-img]'); if (!b) return; aiImgs.splice(Number(b.dataset.rmImg), 1); renderThumbs(); });
-$('aiFoodText').addEventListener('paste', e => { const fs = Array.from(e.clipboardData?.files || []); if (fs.length) { e.preventDefault(); addImgs(fs); } });
-const af = $('aiFood');
-af.addEventListener('dragover', e => { e.preventDefault(); af.classList.add('over'); });
-af.addEventListener('dragleave', () => af.classList.remove('over'));
-af.addEventListener('drop', e => { e.preventDefault(); af.classList.remove('over'); addImgs(e.dataTransfer.files); });
+let aiItems = [];
 $('aiFoodText').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('aiFoodGo').click(); });
 
 $('aiFoodGo').addEventListener('click', async () => {
   const text = $('aiFoodText').value.trim();
-  if (!text && !aiImgs.length) { $('aiFoodMsg').textContent = '先写一句吃了什么，或者上传一张照片。'; return; }
+  if (!text) { $('aiFoodMsg').textContent = '先写一句吃了什么，包括大概的份量。'; return; }
   if (!AI.mode) { $('aiFoodMsg').textContent = '正在连接 AI…'; await AI.ready; }
   if (!AI.mode) { $('aiFoodMsg').textContent = 'AI 还没连接上，请稍后再试。'; return; }
   if (AI.busy) return;
-  let noImg = false;
-  if (aiImgs.length && AI.mode === 'claude') {
-    const lim = AI.noImages ? null : await AI.sample.limits().catch(() => null);
-    AI.imgMax = lim && lim.images ? lim.images.maxCount : 0;
-    if (!AI.imgMax) {
-      if (!text) { $('aiFoodMsg').textContent = IMG_UNAVAILABLE + ' 这次请先用文字描述。'; return; }
-      noImg = true;
-    } else aiImgs = aiImgs.slice(0, AI.imgMax);
-  }
   AI.busy = true; setAIEnabled(true); $('aiRes').hidden = true;
-  $('aiFoodMsg').textContent = aiImgs.length && !noImg ? '正在看照片、估算份量…' : '正在估算…';
+  $('aiFoodMsg').textContent = '正在估算…';
   const left = Math.max(0, target(logDate) - intake(logDate)), protLeft = Math.max(0, protTarget() - protein(logDate));
-  const prompt = `你是营养师，帮用户估算一餐的热量和营养素。${aiImgs.length && !noImg ? `附了 ${aiImgs.length} 张照片。` : ''}
-用户描述：${text || '（没有文字，只看照片）'}
+  const prompt = `你是营养师，帮用户估算一餐的热量和营养素。
+用户描述：${text}
 ${P().about ? '用户背景：' + P().about.slice(0, 600) + '\n' : ''}今天（${logDate}）还可以吃约 ${left} kcal，蛋白质还差约 ${protLeft} g，处于${PHASES[phaseOf(logDate).key].name}。
-要求：按中国常见做法和份量估算（食堂、外卖、港式茶餐厅都常见）；描述里说了“吃了一半”“少饭”等要按实际吃下的量算；照片里有参照物（手、筷子、碗）就据此估份量；看不清的按中等份量并在 name 里写明“估”。
+要求：按中国常见做法和份量估算（食堂、外卖、港式茶餐厅都常见）；描述里说了“吃了一半”“少饭”等要按实际吃下的量算；份量没说清的按中等份量，并在 name 里写明“估”。
 只回复一个 JSON 对象，不要其他文字：
 {"items":[{"name":"番茄炒蛋盖饭（饭半份）","kcal":420,"prot":15,"carb":55,"fat":14}],"note":"一句话总结这餐：蛋白质够不够、下一餐怎么补，结合她剩余的额度，温和不评判，40 字以内"}
 name 用简体中文写食物和份量；kcal、prot、carb、fat 为整数（克）；饮品也要算。`;
   try {
     let r;
-    const opts = { modelTier: 'default' }; if (aiImgs.length && !noImg) opts.images = aiImgs.slice();
+    const opts = { modelTier: 'default' };
     if (AI.mode === 'claude') r = await AI.sample.json(prompt, opts);
     else { const { text: t } = await callKeyAPI(prompt, opts); r = JSON.parse((t.match(/\{[\s\S]*\}/) || ['{}'])[0]); }
     const n = v => Math.max(0, Math.round(Number(v) || 0));
     aiItems = (Array.isArray(r) ? r : (r && r.items) || []).map(x => ({ name: String(x.name || '').slice(0, 40), kcal: n(x.kcal), prot: n(x.prot), carb: n(x.carb), fat: n(x.fat), on: true })).filter(x => x.name && x.kcal < 5000);
     if (!aiItems.length) { $('aiFoodMsg').textContent = '没认出食物，可以写得具体一点，或者换一张更清楚的照片。'; return; }
-    $('aiFoodMsg').textContent = noImg ? IMG_UNAVAILABLE + ' 这次只按文字估算。' : '';
+    $('aiFoodMsg').textContent = '';
     renderAiRes(String((r && r.note) || '').slice(0, 120));
   } catch (err) {
-    if (err && err.code === 'images_unavailable') { AI.imgMax = 0; AI.noImages = true; noPhotoMode(); $('aiFoodMsg').textContent = IMG_UNAVAILABLE + (text ? ' 请再点一次，只按文字估算。' : ' 这次请先用文字描述。'); return; }
     $('aiFoodMsg').textContent = err && err.code === 'invalid_json' ? '这次结果格式不对，再点一次分析试试。' : errCopy(err && err.code);
   } finally { AI.busy = false; setAIEnabled(!!AI.mode); }
 });
@@ -1483,7 +1430,7 @@ function renderAiRes(note) {
   $('aiAdd').onclick = () => {
     const chosen = aiItems.filter(x => x.on); if (!chosen.length) return;
     const rec = ensure(logDate); chosen.forEach(({ on, ...x }) => rec.food.push({ ...x, ai: true }));
-    commit(); box.hidden = true; aiImgs = []; renderThumbs(); $('aiFoodText').value = '';
+    commit(); box.hidden = true; $('aiFoodText').value = '';
     $('aiFoodMsg').textContent = `已添加 ${chosen.length} 项，共 ${fmt(chosen.reduce((a, x) => a + x.kcal, 0))} kcal`;
     onLogged(chosen.map(x => `${x.name} ${x.kcal} kcal`).join('、'));
   };
@@ -1647,10 +1594,9 @@ function renderLabs() {
     const trend = prev ? `${last.value > prev.value ? '↑' : last.value < prev.value ? '↓' : '→'} 上次 ${prev.value}` : '—';
     const idx = labs.indexOf(last);
     return `<tr><td style="white-space:normal">${esc(n)}</td><td class="num">${last.value}${last.unit ? ' ' + esc(last.unit) : ''}${f ? `<span class="lab-flag ${f}">${f === 'hi' ? '偏高' : '偏低'}</span>` : ''}</td><td class="num">${esc(last.ref || '—')}</td><td class="num">${last.date.slice(5).replace('-', '/')}</td><td class="small">${trend}</td><td><button class="btn ghost" type="button" data-del-lab="${idx}" aria-label="删除 ${esc(n)} 这条">×</button></td></tr>`;
-  }).join('') : `<tr><td colspan="6" style="text-align:left;white-space:normal" class="muted">还没有化验记录。可以手动添加，或者拍照识别化验单。</td></tr>`;
+  }).join('') : `<tr><td colspan="6" style="text-align:left;white-space:normal" class="muted">还没有化验记录。在右边手动添加。</td></tr>`;
   $('labList').innerHTML = LAB_NAMES.map(n => `<option value="${n}">`).join('');
   if (!$('labDate').value) $('labDate').value = TODAY;
-  $('labPhotoWrap').hidden = !AI.mode;
 }
 $('labForm').addEventListener('submit', e => {
   e.preventDefault();
@@ -1659,22 +1605,6 @@ $('labForm').addEventListener('submit', e => {
   state.labs.push(x); save(); renderLabs(); ['labName', 'labVal', 'labUnit', 'labRef'].forEach(id => $(id).value = ''); $('labMsg').textContent = `已添加 ${x.name}`;
 });
 $('labBody').addEventListener('click', e => { const b = e.target.closest('[data-del-lab]'); if (!b) return; state.labs.splice(Number(b.dataset.delLab), 1); save(); renderLabs(); });
-$('labPhoto').addEventListener('change', async e => {
-  const file = e.target.files && e.target.files[0]; e.target.value = '';
-  if (!file || !AI.mode || AI.busy) return;
-  $('labMsg').textContent = '正在识别化验单…';
-  try {
-    const prompt = '这是一张医院化验单照片（可能是横着拍的）。提取每一个检验项目。只回复 JSON 数组，例如 [{"name":"TgAb 抗甲状腺球蛋白抗体","value":155.1,"unit":"IU/mL","ref":"<4.00","date":"2026-09-05"}]。name 用中文项目名，常见英文缩写放前面；value 为数字（写着"<0.26"这类的取 0.26）；ref 原样照抄参考范围，有多个阶段的范围就留空；date 用采样日期 YYYY-MM-DD。不要包含姓名、病历号、电话等个人信息。';
-    let items;
-    if (AI.mode === 'claude') items = await AI.sample.json(prompt, { images: file, modelTier: 'default' });
-    else { const { text } = await callKeyAPI(prompt, { images: file }); items = JSON.parse((text.match(/\[[\s\S]*\]/) || ['[]'])[0]); }
-    items = (Array.isArray(items) ? items : []).map(x => ({ name: String(x.name || '').slice(0, 40), value: Number(x.value), unit: String(x.unit || '').slice(0, 16), ref: String(x.ref || '').slice(0, 24), date: /^\d{4}-\d{2}-\d{2}$/.test(x.date) ? x.date : TODAY })).filter(x => x.name && Number.isFinite(x.value));
-    if (!items.length) { $('labMsg').textContent = '没识别出检验项目，可以换一张更清楚的照片，或者手动添加。'; return; }
-    // same test on the same date replaces the old value
-    state.labs = state.labs.filter(o => !items.some(x => x.name === o.name && x.date === o.date)).concat(items);
-    save(); renderLabs(); $('labMsg').textContent = `识别并添加了 ${items.length} 项，请对照化验单核对一遍。`;
-  } catch (err) { $('labMsg').textContent = errCopy(err && err.code); }
-});
 
 /* ---------- WHOOP import ---------- */
 // WHOOP journal questions worth keeping; `bad` marks habits where "yes" is expected to cost recovery
