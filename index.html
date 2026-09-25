@@ -508,7 +508,6 @@ td.bar-cell{width:34%;min-width:110px}
   </form>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
 (() => {
 'use strict';
@@ -560,11 +559,11 @@ let logDate = TODAY;
 let range = 30;
 let calMonth = TODAY.slice(0, 7);
 
-function blank() { return { profile: { ...DEFAULT_PROFILE }, days: {}, whoop: {}, sample: false, onboarded: false }; }
+function blank() { return { profile: { ...DEFAULT_PROFILE }, days: {}, whoop: {}, journal: {}, sample: false, onboarded: false }; }
 function load() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) { const s = JSON.parse(raw); if (s && s.days && s.profile) { s.profile = { ...DEFAULT_PROFILE, ...s.profile }; s.whoop = s.whoop || {}; return s; } }
+    if (raw) { const s = JSON.parse(raw); if (s && s.days && s.profile) { s.profile = { ...DEFAULT_PROFILE, ...s.profile }; s.whoop = s.whoop || {}; s.journal = s.journal || {}; return s; } }
   } catch (e) { /* storage unavailable */ }
   return makeSample();
 }
@@ -1023,7 +1022,7 @@ $('importBtn').addEventListener('click', () => {
   try {
     const s = JSON.parse($('backupText').value);
     if (!s || typeof s.days !== 'object' || typeof s.profile !== 'object') throw 0;
-    state = { profile: { ...DEFAULT_PROFILE, ...s.profile }, days: s.days, whoop: s.whoop || {}, sample: false, onboarded: true };
+    state = { profile: { ...DEFAULT_PROFILE, ...s.profile }, days: s.days, whoop: s.whoop || {}, journal: s.journal || {}, sample: false, onboarded: true };
     commit(); renderSettings(); $('backupMsg').textContent = '已恢复';
   } catch (e) { $('backupMsg').textContent = '恢复失败：文本不是有效的备份，请粘贴完整的备份内容'; }
 });
@@ -1131,7 +1130,7 @@ function context() {
   const ph = phaseOf(TODAY), p = P();
   const dayLine = d => {
     const r = day(d), k = phaseOf(d);
-    return `${d}｜${PHASES[k.key].name}${k.cd ? ' D' + k.cd : ''}${r.period ? '｜经期' : ''}｜摄入 ${intake(d)}${r.food.length ? '（' + r.food.map(f => `${f.name} ${f.kcal}`).join('、') + '）' : '（未记录）'}｜运动 ${exBurn(d)}${r.ex.length ? '（' + r.ex.map(e => `${e.type} ${e.min}分钟`).join('、') + '）' : ''}｜总消耗 ${totalBurn(d)}${measured(d) ? '(WHOOP实测)' : ''}｜蛋白 ${protein(d)}g${wh(d) ? `｜WHOOP 恢复${wh(d).recovery ?? '-'}% HRV${wh(d).hrv ?? '-'} 静息心率${wh(d).rhr ?? '-'} 睡眠${wh(d).sleepMin ? (wh(d).sleepMin / 60).toFixed(1) + 'h' : '-'} Strain${wh(d).strain ?? '-'}` : ''}`;
+    return `${d}｜${PHASES[k.key].name}${k.cd ? ' D' + k.cd : ''}${r.period ? '｜经期' : ''}｜摄入 ${intake(d)}${r.food.length ? '（' + r.food.map(f => `${f.name} ${f.kcal}`).join('、') + '）' : '（未记录）'}｜运动 ${exBurn(d)}${r.ex.length ? '（' + r.ex.map(e => `${e.type} ${e.min}分钟`).join('、') + '）' : ''}｜总消耗 ${totalBurn(d)}${measured(d) ? '(WHOOP实测)' : ''}｜蛋白 ${protein(d)}g${wh(d) ? `｜WHOOP 恢复${wh(d).recovery ?? '-'}% HRV${wh(d).hrv ?? '-'} 静息心率${wh(d).rhr ?? '-'} 睡眠${wh(d).sleepMin ? (wh(d).sleepMin / 60).toFixed(1) + 'h' : '-'} Strain${wh(d).strain ?? '-'}` : ''}${jr(d) ? '｜日志：' + JOURNAL_TAGS.filter(t => jr(d)[t.k]).map(t => t.name).join('、') : ''}`;
   };
   const recent = []; for (let i = 13; i >= 0; i--) recent.push(dayLine(addDays(TODAY, -i)));
   const agg = PH_ORDER.map(k => {
@@ -1233,6 +1232,26 @@ $('photoIn').addEventListener('change', async e => {
 });
 
 /* ---------- WHOOP import ---------- */
+// WHOOP journal questions worth keeping; `bad` marks habits where "yes" is expected to cost recovery
+const JOURNAL_TAGS = [
+  { k: 'alcohol', name: '喝酒', q: ['have any alcoholic drinks', 'consumed alcohol'], bad: true },
+  { k: 'stress', name: '感到压力', q: ['experienced stress'], bad: true, mood: true },
+  { k: 'anxious', name: '紧张或焦虑', q: ['felt nervous or anxious'], bad: true, mood: true },
+  { k: 'stable', name: '情绪稳定', q: ['felt emotionally and mentally stable'], mood: true },
+  { k: 'energized', name: '一整天有精神', q: ['felt energized throughout the day'], mood: true },
+  { k: 'caffeine', name: '咖啡因', q: ['consumed caffeine'] },
+  { k: 'takeout', name: '吃外卖', q: ['ate takeout'], bad: true },
+  { k: 'lateFood', name: '睡前进食', q: ['ate food close to bedtime'], bad: true },
+  { k: 'walkMeal', name: '饭后散步', q: ['walked after a meal'] },
+  { k: 'social', name: '和亲友联系', q: ['connected with family and/or friends'] },
+  { k: 'solo', name: '独处时间', q: ['had some solo time'] },
+  { k: 'stretch', name: '拉伸', q: ['spent time stretching'] },
+  { k: 'workedLate', name: '加班', q: ['worked late'], bad: true },
+  { k: 'bloating', name: '腹胀', q: ['experienced bloating'], symptom: true },
+  { k: 'headache', name: '头痛', q: ['experienced a headache'], symptom: true },
+  { k: 'soreness', name: '肌肉酸痛', q: ['experienced muscle soreness'], symptom: true }
+];
+const jr = d => (state.journal || {})[d] || null;
 const norm = h => String(h).toLowerCase().replace(/[^a-z0-9%]/g, '');
 function parseCSV(text) {
   const rows = []; let row = [], cur = '', q = false;
@@ -1259,7 +1278,7 @@ const WH_ACT = { running: '跑步', run: '跑步', walking: '快走', cycling: '
 const actName = n => { const k = String(n || '').toLowerCase().trim(); for (const [en, zh] of Object.entries(WH_ACT)) if (k === en || k.includes(en)) return zh; return n || '运动'; };
 
 function importWhoop(files) {
-  const out = { cycles: 0, workouts: 0, sleeps: 0, period: 0, days: new Set(), unknown: [] };
+  const out = { cycles: 0, workouts: 0, sleeps: 0, period: 0, journal: 0, days: new Set(), unknown: [] };
   const W = state.whoop || (state.whoop = {});
   const put = (d, k, v) => { if (v == null || !d) return; (W[d] || (W[d] = {}))[k] = v; out.days.add(d); };
   for (const { name, text } of files) {
@@ -1286,11 +1305,14 @@ function importWhoop(files) {
     } else if (iQuestion >= 0) {
       // journal_entries.csv — look for period/menstruation answers
       const iYes = col(head, 'answered yes', 'answer');
+      const JR = state.journal || (state.journal = {});
       for (const r of rows) {
-        const q = String(r[iQuestion] || '').toLowerCase();
-        if (!/menstru|period|月经|经期/.test(q)) continue;
-        const d = cycleDay(r[iStart]); const yes = /true|yes|1/i.test(String(r[iYes]));
-        if (d && yes && d <= TODAY) { ensure(d).period = true; out.period++; }
+        const q = String(r[iQuestion] || '').trim().toLowerCase();
+        const d = cycleDay(r[iStart]); if (!d) continue;
+        const yes = /^(true|yes|1)$/i.test(String(r[iYes]).trim());
+        if (/^menstruating\??$|^(是否)?(在)?(月经|经期)/.test(q)) { if (yes && d <= TODAY) { ensure(d).period = true; out.period++; } continue; }
+        const tag = JOURNAL_TAGS.find(t => t.q.some(x => q.startsWith(x)));
+        if (tag) { (JR[d] || (JR[d] = {}))[tag.k] = yes; out.journal++; out.days.add(d); }
       }
     } else if (iRec >= 0 || col(head, 'day strain') >= 0 || (iStart >= 0 && col(head, 'energy burned') >= 0 && iOnset < 0)) {
       // physiological_cycles.csv
@@ -1318,13 +1340,38 @@ function importWhoop(files) {
   }
   return out;
 }
+// Minimal zip reader using the browser's built-in DecompressionStream (no library needed)
+async function unzipCSVs(file) {
+  const buf = new Uint8Array(await file.arrayBuffer()), dv = new DataView(buf.buffer);
+  let eocd = -1;
+  for (let i = buf.length - 22; i >= Math.max(0, buf.length - 65557); i--) if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  if (eocd < 0) throw new Error('这个 zip 文件打不开，请解压后直接选择里面的 CSV 文件');
+  const count = dv.getUint16(eocd + 10, true); let off = dv.getUint32(eocd + 16, true);
+  const out = [], dec = new TextDecoder('utf-8');
+  for (let n = 0; n < count; n++) {
+    if (dv.getUint32(off, true) !== 0x02014b50) break;
+    const method = dv.getUint16(off + 10, true), csize = dv.getUint32(off + 20, true);
+    const nlen = dv.getUint16(off + 28, true), xlen = dv.getUint16(off + 30, true), clen = dv.getUint16(off + 32, true);
+    const local = dv.getUint32(off + 42, true), name = dec.decode(buf.subarray(off + 46, off + 46 + nlen));
+    off += 46 + nlen + xlen + clen;
+    if (!/\.csv$/i.test(name) || name.includes('__MACOSX')) continue;
+    const start = local + 30 + dv.getUint16(local + 26, true) + dv.getUint16(local + 28, true);
+    const data = buf.subarray(start, start + csize);
+    let bytes;
+    if (method === 0) bytes = data;
+    else if (method === 8) {
+      if (typeof DecompressionStream === 'undefined') throw new Error('这个浏览器不支持直接读 zip，请解压后选择里面的 CSV 文件');
+      bytes = new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
+    } else continue;
+    out.push({ name: name.split('/').pop(), text: dec.decode(bytes) });
+  }
+  return out;
+}
 async function readWhoopFiles(fileList) {
   const files = [];
   for (const f of fileList) {
     if (/\.zip$/i.test(f.name) || f.type.includes('zip')) {
-      if (!window.JSZip) throw new Error('zip 解压组件没加载成功，请解压后直接选择里面的 CSV 文件');
-      const zip = await window.JSZip.loadAsync(f);
-      for (const entry of Object.values(zip.files)) if (!entry.dir && /\.csv$/i.test(entry.name)) files.push({ name: entry.name, text: await entry.async('string') });
+      files.push(...await unzipCSVs(f));
     } else files.push({ name: f.name, text: await f.text() });
   }
   if (!files.length) throw new Error('没找到 CSV 文件');
@@ -1339,11 +1386,11 @@ async function handleWhoop(fileList, msgEl) {
     const files = await readWhoopFiles(list);
     if (state.sample) { const p = state.profile; const ob = state.onboarded; state = blank(); state.profile = p; state.onboarded = ob; }
     const r = importWhoop(files);
-    if (!r.cycles && !r.workouts && !r.sleeps && !r.period) throw new Error('这些文件里没有认出 WHOOP 数据，请确认是 WHOOP 导出的 CSV');
+    if (!r.cycles && !r.workouts && !r.sleeps && !r.period && !r.journal) throw new Error('这些文件里没有认出 WHOOP 数据，请确认是 WHOOP 导出的 CSV');
     const ds = [...r.days].sort();
     state.whoopImported = new Date().toISOString();
     commit();
-    msgEl.textContent = `已导入 ${ds.length} 天（${fmtMD(ds[0])}–${fmtMD(ds[ds.length - 1])}）：生理周期 ${r.cycles} 条、训练 ${r.workouts} 次、睡眠 ${r.sleeps} 条${r.period ? `、经期标记 ${r.period} 天` : ''}${r.unknown.length ? `；跳过 ${r.unknown.join('、')}` : ''}`;
+    msgEl.textContent = `已导入 ${ds.length} 天（${fmtMD(ds[0])}–${fmtMD(ds[ds.length - 1])}）：生理周期 ${r.cycles} 条、训练 ${r.workouts} 次、睡眠 ${r.sleeps} 条、日志 ${r.journal} 条${r.period ? `、经期 ${r.period} 天` : ''}${r.unknown.length ? `；跳过 ${r.unknown.join('、')}` : ''}`;
   } catch (e) {
     msgEl.textContent = '导入失败：' + (e && e.message ? e.message : '文件无法读取');
   }
@@ -1400,6 +1447,30 @@ function renderWhoop() {
   if (mdays.length >= 5) {
     const bias = mdays.reduce((a, d) => a + (wh(d).kcal - (baseBurn() + exBurn(d) + (phaseOf(d).key === 'lut' ? lutealBonus() : 0))), 0) / mdays.length;
     ins.push(`按 WHOOP 实测，你每天的消耗比公式估算${bias >= 0 ? '多' : '少'} <b class="num">${fmt(Math.abs(bias))}</b> kcal。已结束的日子都按实测计算，今天在 WHOOP 周期结束前仍用估算。`);
+  }
+  // journal: how often mood/symptoms show up in each phase
+  const jd = Object.keys(state.journal || {}).filter(d => d <= TODAY);
+  if (jd.length >= 20) {
+    const rate = (k, p) => { const ds = jd.filter(d => phaseOf(d).key === p && jr(d)[k] != null); return ds.length >= 5 ? ds.filter(d => jr(d)[k]).length / ds.length : null; };
+    const lines = [];
+    for (const t of JOURNAL_TAGS.filter(t => t.k === 'stress' || t.k === 'anxious' || t.symptom && t.k !== 'soreness')) {
+      const l = rate(t.k, 'lut'), f = rate(t.k, 'fol');
+      if (l != null && f != null && l - f >= .15) lines.push(`${t.name} 黄体期 <b class="num">${Math.round(l * 100)}%</b> 的天数，卵泡期 <b class="num">${Math.round(f * 100)}%</b>`);
+    }
+    if (lines.length) ins.unshift(`你的日志显示，经前（黄体期）明显更难受：${lines.join('；')}。这是可以提前准备的规律：黄体期把训练量和热量缺口放小，提前安排好放松的事。如果情绪低落或焦虑在经前反复加重、经期一来就缓解，值得和医生聊聊经前烦躁障碍（PMDD）。`);
+    // next-morning effect: journal answers describe the day; its effect shows in the following cycle's recovery
+    const eff = [];
+    for (const t of JOURNAL_TAGS.filter(t => t.bad || t.k === 'solo' || t.k === 'social')) {
+      const y = jd.filter(d => jr(d)[t.k] === true), n = jd.filter(d => jr(d)[t.k] === false);
+      if (y.length < 5 || n.length < 5) continue;
+      const hv = ds => { const v = ds.map(d => wh(addDays(d, 1))).filter(w => w && w.hrv != null).map(w => w.hrv); return v.length >= 4 ? v.reduce((a, b) => a + b) / v.length : null; };
+      const a = hv(y), b = hv(n); if (a == null || b == null) continue;
+      eff.push({ t, diff: a - b, n: y.length });
+    }
+    eff.sort((a, b) => a.diff - b.diff);
+    const worst = eff.filter(e => e.t.bad && e.diff <= -5).slice(0, 3), best = eff.filter(e => !e.t.bad && e.diff >= 5).slice(-2);
+    if (worst.length) ins.push(`对你第二天 HRV 影响最大的是：${worst.map(e => `${e.t.name}（<b class="num">${Math.round(e.diff)}</b> ms，${e.n} 次）`).join('、')}。`);
+    if (best.length) ins.push(`让你第二天 HRV 更高的：${best.map(e => `${e.t.name}（<b class="num">+${Math.round(e.diff)}</b> ms）`).join('、')}。`);
   }
   $('whIns').innerHTML = (ins.length ? ins : ['数据还不够多：至少需要覆盖一个完整周期（有经期标记），才能按阶段对比。']).map(t => `<li>${t}</li>`).join('');
   renderWhChart();
