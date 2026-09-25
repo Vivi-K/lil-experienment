@@ -36,6 +36,7 @@
   --good:#6CC08E; --warn:#E0A040;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;margin:0}
 .wrap{max-width:1080px;margin:0 auto;padding-inline:20px;padding-block:20px 60px;display:grid;gap:28px}
 h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.2}
@@ -148,7 +149,7 @@ td.bar-cell{width:34%;min-width:110px}
 /* Settings */
 .settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
 .field{display:grid;gap:4px;font-size:13px;color:var(--ink2)}
-.field input,.field select{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 10px;font-size:15px;color:var(--ink)}
+.field input,.field select{min-width:0;width:100%;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 10px;font-size:15px;color:var(--ink)}
 .backup{display:grid;gap:8px}
 .backup textarea{width:100%;min-height:80px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-family:var(--mono);font-size:12px;padding:8px}
 .note{font-size:13px;color:var(--ink3);max-width:70ch}
@@ -178,6 +179,29 @@ td.bar-cell{width:34%;min-width:110px}
 .suggest button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 10px;font-size:13px;color:var(--ink2)}
 .suggest button:hover{color:var(--ink);border-color:var(--ink3)}
 
+/* Onboarding */
+.onb{position:fixed;inset:0;z-index:50;background:color-mix(in srgb,var(--ink) 45%,transparent);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:max(16px,env(safe-area-inset-top,0px)) 16px max(16px,env(safe-area-inset-bottom,0px))}
+.onb-card{background:var(--surface);border-radius:16px;max-width:560px;width:100%;padding:22px 20px;display:grid;gap:16px;margin-block:auto;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.onb-card h2{font-size:22px}
+.onb-steps{display:flex;gap:6px}
+.onb-steps i{flex:1;height:4px;border-radius:2px;background:var(--sunk)}
+.onb-steps i.on{background:var(--accent)}
+.onb-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:460px){.onb-grid{grid-template-columns:1fr}}
+.onb-grid .full{grid-column:1/-1}
+.goal-opts{display:grid;gap:6px}
+.goal-opts label{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer;font-size:14px}
+.goal-opts label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.goal-opts small{display:block;color:var(--ink3);font-size:12px}
+.onb-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center}
+.err-text{color:var(--p-men);font-size:13px}
+/* WHOOP */
+.drop{border:1.5px dashed var(--line);border-radius:12px;padding:16px;display:grid;gap:8px;justify-items:start;background:var(--bg)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.wh-now{display:flex;flex-wrap:wrap;gap:6px}
+.wh-now span{font-size:12px;border-radius:999px;background:var(--sunk);padding:3px 10px;color:var(--ink2)}
+.wh-now b{font-family:var(--mono);font-weight:500;color:var(--ink)}
+.src{font-size:11px;border-radius:4px;padding:1px 5px;background:var(--sunk);color:var(--ink3);margin-left:4px;letter-spacing:.03em}
 .confirm{display:inline-flex;gap:8px;align-items:center;font-size:14px}
 @media (prefers-reduced-motion:no-preference){.meter div,.hbar{transition:width .3s ease}}
 </style>
@@ -192,8 +216,8 @@ td.bar-cell{width:34%;min-width:110px}
   </header>
 
   <div class="sample" id="sampleBar" hidden>
-    <span>现在显示的是<b>示例数据</b>（虚构的 80 天记录），用来演示分析效果。</span>
-    <button class="btn primary" id="startReal" type="button">清空示例，开始记录我的数据</button>
+    <span>现在显示的是<b>示例数据</b>（虚构的约 3 个月记录，含 WHOOP 数据），用来演示分析效果。</span>
+    <button class="btn primary" id="startReal" type="button">填写我的资料，开始记录</button>
   </div>
 
   <!-- HERO -->
@@ -205,6 +229,7 @@ td.bar-cell{width:34%;min-width:110px}
         <span class="small muted" id="phaseSub"></span>
       </div>
       <h2 id="phaseTitle"></h2>
+      <div class="wh-now" id="whNow" hidden></div>
       <ul class="tips" id="phaseTips"></ul>
       <div class="stats" id="stats"></div>
       <div>
@@ -265,6 +290,7 @@ td.bar-cell{width:34%;min-width:110px}
         <form class="row" id="foodForm">
           <input class="grow" id="foodName" list="foodList" placeholder="吃了什么" required aria-label="食物名称">
           <input class="w num" id="foodKcal" type="number" min="0" max="5000" placeholder="kcal" required aria-label="热量">
+          <input class="w num" id="foodProt" type="number" min="0" max="300" placeholder="蛋白 g" aria-label="蛋白质（克，可不填）">
           <button class="btn primary" type="submit">添加</button>
         </form>
         <datalist id="foodList"></datalist>
@@ -308,6 +334,41 @@ td.bar-cell{width:34%;min-width:110px}
         <svg id="chart" role="img" aria-label="每日摄入与消耗趋势"></svg>
         <div class="tip" id="tip" hidden></div>
       </div>
+    </div>
+  </section>
+
+  <!-- WHOOP -->
+  <section class="block" aria-labelledby="whH">
+    <div class="sec-head">
+      <h2 id="whH">WHOOP × 周期</h2>
+      <span class="small muted" id="whMeta"></span>
+    </div>
+    <div class="drop" id="whDrop">
+      <b>导入 WHOOP 数据</b>
+      <span class="small muted">WHOOP App → 个人资料 → 设置 → Data Export（导出数据），邮件里会收到一个 zip。直接上传 zip，或者解压后选里面的 CSV（physiological_cycles、workouts、sleeps、journal_entries）。重复导入同一段时间会覆盖旧数据，不会重复。</span>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <label class="btn primary photo-btn">选择 zip 或 CSV 文件<input type="file" id="whFile" accept=".zip,.csv,text/csv,application/zip" multiple aria-label="上传 WHOOP 导出文件"></label>
+        <span class="small" id="whMsg" role="status"></span>
+      </div>
+    </div>
+    <div class="panel" style="display:grid;gap:10px" id="whPanel">
+      <div class="sec-head">
+        <div class="seg" id="whSeg" role="group" aria-label="WHOOP 指标"></div>
+        <span class="small muted" id="whAvg"></span>
+      </div>
+      <div class="chart-box" id="whBox">
+        <svg id="whChart" role="img" aria-label="WHOOP 指标趋势"></svg>
+        <div class="tip" id="whTip" hidden></div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="panel tbl-wrap">
+        <table>
+          <thead><tr><th>阶段</th><th>天数</th><th>恢复</th><th>HRV</th><th>静息心率</th><th>皮肤温度</th><th>睡眠</th><th>Strain</th></tr></thead>
+          <tbody id="whBody"></tbody>
+        </table>
+      </div>
+      <ul class="insights" id="whIns"></ul>
     </div>
   </section>
 
@@ -366,6 +427,7 @@ td.bar-cell{width:34%;min-width:110px}
           </select></label>
         <label class="field">目标
           <select id="sGoal">
+            <option value="-300">减脂保肌（高蛋白）</option>
             <option value="0">维持体重</option>
             <option value="-275">慢减（约 0.25 kg/周）</option>
             <option value="-550">减脂（约 0.5 kg/周）</option>
@@ -392,6 +454,61 @@ td.bar-cell{width:34%;min-width:110px}
   </section>
 </div>
 
+<div class="onb" id="onb" hidden role="dialog" aria-modal="true" aria-labelledby="onbH">
+  <form class="onb-card" id="onbForm" novalidate>
+    <div class="onb-steps"><i class="on"></i><i id="onbStep2"></i></div>
+    <div id="onbP1" style="display:grid;gap:16px">
+      <div>
+        <h2 id="onbH">先填一下你的资料</h2>
+        <p class="muted small" style="margin:6px 0 0">用来计算基础代谢、蛋白质目标和周期阶段。只保存在这个浏览器里。</p>
+      </div>
+      <div class="onb-grid">
+        <label class="field">身高 cm<input id="oHeight" type="number" min="120" max="220" inputmode="decimal" class="num" required></label>
+        <label class="field">体重 kg<input id="oWeight" type="number" min="30" max="200" step="0.1" inputmode="decimal" class="num" required></label>
+        <label class="field">年龄<input id="oAge" type="number" min="12" max="80" inputmode="numeric" class="num" required></label>
+        <label class="field">日常活动（不含运动）
+          <select id="oAct">
+            <option value="1.2">久坐（办公室）</option>
+            <option value="1.3">轻度（常走动）</option>
+            <option value="1.4">中度（站立工作）</option>
+          </select></label>
+        <div class="field full">目标
+          <div class="goal-opts" id="oGoal">
+            <label><input type="radio" name="oGoal" value="-300" checked><span>减脂保肌<small>每天约 300 kcal 缺口，蛋白质 2.0 g/kg，每周 3 次力量训练；新手有机会同时增肌</small></span></label>
+            <label><input type="radio" name="oGoal" value="-550"><span>较快减脂<small>每天约 550 kcal 缺口，约 0.5 kg/周</small></span></label>
+            <label><input type="radio" name="oGoal" value="0"><span>维持体重</span></label>
+            <label><input type="radio" name="oGoal" value="250"><span>增肌<small>每天约 250 kcal 盈余</small></span></label>
+          </div>
+        </div>
+        <label class="field">上次月经第一天<input id="oLast" type="date" required></label>
+        <label class="field">那次持续几天<input id="oPlen" type="number" min="2" max="9" class="num" value="5"></label>
+        <label class="field">平均周期长度（天）<input id="oCycle" type="number" min="21" max="45" class="num" value="33"></label>
+        <label class="field">再上一次月经第一天（可不填）<input id="oPrev" type="date"></label>
+      </div>
+      <div class="err-text" id="onbErr" role="alert"></div>
+      <div class="onb-actions">
+        <button class="btn ghost" type="button" id="onbDemo">先看看示例数据</button>
+        <button class="btn primary" type="submit">下一步</button>
+      </div>
+    </div>
+    <div id="onbP2" hidden style="display:grid;gap:16px">
+      <div>
+        <h2>导入 WHOOP 数据（可选）</h2>
+        <p class="muted small" style="margin:6px 0 0">WHOOP App → 个人资料 → 设置 → Data Export，邮件里会收到 zip。上传后，每天的总消耗会用 WHOOP 实测值，训练自动记入运动，恢复、HRV、体温、睡眠按周期阶段对比。</p>
+      </div>
+      <div class="drop" id="onbDrop">
+        <label class="btn primary photo-btn">选择 zip 或 CSV 文件<input type="file" id="onbFile" accept=".zip,.csv,text/csv,application/zip" multiple aria-label="上传 WHOOP 导出文件"></label>
+        <span class="small" id="onbWhMsg" role="status">也可以之后在「WHOOP × 周期」里上传。</span>
+      </div>
+      <div class="onb-actions">
+        <span></span>
+        <button class="btn primary" type="button" id="onbDone">完成，开始使用</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
 (() => {
 'use strict';
@@ -409,13 +526,15 @@ const fmtMD = s => { const d = parse(s); return `${d.getMonth() + 1}月${d.getDa
 const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
 
 /* ---------- reference data ---------- */
+// [name, kcal, protein g]
 const FOODS = [
-  ['米饭 一碗', 230], ['鸡蛋 一个', 72], ['牛奶 250ml', 135], ['燕麦 40g', 150], ['全麦面包 一片', 80],
-  ['鸡胸肉 100g', 165], ['三文鱼 100g', 208], ['豆腐 100g', 80], ['面条 一碗', 280], ['饺子 10个', 420],
-  ['苹果 一个', 95], ['香蕉 一根', 105], ['酸奶 一杯', 120], ['坚果 一小把', 170], ['黑巧克力 20g', 110],
-  ['奶茶 中杯', 350], ['拿铁 中杯', 190], ['沙拉（带酱）', 250], ['麻辣烫 一份', 600], ['火锅 一顿', 900]
+  ['米饭 一碗', 230, 4], ['鸡蛋 一个', 72, 6], ['牛奶 250ml', 135, 8], ['燕麦 40g', 150, 5], ['全麦面包 一片', 80, 4],
+  ['鸡胸肉 100g', 165, 31], ['三文鱼 100g', 208, 20], ['牛肉（瘦）100g', 150, 26], ['虾仁 100g', 99, 24], ['豆腐 100g', 80, 8],
+  ['希腊酸奶 一杯', 130, 15], ['蛋白粉 一勺', 120, 24], ['面条 一碗', 280, 9], ['饺子 10个', 420, 18], ['红薯 一个', 130, 2],
+  ['苹果 一个', 95, 0], ['香蕉 一根', 105, 1], ['酸奶 一杯', 120, 5], ['坚果 一小把', 170, 6], ['黑巧克力 20g', 110, 2],
+  ['奶茶 中杯', 350, 3], ['拿铁 中杯', 190, 10], ['沙拉（带酱）', 250, 6], ['麻辣烫 一份', 600, 25], ['火锅 一顿', 900, 45]
 ];
-const QUICK = ['米饭 一碗', '鸡蛋 一个', '牛奶 250ml', '鸡胸肉 100g', '苹果 一个', '奶茶 中杯'];
+const QUICK = ['鸡蛋 一个', '鸡胸肉 100g', '希腊酸奶 一杯', '蛋白粉 一勺', '米饭 一碗', '奶茶 中杯'];
 const EX = [
   ['快走', 4.3], ['慢跑', 7.0], ['跑步（较快）', 9.8], ['骑行', 7.5], ['游泳', 6.0], ['力量训练', 5.0],
   ['HIIT', 8.0], ['跳绳', 11.0], ['瑜伽', 2.5], ['普拉提', 3.0], ['舞蹈', 5.0], ['爬楼梯', 8.0], ['拉伸散步', 2.8]
@@ -435,17 +554,17 @@ const PHASES = {
 const PH_ORDER = ['men', 'fol', 'ovu', 'lut'];
 
 /* ---------- state ---------- */
-const DEFAULT_PROFILE = { height: 163, weight: 55, age: 28, act: 1.2, goal: 0, cycle: 28, period: 5 };
+const DEFAULT_PROFILE = { height: 163, weight: 55, age: 28, act: 1.2, goal: -300, cycle: 33, period: 5 };
 let state = load();
 let logDate = TODAY;
 let range = 30;
 let calMonth = TODAY.slice(0, 7);
 
-function blank() { return { profile: { ...DEFAULT_PROFILE }, days: {}, sample: false }; }
+function blank() { return { profile: { ...DEFAULT_PROFILE }, days: {}, whoop: {}, sample: false, onboarded: false }; }
 function load() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) { const s = JSON.parse(raw); if (s && s.days && s.profile) { s.profile = { ...DEFAULT_PROFILE, ...s.profile }; return s; } }
+    if (raw) { const s = JSON.parse(raw); if (s && s.days && s.profile) { s.profile = { ...DEFAULT_PROFILE, ...s.profile }; s.whoop = s.whoop || {}; return s; } }
   } catch (e) { /* storage unavailable */ }
   return makeSample();
 }
@@ -457,27 +576,27 @@ function ensure(d) { if (!state.days[d]) state.days[d] = { food: [], ex: [], per
 function makeSample() {
   const s = blank(); s.sample = true;
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  const lens = [29, 27, 28];
+  const lens = [33, 31, 34];
   let start = addDays(TODAY, -(lens.reduce((a, b) => a + b) - 9));
   const starts = [start]; for (const l of lens) { start = addDays(start, l); starts.push(start); }
   starts.pop();
-  for (let i = 80; i >= 0; i--) {
+  for (let i = 95; i >= 0; i--) {
     const d = addDays(TODAY, -i);
     const rec = { food: [], ex: [], period: false };
     const st = starts.filter(x => x <= d).pop();
     const cd = st ? diffDays(d, st) + 1 : null;
     if (st && cd <= 5 && d <= TODAY) rec.period = true;
-    const len = 28, ov = len - 14;
+    const len = 33, ov = len - 14;
     const ph = cd == null ? 'fol' : cd <= 5 ? 'men' : cd < ov - 1 ? 'fol' : cd <= ov + 1 ? 'ovu' : 'lut';
     if (rnd() < .12 && i > 0) { s.days[d] = rec; continue; }
     const base = { men: 1750, fol: 1680, ovu: 1720, lut: 1950 }[ph];
-    const meals = [['燕麦 40g', 150], ['牛奶 250ml', 135], ['米饭 一碗', 230], ['鸡胸肉 100g', 165], ['面条 一碗', 280], ['豆腐 100g', 80], ['苹果 一个', 95]];
+    const meals = ['燕麦 40g', '牛奶 250ml', '米饭 一碗', '鸡胸肉 100g', '面条 一碗', '豆腐 100g', '鸡蛋 一个', '希腊酸奶 一杯'].map(n => FOODS.find(f => f[0] === n));
     let total = 0; const n = 4 + Math.floor(rnd() * 2);
-    for (let k = 0; k < n && total < base - 150; k++) { const m = meals[Math.floor(rnd() * meals.length)]; rec.food.push({ name: m[0], kcal: m[1] }); total += m[1]; }
+    for (let k = 0; k < n && total < base - 150; k++) { const m = meals[Math.floor(rnd() * meals.length)]; rec.food.push({ name: m[0], kcal: m[1], prot: m[2] }); total += m[1]; }
     const rest = Math.max(120, Math.round((base + (rnd() - .5) * 360 - total) / 10) * 10);
     const extra = ph === 'lut' && rnd() < .5 ? ['奶茶 中杯', 350] : ph === 'men' && rnd() < .4 ? ['黑巧克力 20g', 110] : null;
-    rec.food.push({ name: '晚餐', kcal: rest });
-    if (extra) rec.food.push({ name: extra[0], kcal: extra[1] });
+    rec.food.push({ name: '晚餐', kcal: rest, prot: Math.round(rest * .07) });
+    if (extra) rec.food.push({ name: extra[0], kcal: extra[1], prot: 2 });
     const p = { men: .25, fol: .7, ovu: .65, lut: .45 }[ph];
     if (rnd() < p) {
       const pool = ph === 'men' ? [['快走', 4.3], ['瑜伽', 2.5]] : ph === 'lut' ? [['快走', 4.3], ['普拉提', 3.0], ['慢跑', 7.0]] : [['慢跑', 7.0], ['力量训练', 5.0], ['HIIT', 8.0], ['骑行', 7.5]];
@@ -487,6 +606,24 @@ function makeSample() {
     if (i === 0) { rec.food = rec.food.slice(0, 3); rec.ex = rec.ex.slice(0, 1); }
     s.days[d] = rec;
   }
+  // example WHOOP metrics with typical cycle patterns (luteal: higher RHR/temp, lower HRV)
+  for (let i = 95; i >= 1; i--) {
+    const d = addDays(TODAY, -i);
+    const st = starts.filter(x => x <= d).pop(); if (!st) continue;
+    const cd = diffDays(d, st) + 1, lut = cd > 20, men = cd <= 5;
+    const ex = (s.days[d] ? s.days[d].ex : []).reduce((a, e) => a + Math.round(e.met * 55 * e.min / 60), 0);
+    s.whoop[d] = {
+      kcal: Math.round(1780 + ex + (lut ? 80 : 0) + (rnd() - .5) * 160),
+      strain: +(7 + ex / 70 + rnd() * 3).toFixed(1),
+      recovery: Math.round(Math.min(98, Math.max(18, (lut ? 52 : men ? 58 : 70) + (rnd() - .5) * 36))),
+      hrv: Math.round((lut ? 52 : 63) + (rnd() - .5) * 14),
+      rhr: Math.round((lut ? 60 : 56) + (rnd() - .5) * 4),
+      temp: +((lut ? 33.9 : 33.5) + (rnd() - .5) * .3).toFixed(2),
+      sleepMin: Math.round(430 + (rnd() - .5) * 90 - (lut && cd > 28 ? 25 : 0)),
+      sleepPerf: Math.round(78 + (rnd() - .5) * 24),
+      resp: +(15 + (lut ? .4 : 0) + (rnd() - .5) * .6).toFixed(1)
+    };
+  }
   return s;
 }
 
@@ -494,11 +631,18 @@ function makeSample() {
 const P = () => state.profile;
 const bmr = () => Math.round(10 * P().weight + 6.25 * P().height - 5 * P().age - 161);
 const baseBurn = () => Math.round(bmr() * P().act);
-const exKcal = e => Math.round(e.met * P().weight * e.min / 60);
+const exKcal = e => e.kcal != null ? Math.round(e.kcal) : Math.round(e.met * P().weight * e.min / 60);
 const intake = d => day(d).food.reduce((a, f) => a + f.kcal, 0);
+const protein = d => day(d).food.reduce((a, f) => a + (f.prot || 0), 0);
+const protPerKg = () => ({ '-300': 2.0, '-550': 2.0, '-275': 1.8, '250': 1.8 })[String(P().goal)] || 1.6;
+const protTarget = () => Math.round(protPerKg() * P().weight);
+const wh = d => (state.whoop || {})[d] || null;
+// WHOOP's measured burn replaces the estimate for finished days (today's cycle is still open)
+const measured = d => d < TODAY && wh(d) && wh(d).kcal > 800 ? wh(d).kcal : null;
 const exBurn = d => day(d).ex.reduce((a, e) => a + exKcal(e), 0);
 const lutealBonus = () => Math.round(bmr() * 0.06);
 function totalBurn(d) {
+  const m = measured(d); if (m) return m;
   const ph = phaseOf(d).key;
   return baseBurn() + exBurn(d) + (ph === 'lut' ? lutealBonus() : 0);
 }
@@ -572,10 +716,11 @@ function renderHero() {
   $('phaseTitle').textContent = info.title;
   $('phaseTips').innerHTML = info.tips.map(t => `<li>${t}</li>`).join('');
   const inT = intake(TODAY), exT = exBurn(TODAY), tb = totalBurn(TODAY), tg = target(TODAY);
-  const bonus = ph.key === 'lut' ? `含黄体期 +${lutealBonus()}` : `基础 ${fmt(baseBurn())}`;
+  const bonus = `运动 ${fmt(exT)}${ph.key === 'lut' ? ` · 黄体期 +${lutealBonus()}` : ''}`;
+  const pr = protein(TODAY), pt = protTarget();
   $('stats').innerHTML = [
     ['今日摄入', fmt(inT), `${day(TODAY).food.length} 项记录`],
-    ['运动消耗', fmt(exT), `${day(TODAY).ex.reduce((a, e) => a + e.min, 0)} 分钟`],
+    ['蛋白质 g', `${fmt(pr)}<span class="small" style="color:var(--ink3)"> / ${pt}</span>`, pr >= pt ? '已达标' : `还差 ${fmt(pt - pr)} g`],
     ['总消耗', fmt(tb), bonus],
     ['还可以吃', fmt(Math.max(0, tg - inT)), tg - inT < 0 ? `已超 ${fmt(inT - tg)}` : `目标 ${fmt(tg)}`]
   ].map(([l, v, s]) => `<div class="stat"><span class="label">${l}</span><b>${v}</b><span class="small">${s}</span></div>`).join('');
@@ -584,6 +729,18 @@ function renderHero() {
   $('meter').firstElementChild.style.width = Math.min(100, pct * 100) + '%';
   $('meterText').textContent = `今日目标 ${fmt(tg)} kcal，已完成 ${Math.round(pct * 100)}%`;
   renderDial(ph);
+  // latest WHOOP morning metrics (today's recovery is scored on waking)
+  const wd = wh(TODAY) ? TODAY : wh(addDays(TODAY, -1)) ? addDays(TODAY, -1) : null;
+  const w = wd && wh(wd);
+  $('whNow').hidden = !w;
+  if (w) {
+    const bits = [];
+    if (w.recovery != null) bits.push(`恢复 <b>${w.recovery}%</b>`);
+    if (w.hrv != null) bits.push(`HRV <b>${w.hrv}</b> ms`);
+    if (w.rhr != null) bits.push(`静息心率 <b>${w.rhr}</b>`);
+    if (w.sleepMin != null) bits.push(`睡眠 <b>${(w.sleepMin / 60).toFixed(1)}</b> h`);
+    $('whNow').innerHTML = `<span>WHOOP ${wd === TODAY ? '今天' : '昨天'}</span>` + bits.map(b => `<span>${b}</span>`).join('');
+  }
 }
 
 function renderDial(ph) {
@@ -628,12 +785,12 @@ function renderLogger() {
   const t = $('periodToggle'); t.setAttribute('aria-pressed', rec.period ? 'true' : 'false');
   const fe = $('foodEntries');
   fe.innerHTML = rec.food.length ? rec.food.map((f, i) =>
-    `<li><span>${esc(f.name)}</span><span style="display:flex;gap:6px;align-items:center"><span class="num">${fmt(f.kcal)}</span><button class="btn ghost" data-del-food="${i}" aria-label="删除 ${esc(f.name)}">×</button></span></li>`).join('')
-    + `<li class="sum"><span>合计</span><span class="num">${fmt(intake(logDate))} kcal</span></li>`
+    `<li><span>${esc(f.name)}${f.prot ? ` <span class="muted small num">${f.prot}g 蛋白</span>` : ''}</span><span style="display:flex;gap:6px;align-items:center"><span class="num">${fmt(f.kcal)}</span><button class="btn ghost" data-del-food="${i}" aria-label="删除 ${esc(f.name)}">×</button></span></li>`).join('')
+    + `<li class="sum"><span>合计</span><span class="num">${fmt(intake(logDate))} kcal · ${fmt(protein(logDate))} g 蛋白</span></li>`
     : `<li class="empty">${fmtMD(logDate)} 还没有饮食记录</li>`;
   const ee = $('exEntries');
   ee.innerHTML = rec.ex.length ? rec.ex.map((e, i) =>
-    `<li><span>${esc(e.type)} <span class="muted small num">${e.min} 分钟</span></span><span style="display:flex;gap:6px;align-items:center"><span class="num">${fmt(exKcal(e))}</span><button class="btn ghost" data-del-ex="${i}" aria-label="删除 ${esc(e.type)}">×</button></span></li>`).join('')
+    `<li><span>${esc(e.type)} <span class="muted small num">${e.min} 分钟${e.strain != null ? ' · Strain ' + e.strain : ''}</span>${e.src === 'whoop' ? '<span class="src">WHOOP</span>' : ''}</span><span style="display:flex;gap:6px;align-items:center"><span class="num">${fmt(exKcal(e))}</span><button class="btn ghost" data-del-ex="${i}" aria-label="删除 ${esc(e.type)}">×</button></span></li>`).join('')
     + `<li class="sum"><span>合计</span><span class="num">${fmt(exBurn(logDate))} kcal</span></li>`
     : `<li class="empty">${fmtMD(logDate)} 还没有运动记录</li>`;
   updateExPreview();
@@ -799,26 +956,27 @@ function renderSettings() { for (const [id, k] of Object.entries(SETS)) $(id).va
 function renderAll() {
   CS = cycleStats();
   $('sampleBar').hidden = !state.sample;
-  renderHero(); renderLogger(); renderChart(); renderPhases(); renderCalendar();
+  renderHero(); renderLogger(); renderChart(); renderWhoop(); renderPhases(); renderCalendar();
 }
 function commit() { save(); renderAll(); }
 function setLogDate(d) { logDate = d > TODAY ? TODAY : d; calMonth = logDate.slice(0, 7); renderLogger(); renderCalendar(); }
 
 /* ---------- events ---------- */
 $('foodList').innerHTML = FOODS.map(([n, k]) => `<option value="${n}">${k} kcal</option>`).join('');
-$('foodQuick').innerHTML = QUICK.map(n => { const k = FOODS.find(f => f[0] === n)[1]; return `<button type="button" data-quick="${n}">+ ${n} <span class="num">${k}</span></button>`; }).join('');
+$('foodQuick').innerHTML = QUICK.map(n => { const f = FOODS.find(x => x[0] === n); return `<button type="button" data-quick="${n}">+ ${n} <span class="num">${f[1]}</span>${f[2] >= 10 ? ` <span class="num">${f[2]}g</span>` : ''}</button>`; }).join('');
 $('exType').innerHTML = EX.map(([n, m]) => `<option value="${m}">${n}</option>`).join('');
 
-$('foodName').addEventListener('input', e => { const f = FOODS.find(x => x[0] === e.target.value); if (f) $('foodKcal').value = f[1]; });
+$('foodName').addEventListener('input', e => { const f = FOODS.find(x => x[0] === e.target.value); if (f) { $('foodKcal').value = f[1]; $('foodProt').value = f[2]; } });
 $('foodForm').addEventListener('submit', e => {
   e.preventDefault();
   const name = $('foodName').value.trim(), kcal = Math.round(Number($('foodKcal').value));
   if (!name || !(kcal >= 0)) return;
-  ensure(logDate).food.push({ name, kcal }); $('foodName').value = ''; $('foodKcal').value = ''; commit(); $('foodName').focus(); onLogged(`${name} ${kcal} kcal`);
+  const prot = Math.max(0, Math.round(Number($('foodProt').value) || 0));
+  ensure(logDate).food.push(prot ? { name, kcal, prot } : { name, kcal }); $('foodName').value = ''; $('foodKcal').value = ''; $('foodProt').value = ''; commit(); $('foodName').focus(); onLogged(`${name} ${kcal} kcal`);
 });
 $('foodQuick').addEventListener('click', e => {
   const b = e.target.closest('[data-quick]'); if (!b) return;
-  const f = FOODS.find(x => x[0] === b.dataset.quick); ensure(logDate).food.push({ name: f[0], kcal: f[1] }); commit(); onLogged(`${f[0]} ${f[1]} kcal`);
+  const f = FOODS.find(x => x[0] === b.dataset.quick); ensure(logDate).food.push({ name: f[0], kcal: f[1], prot: f[2] }); commit(); onLogged(`${f[0]} ${f[1]} kcal，蛋白 ${f[2]} g`);
 });
 $('exForm').addEventListener('submit', e => {
   e.preventDefault();
@@ -852,7 +1010,7 @@ $('calNext').addEventListener('click', () => { const [y, m] = calMonth.split('-'
 for (const [id, k] of Object.entries(SETS)) {
   $(id).addEventListener('change', e => { const v = Number(e.target.value); if (Number.isFinite(v) && v > 0 || k === 'goal') { state.profile[k] = v; commit(); } });
 }
-$('startReal').addEventListener('click', () => { const p = state.profile; state = blank(); state.profile = p; logDate = TODAY; commit(); });
+$('startReal').addEventListener('click', () => openOnboarding());
 
 $('copyBackup').addEventListener('click', () => {
   const txt = JSON.stringify(state); $('backupText').value = txt;
@@ -865,7 +1023,7 @@ $('importBtn').addEventListener('click', () => {
   try {
     const s = JSON.parse($('backupText').value);
     if (!s || typeof s.days !== 'object' || typeof s.profile !== 'object') throw 0;
-    state = { profile: { ...DEFAULT_PROFILE, ...s.profile }, days: s.days, sample: false };
+    state = { profile: { ...DEFAULT_PROFILE, ...s.profile }, days: s.days, whoop: s.whoop || {}, sample: false, onboarded: true };
     commit(); renderSettings(); $('backupMsg').textContent = '已恢复';
   } catch (e) { $('backupMsg').textContent = '恢复失败：文本不是有效的备份，请粘贴完整的备份内容'; }
 });
@@ -881,7 +1039,7 @@ function renderClear(asking) {
 }
 renderClear(false);
 
-let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(renderChart, 120); });
+let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { renderChart(); if (!$('whPanel').hidden) renderWhChart(); }, 120); });
 
 /* ---------- AI coach ---------- */
 const AI = { mode: null, sample: null, ctl: null, turns: [], busy: false, autoTimer: null };
@@ -973,7 +1131,7 @@ function context() {
   const ph = phaseOf(TODAY), p = P();
   const dayLine = d => {
     const r = day(d), k = phaseOf(d);
-    return `${d}｜${PHASES[k.key].name}${k.cd ? ' D' + k.cd : ''}${r.period ? '｜经期' : ''}｜摄入 ${intake(d)}${r.food.length ? '（' + r.food.map(f => `${f.name} ${f.kcal}`).join('、') + '）' : '（未记录）'}｜运动 ${exBurn(d)}${r.ex.length ? '（' + r.ex.map(e => `${e.type} ${e.min}分钟`).join('、') + '）' : ''}｜总消耗 ${totalBurn(d)}`;
+    return `${d}｜${PHASES[k.key].name}${k.cd ? ' D' + k.cd : ''}${r.period ? '｜经期' : ''}｜摄入 ${intake(d)}${r.food.length ? '（' + r.food.map(f => `${f.name} ${f.kcal}`).join('、') + '）' : '（未记录）'}｜运动 ${exBurn(d)}${r.ex.length ? '（' + r.ex.map(e => `${e.type} ${e.min}分钟`).join('、') + '）' : ''}｜总消耗 ${totalBurn(d)}${measured(d) ? '(WHOOP实测)' : ''}｜蛋白 ${protein(d)}g${wh(d) ? `｜WHOOP 恢复${wh(d).recovery ?? '-'}% HRV${wh(d).hrv ?? '-'} 静息心率${wh(d).rhr ?? '-'} 睡眠${wh(d).sleepMin ? (wh(d).sleepMin / 60).toFixed(1) + 'h' : '-'} Strain${wh(d).strain ?? '-'}` : ''}`;
   };
   const recent = []; for (let i = 13; i >= 0; i--) recent.push(dayLine(addDays(TODAY, -i)));
   const agg = PH_ORDER.map(k => {
@@ -982,17 +1140,20 @@ function context() {
     const a = f => Math.round(ds.reduce((s, d) => s + f(d), 0) / ds.length);
     return `${PHASES[k].name}：${ds.length}天，日均摄入 ${a(intake)}，日均运动 ${a(exBurn)}，日均盈亏 ${a(d => intake(d) - totalBurn(d))}`;
   });
-  const goal = { '0': '维持体重', '-275': '慢减（约0.25kg/周）', '-550': '减脂（约0.5kg/周）', '250': '增肌' }[String(p.goal)] || '维持体重';
-  return `【用户资料】女性，${p.age}岁，${p.height}cm，${p.weight}kg，目标：${goal}。BMR≈${bmr()} kcal，日常基础消耗≈${baseBurn()} kcal。
+  const goal = { '-300': '减脂同时保住肌肉，最好能增肌（身体重组）', '0': '维持体重', '-275': '慢减（约0.25kg/周）', '-550': '减脂（约0.5kg/周）', '250': '增肌' }[String(p.goal)] || '维持体重';
+  const whAgg = PH_ORDER.map(k => { const a = whoopPhaseAvg(k); return a ? `${PHASES[k].name}：恢复${a.recovery ?? '-'}% HRV${a.hrv ?? '-'} 静息心率${a.rhr ?? '-'} 皮肤温度${a.temp ?? '-'}℃ 睡眠${a.sleepMin ? (a.sleepMin / 60).toFixed(1) + 'h' : '-'}` : null; }).filter(Boolean);
+  return `【用户资料】女性，${p.age}岁，${p.height}cm，${p.weight}kg，目标：${goal}。BMR≈${bmr()} kcal，日常基础消耗≈${baseBurn()} kcal，蛋白质目标 ${protTarget()} g/天。
 【周期】今天 ${TODAY}，周期第 ${ph.cd ?? '未知'} 天，${PHASES[ph.key].name}；平均周期 ${CS.len} 天，经期 ${CS.plen} 天；预计下次经期 ${nextPeriod() || '未知'}。
-【今天】摄入 ${intake(TODAY)}，运动 ${exBurn(TODAY)}，总消耗 ${totalBurn(TODAY)}，今日目标 ${target(TODAY)}（黄体期已含 +${lutealBonus()}）。
+【今天】摄入 ${intake(TODAY)}，蛋白 ${protein(TODAY)}g，运动 ${exBurn(TODAY)}，总消耗 ${totalBurn(TODAY)}，今日目标 ${target(TODAY)}（黄体期已含 +${lutealBonus()}）。
 【最近14天】
 ${recent.join('\n')}
 【各阶段均值】
-${agg.join('\n')}${state.sample ? '\n（注意：这些是示例数据）' : ''}`;
+${agg.join('\n')}${whAgg.length ? '\n【WHOOP 各阶段均值】\n' + whAgg.join('\n') : ''}${state.sample ? '\n（注意：这些是示例数据）' : ''}`;
 }
 const RULES = `你是一位懂女性生理周期的营养与运动教练，用简体中文回答。语气温和、直接、具体，不说教，不制造焦虑，不鼓励极端节食。
 结合用户当前的周期阶段解释她的数据（例如黄体期代谢和食欲上升、经期精力偏低、卵泡期适合高强度训练）。给出可以马上执行的建议，数字要具体（kcal、克数、分钟数）。
+如果用户目标是减脂保肌：强调蛋白质达标、每周至少 3 次渐进式力量训练、温和热量缺口，不要为了多掉秤牺牲肌肉；训练日和卵泡期可以多吃碳水，黄体期可以把缺口放小。
+有 WHOOP 数据时，用恢复分数、HRV、静息心率、睡眠来判断当天训练强度（例如恢复低于 34% 建议恢复性训练），并说明黄体期 HRV 下降、静息心率和体温升高是正常的周期现象。
 不做医疗诊断；遇到异常出血、剧烈疼痛、周期严重紊乱等情况，建议就医。不要用 Markdown 标题或表格，可以用短段落和“·”开头的要点。`;
 
 async function run(label, prompt, { tier = 'default', live = false, chat = false, images } = {}) {
@@ -1053,11 +1214,11 @@ $('photoIn').addEventListener('change', async e => {
   AI.busy = true; setAIEnabled(true);
   const body = addMsg('ai', '正在识别照片里的食物…', '拍照识别');
   try {
-    const prompt = '这是一张食物照片。识别里面的每样食物并估算份量和热量。只回复 JSON 数组，例如 [{"name":"米饭 一碗","kcal":230}]，name 用简体中文写食物和份量，kcal 为整数。看不出食物就回复 []。';
+    const prompt = '这是一张食物照片。识别里面的每样食物并估算份量、热量和蛋白质。只回复 JSON 数组，例如 [{"name":"米饭 一碗","kcal":230,"prot":4}]，name 用简体中文写食物和份量，kcal 和 prot（蛋白质克数）为整数。看不出食物就回复 []。';
     let items;
     if (AI.mode === 'claude') items = await AI.sample.json(prompt, { images: file, modelTier: 'default' });
     else { const { text } = await callKeyAPI(prompt, { images: file }); items = JSON.parse((text.match(/\[[\s\S]*\]/) || ['[]'])[0]); }
-    items = (Array.isArray(items) ? items : []).map(x => ({ name: String(x.name || '').slice(0, 40), kcal: Math.round(Number(x.kcal)) })).filter(x => x.name && x.kcal >= 0 && x.kcal < 5000);
+    items = (Array.isArray(items) ? items : []).map(x => ({ name: String(x.name || '').slice(0, 40), kcal: Math.round(Number(x.kcal)), prot: Math.max(0, Math.round(Number(x.prot) || 0)) })).filter(x => x.name && x.kcal >= 0 && x.kcal < 5000);
     if (!items.length) { body.textContent = '没认出食物，可以换个角度再拍一张，或者手动记录。'; return; }
     body.textContent = `识别到：${items.map(x => `${x.name} ${x.kcal} kcal`).join('、')}（合计 ${items.reduce((a, x) => a + x.kcal, 0)} kcal）`;
     const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:8px;margin-top:8px';
@@ -1071,9 +1232,260 @@ $('photoIn').addEventListener('change', async e => {
   } finally { AI.busy = false; setAIEnabled(!!AI.mode); }
 });
 
+/* ---------- WHOOP import ---------- */
+const norm = h => String(h).toLowerCase().replace(/[^a-z0-9%]/g, '');
+function parseCSV(text) {
+  const rows = []; let row = [], cur = '', q = false;
+  text = text.replace(/^﻿/, '');
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+    else cur += c;
+  }
+  if (cur || row.length) { row.push(cur); rows.push(row); }
+  const head = (rows.shift() || []).map(norm);
+  return { head, rows: rows.filter(r => r.some(x => x.trim())) };
+}
+// find a column by any of several header fragments (WHOOP renames headers between versions)
+function col(head, ...keys) { for (const k of keys) { const i = head.findIndex(h => h.includes(norm(k))); if (i >= 0) return i; } return -1; }
+const num = v => { const n = parseFloat(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : null; };
+const dateOf = v => { const m = String(v || '').match(/(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/); return m ? { d: `${m[1]}-${m[2]}-${m[3]}`, h: m[4] ? Number(m[4]) : 12 } : null; };
+// A WHOOP cycle starts when you fall asleep; count it toward the day you wake up in
+const cycleDay = v => { const x = dateOf(v); return x ? (x.h >= 12 ? addDays(x.d, 1) : x.d) : null; };
+const WH_ACT = { running: '跑步', run: '跑步', walking: '快走', cycling: '骑行', spin: '动感单车', swimming: '游泳', weightlifting: '力量训练', 'functional fitness': '功能性训练', 'strength trainer': '力量训练', yoga: '瑜伽', pilates: '普拉提', hiit: 'HIIT', hiking: '徒步', rowing: '划船', tennis: '网球', dance: '舞蹈', boxing: '拳击', stairmaster: '爬楼梯', elliptical: '椭圆机', 'activity': '运动' };
+const actName = n => { const k = String(n || '').toLowerCase().trim(); for (const [en, zh] of Object.entries(WH_ACT)) if (k === en || k.includes(en)) return zh; return n || '运动'; };
+
+function importWhoop(files) {
+  const out = { cycles: 0, workouts: 0, sleeps: 0, period: 0, days: new Set(), unknown: [] };
+  const W = state.whoop || (state.whoop = {});
+  const put = (d, k, v) => { if (v == null || !d) return; (W[d] || (W[d] = {}))[k] = v; out.days.add(d); };
+  for (const { name, text } of files) {
+    const { head, rows } = parseCSV(text);
+    const iStart = col(head, 'cycle start time', 'cyclestart', 'start');
+    const iWork = col(head, 'workout start time', 'workoutstart');
+    const iAct = col(head, 'activity name', 'sport');
+    const iQuestion = col(head, 'question text', 'question');
+    const iRec = col(head, 'recovery score', 'recovery');
+    const iOnset = col(head, 'sleep onset');
+    if (iWork >= 0 && iAct >= 0) {
+      // workouts.csv
+      const iDur = col(head, 'duration (min)', 'duration'), iKcal = col(head, 'energy burned', 'calories', 'kilojoule'), iStr = col(head, 'activity strain', 'strain');
+      const byDay = {};
+      for (const r of rows) {
+        const x = dateOf(r[iWork]); if (!x) continue;
+        let kcal = num(r[iKcal]); if (kcal != null && head[iKcal].includes('kj')) kcal = kcal / 4.184;
+        (byDay[x.d] || (byDay[x.d] = [])).push({ type: actName(r[iAct]), min: Math.round(num(r[iDur]) || 0), kcal: kcal != null ? Math.round(kcal) : null, strain: num(r[iStr]), src: 'whoop' });
+      }
+      for (const [d, list] of Object.entries(byDay)) {
+        const rec = ensure(d); rec.ex = rec.ex.filter(e => e.src !== 'whoop').concat(list.map(e => (e.kcal == null ? { ...e, met: 5, kcal: undefined } : e)));
+        out.workouts += list.length; out.days.add(d);
+      }
+    } else if (iQuestion >= 0) {
+      // journal_entries.csv — look for period/menstruation answers
+      const iYes = col(head, 'answered yes', 'answer');
+      for (const r of rows) {
+        const q = String(r[iQuestion] || '').toLowerCase();
+        if (!/menstru|period|月经|经期/.test(q)) continue;
+        const d = cycleDay(r[iStart]); const yes = /true|yes|1/i.test(String(r[iYes]));
+        if (d && yes && d <= TODAY) { ensure(d).period = true; out.period++; }
+      }
+    } else if (iRec >= 0 || col(head, 'day strain') >= 0 || (iStart >= 0 && col(head, 'energy burned') >= 0 && iOnset < 0)) {
+      // physiological_cycles.csv
+      const c = {
+        kcal: col(head, 'energy burned', 'calories'), strain: col(head, 'day strain'), recovery: iRec, hrv: col(head, 'heart rate variability', 'hrv'),
+        rhr: col(head, 'resting heart rate'), temp: col(head, 'skin temp'), spo2: col(head, 'blood oxygen', 'spo2'), resp: col(head, 'respiratory rate'),
+        sleepMin: col(head, 'asleep duration'), sleepPerf: col(head, 'sleep performance')
+      };
+      for (const r of rows) {
+        const d = cycleDay(r[iStart]); if (!d) continue;
+        for (const [k, i] of Object.entries(c)) if (i >= 0) { let v = num(r[i]); if (v != null && k === 'kcal' && head[i].includes('kj')) v = v / 4.184; put(d, k, v == null ? null : (k === 'strain' || k === 'temp' || k === 'resp') ? +v.toFixed(2) : Math.round(v)); }
+        out.cycles++;
+      }
+    } else if (iOnset >= 0) {
+      // sleeps.csv (main sleeps only; naps skipped)
+      const iNap = col(head, 'nap'), iAsleep = col(head, 'asleep duration'), iPerf = col(head, 'sleep performance'), iWake = col(head, 'wake onset');
+      for (const r of rows) {
+        if (iNap >= 0 && /true|yes|1/i.test(String(r[iNap]))) continue;
+        const w = dateOf(r[iWake]); const d = w ? w.d : cycleDay(r[iOnset]); if (!d) continue;
+        put(d, 'sleepMin', num(r[iAsleep]) != null ? Math.round(num(r[iAsleep])) : null);
+        put(d, 'sleepPerf', num(r[iPerf]) != null ? Math.round(num(r[iPerf])) : null);
+        out.sleeps++;
+      }
+    } else out.unknown.push(name);
+  }
+  return out;
+}
+async function readWhoopFiles(fileList) {
+  const files = [];
+  for (const f of fileList) {
+    if (/\.zip$/i.test(f.name) || f.type.includes('zip')) {
+      if (!window.JSZip) throw new Error('zip 解压组件没加载成功，请解压后直接选择里面的 CSV 文件');
+      const zip = await window.JSZip.loadAsync(f);
+      for (const entry of Object.values(zip.files)) if (!entry.dir && /\.csv$/i.test(entry.name)) files.push({ name: entry.name, text: await entry.async('string') });
+    } else files.push({ name: f.name, text: await f.text() });
+  }
+  if (!files.length) throw new Error('没找到 CSV 文件');
+  return files;
+}
+async function handleWhoop(fileList, msgEl) {
+  // copy first: the input is cleared right after this call, which empties its live FileList
+  const list = Array.from(fileList || []);
+  if (!list.length) return;
+  msgEl.textContent = '正在读取…';
+  try {
+    const files = await readWhoopFiles(list);
+    if (state.sample) { const p = state.profile; const ob = state.onboarded; state = blank(); state.profile = p; state.onboarded = ob; }
+    const r = importWhoop(files);
+    if (!r.cycles && !r.workouts && !r.sleeps && !r.period) throw new Error('这些文件里没有认出 WHOOP 数据，请确认是 WHOOP 导出的 CSV');
+    const ds = [...r.days].sort();
+    state.whoopImported = new Date().toISOString();
+    commit();
+    msgEl.textContent = `已导入 ${ds.length} 天（${fmtMD(ds[0])}–${fmtMD(ds[ds.length - 1])}）：生理周期 ${r.cycles} 条、训练 ${r.workouts} 次、睡眠 ${r.sleeps} 条${r.period ? `、经期标记 ${r.period} 天` : ''}${r.unknown.length ? `；跳过 ${r.unknown.join('、')}` : ''}`;
+  } catch (e) {
+    msgEl.textContent = '导入失败：' + (e && e.message ? e.message : '文件无法读取');
+  }
+}
+$('whFile').addEventListener('change', e => { handleWhoop(e.target.files, $('whMsg')); e.target.value = ''; });
+for (const [zone, msg] of [['whDrop', 'whMsg'], ['onbDrop', 'onbWhMsg']]) {
+  const z = $(zone);
+  z.addEventListener('dragover', e => { e.preventDefault(); z.classList.add('over'); });
+  z.addEventListener('dragleave', () => z.classList.remove('over'));
+  z.addEventListener('drop', e => { e.preventDefault(); z.classList.remove('over'); handleWhoop(e.dataTransfer.files, $(msg)); });
+}
+
+/* ---------- WHOOP × cycle rendering ---------- */
+const WH_METRICS = [
+  { k: 'recovery', name: '恢复', unit: '%', fmt: v => Math.round(v) },
+  { k: 'hrv', name: 'HRV', unit: 'ms', fmt: v => Math.round(v) },
+  { k: 'rhr', name: '静息心率', unit: 'bpm', fmt: v => Math.round(v) },
+  { k: 'temp', name: '皮肤温度', unit: '℃', fmt: v => v.toFixed(2) },
+  { k: 'sleepMin', name: '睡眠', unit: 'h', fmt: v => (v / 60).toFixed(1), scale: v => v / 60 },
+  { k: 'strain', name: 'Strain', unit: '', fmt: v => v.toFixed(1) }
+];
+let whMetric = 'recovery';
+function whoopPhaseAvg(k) {
+  const ds = Object.keys(state.whoop || {}).filter(d => d <= TODAY && phaseOf(d).key === k);
+  if (!ds.length) return null;
+  const out = { n: ds.length };
+  for (const m of WH_METRICS) {
+    const vals = ds.map(d => wh(d)[m.k]).filter(v => v != null);
+    out[m.k] = vals.length ? (m.k === 'temp' || m.k === 'strain' ? +(vals.reduce((a, b) => a + b) / vals.length).toFixed(2) : Math.round(vals.reduce((a, b) => a + b) / vals.length)) : null;
+  }
+  return out;
+}
+function renderWhoop() {
+  const has = Object.keys(state.whoop || {}).length > 0;
+  $('whPanel').hidden = !has;
+  $('whBody').closest('.grid2').hidden = !has;
+  const dates = Object.keys(state.whoop || {}).sort();
+  $('whMeta').textContent = has ? `${state.sample ? '示例 · ' : ''}${dates.length} 天 · ${fmtMD(dates[0])} 至 ${fmtMD(dates[dates.length - 1])}` : '还没有导入';
+  if (!has) return;
+  $('whSeg').innerHTML = WH_METRICS.map(m => `<button type="button" data-m="${m.k}" aria-pressed="${m.k === whMetric}">${m.name}</button>`).join('');
+  const A = Object.fromEntries(PH_ORDER.map(k => [k, whoopPhaseAvg(k)]));
+  const cell = (a, k) => { if (!a || a[k] == null) return '—'; const m = WH_METRICS.find(x => x.k === k); return m.fmt(a[k]) + (m.unit && m.unit !== '%' ? '' : m.unit); };
+  $('whBody').innerHTML = PH_ORDER.map(k => `<tr><td><span class="chip" style="--c:${PHASES[k].color}"><i></i>${PHASES[k].name}</span></td><td class="num">${A[k] ? A[k].n : 0}</td>${['recovery', 'hrv', 'rhr', 'temp', 'sleepMin', 'strain'].map(m => `<td class="num">${cell(A[k], m)}</td>`).join('')}</tr>`).join('')
+    + `<tr><td class="small muted" colspan="8" style="text-align:left;white-space:normal">单位：HRV ms · 静息心率 bpm · 皮肤温度 ℃ · 睡眠 h</td></tr>`;
+  const ins = [];
+  const F = A.fol, L = A.lut, M = A.men;
+  if (F && L) {
+    if (F.hrv != null && L.hrv != null) ins.push(`黄体期 HRV 平均 <b class="num">${L.hrv}</b> ms，卵泡期 <b class="num">${F.hrv}</b> ms（${L.hrv <= F.hrv ? '低' : '高'} ${Math.abs(F.hrv - L.hrv)}）。${L.hrv < F.hrv ? '孕酮升高时 HRV 下降是常见的周期现象，不代表你练退步了。' : ''}`);
+    if (F.rhr != null && L.rhr != null) ins.push(`静息心率黄体期 <b class="num">${L.rhr}</b>，卵泡期 <b class="num">${F.rhr}</b>（差 ${L.rhr - F.rhr > 0 ? '+' : ''}${L.rhr - F.rhr} bpm）。`);
+    if (F.temp != null && L.temp != null) { const dt = L.temp - F.temp; ins.push(`皮肤温度黄体期比卵泡期${dt >= 0 ? '高' : '低'} <b class="num">${Math.abs(dt).toFixed(2)}</b> ℃。${dt >= 0.2 ? '体温升高说明这几个周期大概率都有排卵，排卵日推算比较可信。' : '温差不明显，排卵日推算的误差可能大一些。'}`); }
+    if (F.recovery != null && L.recovery != null) ins.push(`平均恢复：卵泡期 <b class="num">${F.recovery}%</b>，黄体期 <b class="num">${L.recovery}%</b>${M && M.recovery != null ? `，经期 <b class="num">${M.recovery}%</b>` : ''}。为了保住肌肉，重训练尽量排在恢复高的阶段，黄体期后半段减少总训练量，但不要停。`);
+  }
+  const mdays = dates.filter(d => measured(d)).slice(-30);
+  if (mdays.length >= 5) {
+    const bias = mdays.reduce((a, d) => a + (wh(d).kcal - (baseBurn() + exBurn(d) + (phaseOf(d).key === 'lut' ? lutealBonus() : 0))), 0) / mdays.length;
+    ins.push(`按 WHOOP 实测，你每天的消耗比公式估算${bias >= 0 ? '多' : '少'} <b class="num">${fmt(Math.abs(bias))}</b> kcal。已结束的日子都按实测计算，今天在 WHOOP 周期结束前仍用估算。`);
+  }
+  $('whIns').innerHTML = (ins.length ? ins : ['数据还不够多：至少需要覆盖一个完整周期（有经期标记），才能按阶段对比。']).map(t => `<li>${t}</li>`).join('');
+  renderWhChart();
+}
+function renderWhChart() {
+  const m = WH_METRICS.find(x => x.k === whMetric); const sc = m.scale || (v => v);
+  const svg = $('whChart');
+  const W = Math.max(320, $('whBox').clientWidth || 800), H = W < 520 ? 200 : 230;
+  const mg = { l: 44, r: 10, t: 12, b: 34 }, iw = W - mg.l - mg.r, ih = H - mg.t - mg.b - 14;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const days = []; for (let i = 89; i >= 0; i--) days.push(addDays(TODAY, -i));
+  const rows = days.map(d => ({ d, v: wh(d) && wh(d)[m.k] != null ? sc(wh(d)[m.k]) : null, ph: phaseOf(d).key }));
+  const vals = rows.map(r => r.v).filter(v => v != null);
+  if (!vals.length) { svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle">最近 90 天没有这个指标</text>`; return; }
+  let lo = Math.min(...vals), hi = Math.max(...vals); const pad = (hi - lo) * .15 || 1; lo -= pad; hi += pad;
+  if (m.k === 'recovery') { lo = 0; hi = 100; }
+  const y = v => mg.t + ih - (v - lo) / (hi - lo) * ih, bw = iw / rows.length, x = i => mg.l + i * bw + bw / 2;
+  let out = '';
+  const ticks = 4; for (let t = 0; t <= ticks; t++) { const v = lo + (hi - lo) * t / ticks; out += `<line x1="${mg.l}" x2="${W - mg.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${mg.l - 6}" y="${y(v)}" text-anchor="end" dominant-baseline="middle">${m.k === 'temp' || m.k === 'sleepMin' || m.k === 'strain' ? v.toFixed(1) : Math.round(v)}</text>`; }
+  let path = '', pen = false;
+  rows.forEach((r, i) => { if (r.v == null) { pen = false; return; } path += `${pen ? 'L' : 'M'}${x(i).toFixed(1)} ${y(r.v).toFixed(1)} `; pen = true; });
+  out += `<path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>`;
+  const by = mg.t + ih + 6;
+  rows.forEach((r, i) => { if (r.ph !== 'none') out += `<rect x="${mg.l + i * bw}" y="${by}" width="${bw + .3}" height="6" fill="${PHASES[r.ph].color}"/>`; });
+  rows.forEach((r, i) => { if ((rows.length - 1 - i) % 21 === 0) out += `<text x="${x(i)}" y="${H - 6}" text-anchor="middle">${r.d === TODAY ? '今天' : r.d.slice(5).replace('-', '/')}</text>`; });
+  const li = rows.map(r => r.v != null).lastIndexOf(true);
+  if (li >= 0) out += `<circle cx="${x(li)}" cy="${y(rows[li].v)}" r="4" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>`;
+  out += `<line id="whCross" x1="0" x2="0" y1="${mg.t}" y2="${by + 6}" stroke="var(--ink3)" stroke-dasharray="3 3" visibility="hidden"/><rect id="whHit" x="${mg.l}" y="${mg.t}" width="${iw}" height="${ih + 20}" fill="transparent"/>`;
+  svg.innerHTML = out;
+  const tip = $('whTip'), cross = svg.querySelector('#whCross');
+  const show = ev => {
+    const rect = svg.getBoundingClientRect(), s = W / rect.width;
+    const i = Math.max(0, Math.min(rows.length - 1, Math.floor(((ev.clientX - rect.left) * s - mg.l) / bw))), r = rows[i];
+    cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i)); cross.setAttribute('visibility', 'visible');
+    const w = wh(r.d);
+    tip.innerHTML = `<b>${fmtMD(r.d)}</b> · ${PHASES[r.ph].name}<br>` + (w ? WH_METRICS.filter(q => w[q.k] != null).map(q => `${q.name} <span class="num">${q.fmt(w[q.k])}${q.unit}</span>`).join('<br>') : '没有 WHOOP 数据');
+    tip.hidden = false;
+    tip.style.left = Math.max(80, Math.min(rect.width - 80, x(i) / s)) + 'px';
+    tip.style.top = ((r.v != null ? y(r.v) : mg.t + ih / 2) / s - 10) + 'px';
+  };
+  const hit = svg.querySelector('#whHit');
+  hit.addEventListener('pointermove', show); hit.addEventListener('pointerdown', show);
+  hit.addEventListener('pointerleave', () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); });
+}
+$('whSeg').addEventListener('click', e => { const b = e.target.closest('[data-m]'); if (!b) return; whMetric = b.dataset.m; $('whSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')); renderWhChart(); });
+
+/* ---------- onboarding ---------- */
+function openOnboarding() {
+  const p = state.profile;
+  $('oHeight').value = p.height; $('oWeight').value = p.weight; $('oAge').value = p.age; $('oAct').value = String(p.act);
+  $('oCycle').value = p.cycle; $('oPlen').value = p.period;
+  const g = $('oGoal').querySelector(`input[value="${p.goal}"]`); if (g) g.checked = true;
+  $('oLast').max = TODAY; $('oPrev').max = TODAY;
+  if (state.sample) { $('oLast').value = ''; $('oPrev').value = ''; }
+  $('onbP1').hidden = false; $('onbP2').hidden = true; $('onbStep2').classList.remove('on'); $('onbErr').textContent = '';
+  $('onb').hidden = false; document.body.style.overflow = 'hidden';
+  setTimeout(() => $('oHeight').focus(), 50);
+}
+function closeOnboarding() { $('onb').hidden = true; document.body.style.overflow = ''; }
+$('onbForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const v = id => Number($(id).value);
+  const err = m => { $('onbErr').textContent = m; };
+  if (!(v('oHeight') >= 120 && v('oHeight') <= 220)) return err('身高请填 120–220 之间的数字（厘米）');
+  if (!(v('oWeight') >= 30 && v('oWeight') <= 200)) return err('体重请填 30–200 之间的数字（公斤）');
+  if (!(v('oAge') >= 12 && v('oAge') <= 80)) return err('年龄请填 12–80 之间的数字');
+  const last = $('oLast').value, prev = $('oPrev').value;
+  if (!last) return err('请选择上次月经的第一天，周期分析要从这天开始算');
+  if (last > TODAY) return err('上次月经日期不能晚于今天');
+  if (prev && diffDays(last, prev) < 18) return err('再上一次月经应该比上次早至少 18 天，请检查日期');
+  const plen = Math.min(9, Math.max(2, v('oPlen') || 5)), cycle = Math.min(45, Math.max(21, v('oCycle') || 33));
+  if (state.sample) state = blank();
+  state.profile = { height: v('oHeight'), weight: v('oWeight'), age: v('oAge'), act: Number($('oAct').value), goal: Number($('oGoal').querySelector('input:checked').value), cycle, period: plen };
+  for (const st of [prev, last].filter(Boolean)) for (let i = 0; i < plen; i++) { const d = addDays(st, i); if (d <= TODAY) ensure(d).period = true; }
+  state.onboarded = true; logDate = TODAY; calMonth = TODAY.slice(0, 7);
+  commit(); renderSettings();
+  $('onbP1').hidden = true; $('onbP2').hidden = false; $('onbStep2').classList.add('on');
+});
+$('onbFile').addEventListener('change', e => { handleWhoop(e.target.files, $('onbWhMsg')); e.target.value = ''; });
+$('onbDone').addEventListener('click', () => { closeOnboarding(); window.scrollTo({ top: 0 }); });
+$('onbDemo').addEventListener('click', () => { if (!state.sample) { const ob = state.onboarded; state = makeSample(); state.onboarded = ob; } state.demoSeen = true; closeOnboarding(); commit(); renderSettings(); });
+
 renderSettings();
 renderAll();
 setAIEnabled(false);
 initAI();
+if (!state.onboarded && !state.demoSeen) openOnboarding();
 })();
 </script>

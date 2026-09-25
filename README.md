@@ -10,6 +10,12 @@
 - AI 教练：记录后即时点评、点评今天、分析最近一个周期、生成明天的计划、自由提问、拍照识别食物热量
   - 在 claude.ai 打开时，使用你自己的 Claude 账号，不需要 API Key
   - 在本地打开 `index.html` 时，填入 Anthropic API Key 即可（Key 只保存在本机浏览器）
+- 首次打开的引导：填写身高、体重、年龄、目标（默认「减脂保肌」，蛋白质 2.0 g/kg）、上次经期，可选导入 WHOOP
+- 蛋白质追踪：每项食物可填蛋白质克数，首页显示今日蛋白质 / 目标
+- WHOOP 导入：上传 WHOOP 导出的 zip 或 CSV（physiological_cycles、workouts、sleeps、journal_entries）
+  - 已结束的日子用 WHOOP 实测消耗替代公式估算，训练自动记入运动
+  - 恢复、HRV、静息心率、皮肤温度、睡眠、Strain 按周期阶段对比，并交给 AI 教练参考
+  - 列名做了宽松匹配，兼容 WHOOP 不同版本的导出格式
 - 数据保存在浏览器 localStorage，可复制备份 / 粘贴恢复
 
 直接用浏览器打开 `index.html` 即可。首次打开显示示例数据，点“清空示例，开始记录我的数据”开始使用。
