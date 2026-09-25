@@ -557,8 +557,8 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
     <div class="panel" style="display:grid;gap:12px">
       <details id="liftWrap">
         <summary style="cursor:pointer;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline"><h3 style="display:inline">我的重量基础</h3><span class="small muted" id="liftSum"></span></summary>
-        <p class="small muted" style="margin:10px 0">每个动作填最近一组做得比较好的重量和次数（哑铃填单手重量）。app 用它估算你的最大力量，再给每个训练动作算建议重量。以后变强了随时更新。</p>
-        <div class="tbl-wrap"><table class="lift-tbl"><thead><tr><th style="text-align:left">动作</th><th>重量 kg</th><th>次数</th><th>估算 1RM</th><th>变化</th></tr></thead><tbody id="liftBody"></tbody></table></div>
+        <p class="small muted" style="margin:10px 0">每个动作填最近一组做得比较好的重量和次数（哑铃填单手重量）。app 用它估算你的最大力量，再给每个训练动作算建议重量。右边是按进度计划推算的主项工作重量：卵泡期和排卵期正常加重，黄体期前段和经期加一半，经前一周不加（当作减量周）。</p>
+        <div class="tbl-wrap"><table class="lift-tbl"><thead><tr><th style="text-align:left">动作</th><th>重量 kg</th><th>次数</th><th>估算 1RM</th><th>变化</th><th>主项组数</th><th>现在</th><th>4 周后</th><th>100 天结束</th></tr></thead><tbody id="liftBody"></tbody></table></div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap"><button class="btn primary" type="button" id="liftSave">保存重量基础</button><span class="small" id="liftMsg" role="status"></span></div>
       </details>
       <div id="gluteStr"></div>
@@ -2072,8 +2072,8 @@ function recCombo(ph, w) {
 const liftLatest = k => { const h = ((state.lifts || {})[k] || []); return h.length ? h[h.length - 1] : null; };
 const liftFirst = k => { const h = ((state.lifts || {})[k] || []); return h.length ? h[0] : null; };
 const e1rm = x => x && x.w > 0 && x.r > 0 ? x.w * (1 + Math.min(x.r, 15) / 30) : null;
-function loadFor(liftKey, dose, factor) {
-  const L = LIFTS.find(l => l.k === liftKey), x = liftLatest(liftKey), one = e1rm(x);
+function loadFromE1(liftKey, one, dose, factor) {
+  const L = LIFTS.find(l => l.k === liftKey);
   if (!L || !one) return null;
   const m = String(dose).match(/×\s*(\d+)(?:\s*[–-]\s*(\d+))?/); if (!m) return null;
   const hi = Number(m[2] || m[1]);
@@ -2082,6 +2082,30 @@ function loadFor(liftKey, dose, factor) {
   const v = Math.max(L.step, Math.round(raw / L.step) * L.step);
   return { kg: +v.toFixed(1), perHand: /单手/.test(L.note) };
 }
+function loadFor(liftKey, dose, factor) { return loadFromE1(liftKey, e1rm(liftLatest(liftKey)), dose, factor); }
+/* progression plan: weekly gain in estimated 1RM, paced by the menstrual cycle
+   (full pace in the follicular/ovulatory phase, half in early luteal and during the period, none in the premenstrual week) */
+const RATE = { hipthrust: 0.015, rdl: 0.0125, bss: 0.01, abductor: 0.015, pulldown: 0.01, dbpress: 0.0075, lateral: 0.005, row: 0.01 };
+const MAIN_DOSE = { hipthrust: '5 × 5', rdl: '4 × 6–8', bss: '3 × 10', abductor: '3 × 12–15', pulldown: '4 × 10–12', dbpress: '3 × 8–10', lateral: '4 × 12–20', row: '3 × 12' };
+function progWeeks(from, to) {
+  let w = 0;
+  for (let d = from, n = 0; d < to && n < 800; d = addDays(d, 1), n++) {
+    const ph = phaseOf(d);
+    w += ph.key === 'lut' && ph.cd && ph.cd >= CS.len - 6 ? 0 : (ph.key === 'lut' || ph.key === 'men') ? 0.5 : 1;
+  }
+  return w / 7;
+}
+function planE1(lk, date) {
+  const f = liftFirst(lk); if (!f) return null;
+  return e1rm(f) * (1 + (RATE[lk] || 0.01) * progWeeks(f.date, date));
+}
+function forecastE1(lk, date) {
+  const x = liftLatest(lk); if (!x) return null;
+  // project from whichever is higher today: what you can do now, or where the plan says you should be
+  const base = Math.max(e1rm(x), planE1(lk, TODAY) || 0);
+  return base * (1 + (RATE[lk] || 0.01) * progWeeks(TODAY, date));
+}
+function weekNo(lk) { const f = liftFirst(lk); return f ? Math.floor(diffDays(TODAY, f.date) / 7) + 1 : null; }
 function weekStart(d) { const w = parse(d).getDay(); return addDays(d, -((w + 6) % 7)); }
 function partCounts() {
   const ws = weekStart(TODAY), out = { glute: 0, shoulder: 0, core: 0, other: 0 };
@@ -2135,12 +2159,18 @@ $('parts').addEventListener('click', e => {
 });
 $('planTabs').addEventListener('click', e => { const b = e.target.closest('[data-plan]'); if (!b) return; planDays = Number(b.dataset.plan); renderTraining(); });
 
+function progCells(k) {
+  const x = liftLatest(k); if (!x) return '<td class="small muted" colspan="4">填了以后显示进度目标</td>';
+  const dose = MAIN_DOSE[k], end = addDays(cdState().start, 99), in4 = addDays(TODAY, 28);
+  const now = loadFor(k, dose, 1), a = loadFromE1(k, forecastE1(k, in4), dose, 1), z = end > TODAY ? loadFromE1(k, forecastE1(k, end), dose, 1) : null;
+  return `<td class="small muted">${dose}</td><td class="num">${now ? now.kg : '—'}</td><td class="num">${a ? a.kg : '—'}</td><td class="num" style="font-weight:600">${z ? z.kg : '—'}</td>`;
+}
 function renderLifts() {
   const have = LIFTS.filter(l => liftLatest(l.k));
   $('liftSum').textContent = have.length ? `已填 ${have.length}/${LIFTS.length} 个动作，训练动作会显示建议重量` : '还没填，填了以后每个动作会显示建议重量';
   if (!$('liftWrap').open || !$('liftBody').children.length) {
     $('liftBody').innerHTML = LIFTS.map(l => { const x = liftLatest(l.k), f = liftFirst(l.k), one = e1rm(x), d = x && f && x !== f ? e1rm(x) - e1rm(f) : null;
-      return `<tr><td style="text-align:left">${l.name}${l.note ? ` <span class="small muted">${l.note}</span>` : ''}</td><td><input type="number" step="0.5" min="0" data-lw="${l.k}" value="${x ? x.w : ''}" aria-label="${l.name} 重量"></td><td><input type="number" step="1" min="1" max="30" data-lr="${l.k}" value="${x ? x.r : ''}" aria-label="${l.name} 次数"></td><td class="num">${one ? one.toFixed(1) : '—'}</td><td class="num small ${d > 0 ? 'good' : ''}" style="${d > 0 ? 'color:var(--good)' : ''}">${d ? (d > 0 ? '+' : '') + d.toFixed(1) : '—'}</td></tr>`; }).join('');
+      return `<tr><td style="text-align:left">${l.name}${l.note ? ` <span class="small muted">${l.note}</span>` : ''}</td><td><input type="number" step="0.5" min="0" data-lw="${l.k}" value="${x ? x.w : ''}" aria-label="${l.name} 重量"></td><td><input type="number" step="1" min="1" max="30" data-lr="${l.k}" value="${x ? x.r : ''}" aria-label="${l.name} 次数"></td><td class="num">${one ? one.toFixed(1) : '—'}</td><td class="num small ${d > 0 ? 'good' : ''}" style="${d > 0 ? 'color:var(--good)' : ''}">${d ? (d > 0 ? '+' : '') + d.toFixed(1) : '—'}</td>${progCells(l.k)}</tr>`; }).join('');
   }
   // glute strength relative to body weight
   const ht = e1rm(liftLatest('hipthrust')), bw = Number(P().weight) || 0;
@@ -2167,7 +2197,8 @@ $('liftSave').addEventListener('click', () => {
 });
 function liftsCtx() {
   const have = LIFTS.map(l => { const x = liftLatest(l.k); return x ? `${l.name}${l.note ? '(' + l.note + ')' : ''} ${x.w}kg×${x.r}（估算1RM ${e1rm(x).toFixed(1)}kg）` : null; }).filter(Boolean);
-  return have.length ? '\n【重量基础】' + have.join('；') : '\n【重量基础】还没填写';
+  const plan = LIFTS.filter(l => liftLatest(l.k)).map(l => { const d = MAIN_DOSE[l.k], p4 = loadFromE1(l.k, forecastE1(l.k, addDays(TODAY, 28)), d, 1), pe = loadFromE1(l.k, forecastE1(l.k, addDays(cdState().start, 99)), d, 1); return p4 ? `${l.name} ${d}：4周后约${p4.kg}kg，100天结束约${pe ? pe.kg : '-'}kg` : null; }).filter(Boolean);
+  return have.length ? '\n【重量基础】' + have.join('；') + (plan.length ? '\n【进度计划】' + plan.join('；') : '') : '\n【重量基础】还没填写';
 }
 
 /* ---------- today's workout: one focus area per day, loads from the strength base, checkable sets ---------- */
@@ -2272,6 +2303,11 @@ function renderWorkout() {
           <span class="rir">${rirText(si, pd.sets, pd, main)}</span></div>`;
       }
       if (lk && !ld) html += `<span class="small muted">填了「我的重量基础」里的${LIFTS.find(l => l.k === lk).name}，这里会直接给出重量。</span>`;
+      if (lk && ld) {
+        const pl = loadFromE1(lk, planE1(lk, TODAY), d, f), ahead = e1rm(liftLatest(lk)) >= (planE1(lk, TODAY) || 0) - 0.01, wn = weekNo(lk);
+        const L = LIFTS.find(l => l.k === lk), later = loadFromE1(lk, forecastE1(lk, addDays(TODAY, 28)), d, f);
+        if (pl) html += `<span class="small">${ahead ? '<span style="color:var(--good)">✓ 进度领先或持平计划</span>' : `进度参考（计划第 ${wn} 周）：<b>${pl.kg} kg</b>${pl.kg - ld.kg >= L.step ? '，比你现在的能力高一点，状态好可以在最后一组试试' : ''}`}${later ? ` · 4 周后目标约 ${later.kg} kg` : ''}</span>`;
+      }
       html += `</div>`;
     });
     html += `</div>`;
