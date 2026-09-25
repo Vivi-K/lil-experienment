@@ -152,6 +152,32 @@ td.bar-cell{width:34%;min-width:110px}
 .backup{display:grid;gap:8px}
 .backup textarea{width:100%;min-height:80px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-family:var(--mono);font-size:12px;padding:8px}
 .note{font-size:13px;color:var(--ink3);max-width:70ch}
+/* AI coach */
+.coach{display:grid;gap:12px}
+.coach-top{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.coach-status{font-size:12px;color:var(--ink3);display:inline-flex;align-items:center;gap:6px}
+.coach-status i{width:7px;height:7px;border-radius:50%;background:var(--ink3);display:inline-block}
+.coach-status.on i{background:var(--good)}
+.btn:disabled,.suggest button:disabled{opacity:.45;cursor:not-allowed}
+.feed:empty::before{content:"记录饮食或运动后，AI 会结合你当前的周期阶段即时点评；也可以点上面的按钮，或者直接提问。";font-size:14px;color:var(--ink3)}
+.feed{display:grid;gap:10px;max-height:420px;overflow-y:auto;padding-right:4px}
+.msg{padding:10px 12px;border-radius:10px;font-size:14px;line-height:1.65;white-space:pre-wrap;max-width:100%;overflow-wrap:anywhere}
+.msg.ai{background:var(--sunk)}
+.msg.me{background:var(--accent-soft);justify-self:end;max-width:85%}
+.msg.live{border-left:3px solid var(--accent);border-radius:0 10px 10px 0}
+.msg .meta{display:block;font-size:12px;color:var(--ink3);margin-bottom:2px;white-space:normal}
+.msg.err{background:transparent;border:1px dashed var(--line);color:var(--ink2)}
+.ask{display:flex;gap:8px}
+.ask input{flex:1 1 auto;min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px}
+.switch{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink2);cursor:pointer}
+.photo-btn{position:relative;overflow:hidden}
+.photo-btn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.key-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.key-row input{flex:1 1 220px;min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 10px;font-family:var(--mono);font-size:13px}
+.suggest{display:flex;flex-wrap:wrap;gap:6px}
+.suggest button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 10px;font-size:13px;color:var(--ink2)}
+.suggest button:hover{color:var(--ink);border-color:var(--ink3)}
+
 .confirm{display:inline-flex;gap:8px;align-items:center;font-size:14px}
 @media (prefers-reduced-motion:no-preference){.meter div,.hbar{transition:width .3s ease}}
 </style>
@@ -184,6 +210,40 @@ td.bar-cell{width:34%;min-width:110px}
       <div>
         <div class="meter" id="meter"><div></div></div>
         <div class="small muted" id="meterText" style="margin-top:6px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI COACH -->
+  <section class="block" aria-labelledby="coachH">
+    <div class="sec-head">
+      <h2 id="coachH">AI 教练</h2>
+      <span class="coach-status" id="coachStatus"><i></i><span>正在连接…</span></span>
+    </div>
+    <div class="panel coach">
+      <div class="coach-top">
+        <button class="btn primary" id="aiToday" type="button">点评今天</button>
+        <button class="btn" id="aiWeek" type="button">分析最近一个周期</button>
+        <button class="btn" id="aiPlan" type="button">给我明天的计划</button>
+        <label class="btn photo-btn" id="photoWrap" hidden>拍照识别食物<input type="file" id="photoIn" accept="image/*" aria-label="上传食物照片"></label>
+        <button class="btn ghost" id="aiStop" type="button" hidden>停止</button>
+        <label class="switch" style="margin-left:auto"><input type="checkbox" id="autoFb" checked> 每次记录后即时点评</label>
+      </div>
+      <div class="feed" id="feed" aria-live="polite"></div>
+      <div class="suggest" id="suggest">
+        <button type="button">黄体期总想吃甜的怎么办？</button>
+        <button type="button">经期还能做力量训练吗？</button>
+        <button type="button">我今天晚饭怎么吃比较好？</button>
+      </div>
+      <form class="ask" id="askForm">
+        <input id="askIn" placeholder="问问 AI：比如“今天奶茶喝多了，明天怎么调整？”" aria-label="向 AI 提问" autocomplete="off">
+        <button class="btn primary" type="submit">发送</button>
+      </form>
+      <div class="key-row" id="keyRow" hidden>
+        <span class="small muted">在本地打开时，需要填你的 Anthropic API Key：</span>
+        <input id="apiKey" type="password" placeholder="sk-ant-..." aria-label="Anthropic API Key">
+        <button class="btn" id="saveKey" type="button">保存</button>
+        <span class="note" style="flex-basis:100%">Key 只保存在这个浏览器里，请求直接从浏览器发到 Anthropic。不要在别人的电脑上保存。</span>
       </div>
     </div>
   </section>
@@ -754,17 +814,17 @@ $('foodForm').addEventListener('submit', e => {
   e.preventDefault();
   const name = $('foodName').value.trim(), kcal = Math.round(Number($('foodKcal').value));
   if (!name || !(kcal >= 0)) return;
-  ensure(logDate).food.push({ name, kcal }); $('foodName').value = ''; $('foodKcal').value = ''; commit(); $('foodName').focus();
+  ensure(logDate).food.push({ name, kcal }); $('foodName').value = ''; $('foodKcal').value = ''; commit(); $('foodName').focus(); onLogged(`${name} ${kcal} kcal`);
 });
 $('foodQuick').addEventListener('click', e => {
   const b = e.target.closest('[data-quick]'); if (!b) return;
-  const f = FOODS.find(x => x[0] === b.dataset.quick); ensure(logDate).food.push({ name: f[0], kcal: f[1] }); commit();
+  const f = FOODS.find(x => x[0] === b.dataset.quick); ensure(logDate).food.push({ name: f[0], kcal: f[1] }); commit(); onLogged(`${f[0]} ${f[1]} kcal`);
 });
 $('exForm').addEventListener('submit', e => {
   e.preventDefault();
   const sel = $('exType'), min = Math.round(Number($('exMin').value));
   if (!(min > 0)) return;
-  ensure(logDate).ex.push({ type: sel.options[sel.selectedIndex].text, met: Number(sel.value), min }); $('exMin').value = ''; commit();
+  const exName = sel.options[sel.selectedIndex].text; ensure(logDate).ex.push({ type: exName, met: Number(sel.value), min }); $('exMin').value = ''; commit(); onLogged(`${exName} ${min} 分钟（约 ${fmt(Number(sel.value) * P().weight * min / 60)} kcal）`);
 });
 $('exType').addEventListener('change', updateExPreview);
 $('exMin').addEventListener('input', updateExPreview);
@@ -822,7 +882,198 @@ function renderClear(asking) {
 renderClear(false);
 
 let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(renderChart, 120); });
+
+/* ---------- AI coach ---------- */
+const AI = { mode: null, sample: null, ctl: null, turns: [], busy: false, autoTimer: null };
+const KEY_API = 'moon-energy-apikey';
+const MODELS = { quick: 'claude-haiku-4-5-20251001', default: 'claude-sonnet-5', complex: 'claude-sonnet-5' };
+function getKey() { try { return localStorage.getItem(KEY_API) || ''; } catch (e) { return ''; } }
+
+function setStatus(text, on) {
+  const el = $('coachStatus'); el.classList.toggle('on', !!on); el.querySelector('span').textContent = text;
+}
+function setAIEnabled(on) {
+  ['aiToday', 'aiWeek', 'aiPlan'].forEach(id => $(id).disabled = !on || AI.busy);
+  $('askForm').querySelector('button').disabled = !on || AI.busy;
+  $('suggest').querySelectorAll('button').forEach(b => b.disabled = !on || AI.busy);
+}
+async function initAI() {
+  if (window.claude && typeof window.claude.use === 'function') {
+    const sample = await window.claude.use('sample').catch(() => null);
+    if (sample) {
+      AI.mode = 'claude'; AI.sample = sample;
+      setStatus('已连接 Claude（使用你自己的 claude.ai 额度）', true);
+      const lim = await sample.limits().catch(() => null);
+      $('photoWrap').hidden = !lim?.images;
+      setAIEnabled(true); return;
+    }
+  }
+  // Opened outside claude.ai: fall back to the viewer's own API key
+  $('keyRow').hidden = false;
+  if (getKey()) { AI.mode = 'key'; setStatus('已用 API Key 连接', true); $('photoWrap').hidden = false; setAIEnabled(true); }
+  else { AI.mode = null; setStatus('未连接：填入 API Key 后可用', false); setAIEnabled(false); }
+}
+$('saveKey').addEventListener('click', () => {
+  const k = $('apiKey').value.trim();
+  try { if (k) localStorage.setItem(KEY_API, k); else localStorage.removeItem(KEY_API); } catch (e) { /* ignore */ }
+  $('apiKey').value = ''; initAI();
+});
+
+const blobToB64 = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(b); });
+async function callKeyAPI(input, opts) {
+  const msgs = typeof input === 'string' ? [{ role: 'user', content: input }] : input.map(t => ({ ...t }));
+  if (opts.images) {
+    const last = msgs[msgs.length - 1];
+    const img = opts.images;
+    last.content = [{ type: 'image', source: { type: 'base64', media_type: img.type || 'image/jpeg', data: await blobToB64(img) } }, { type: 'text', text: last.content }];
+  }
+  // merge consecutive same-role turns
+  const merged = [];
+  for (const m of msgs) { const prev = merged[merged.length - 1]; if (prev && prev.role === m.role && typeof prev.content === 'string' && typeof m.content === 'string') prev.content += '\n\n' + m.content; else merged.push(m); }
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST', signal: opts.signal,
+    headers: { 'content-type': 'application/json', 'x-api-key': getKey(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({ model: MODELS[opts.modelTier || 'default'], max_tokens: 1200, messages: merged })
+  }).catch(e => { throw { code: e.name === 'AbortError' ? 'cancelled' : 'upstream_error', message: String(e) }; });
+  if (!r.ok) { const t = await r.text(); throw { code: r.status === 401 ? 'bad_key' : r.status === 429 ? 'rate_limited' : 'upstream_error', message: t }; }
+  const j = await r.json();
+  const text = (j.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
+  opts.onText && opts.onText({ text, delta: text });
+  return { text };
+}
+async function ask(input, opts = {}) {
+  if (AI.mode === 'claude') return AI.sample(input, opts);
+  if (AI.mode === 'key') return callKeyAPI(input, opts);
+  throw { code: 'not_granted' };
+}
+function errCopy(code) {
+  return ({
+    not_granted: '你没有允许这个页面使用 Claude，AI 功能已关闭。刷新页面可以重新选择。',
+    sampling_disabled: '你的账号暂时不能在页面里使用 Claude。',
+    rate_limited: '请求太频繁或额度用完了，稍后再试。',
+    session_expired: '登录已过期，请重新登录 claude.ai。',
+    refused: 'AI 没有回答这个问题，换个问法试试。',
+    bad_key: 'API Key 无效，请检查后重新保存。',
+    image_rejected: '这张图片没法识别，换一张清晰的照片试试。',
+    invalid_json: '识别结果格式不对，再试一次。'
+  })[code] || '连接中断了，再试一次。';
+}
+
+function addMsg(role, text, meta, cls) {
+  const el = document.createElement('div');
+  el.className = `msg ${role}${cls ? ' ' + cls : ''}`;
+  if (meta) { const m = document.createElement('span'); m.className = 'meta'; m.textContent = meta; el.append(m); }
+  const body = document.createElement('span'); body.textContent = text; el.append(body);
+  $('feed').append(el); $('feed').scrollTop = $('feed').scrollHeight;
+  return body;
+}
+
+/* Compact snapshot of the user's data for the prompt */
+function context() {
+  const ph = phaseOf(TODAY), p = P();
+  const dayLine = d => {
+    const r = day(d), k = phaseOf(d);
+    return `${d}｜${PHASES[k.key].name}${k.cd ? ' D' + k.cd : ''}${r.period ? '｜经期' : ''}｜摄入 ${intake(d)}${r.food.length ? '（' + r.food.map(f => `${f.name} ${f.kcal}`).join('、') + '）' : '（未记录）'}｜运动 ${exBurn(d)}${r.ex.length ? '（' + r.ex.map(e => `${e.type} ${e.min}分钟`).join('、') + '）' : ''}｜总消耗 ${totalBurn(d)}`;
+  };
+  const recent = []; for (let i = 13; i >= 0; i--) recent.push(dayLine(addDays(TODAY, -i)));
+  const agg = PH_ORDER.map(k => {
+    const ds = Object.keys(state.days).filter(d => d <= TODAY && logged(d) && phaseOf(d).key === k);
+    if (!ds.length) return `${PHASES[k].name}：无数据`;
+    const a = f => Math.round(ds.reduce((s, d) => s + f(d), 0) / ds.length);
+    return `${PHASES[k].name}：${ds.length}天，日均摄入 ${a(intake)}，日均运动 ${a(exBurn)}，日均盈亏 ${a(d => intake(d) - totalBurn(d))}`;
+  });
+  const goal = { '0': '维持体重', '-275': '慢减（约0.25kg/周）', '-550': '减脂（约0.5kg/周）', '250': '增肌' }[String(p.goal)] || '维持体重';
+  return `【用户资料】女性，${p.age}岁，${p.height}cm，${p.weight}kg，目标：${goal}。BMR≈${bmr()} kcal，日常基础消耗≈${baseBurn()} kcal。
+【周期】今天 ${TODAY}，周期第 ${ph.cd ?? '未知'} 天，${PHASES[ph.key].name}；平均周期 ${CS.len} 天，经期 ${CS.plen} 天；预计下次经期 ${nextPeriod() || '未知'}。
+【今天】摄入 ${intake(TODAY)}，运动 ${exBurn(TODAY)}，总消耗 ${totalBurn(TODAY)}，今日目标 ${target(TODAY)}（黄体期已含 +${lutealBonus()}）。
+【最近14天】
+${recent.join('\n')}
+【各阶段均值】
+${agg.join('\n')}${state.sample ? '\n（注意：这些是示例数据）' : ''}`;
+}
+const RULES = `你是一位懂女性生理周期的营养与运动教练，用简体中文回答。语气温和、直接、具体，不说教，不制造焦虑，不鼓励极端节食。
+结合用户当前的周期阶段解释她的数据（例如黄体期代谢和食欲上升、经期精力偏低、卵泡期适合高强度训练）。给出可以马上执行的建议，数字要具体（kcal、克数、分钟数）。
+不做医疗诊断；遇到异常出血、剧烈疼痛、周期严重紊乱等情况，建议就医。不要用 Markdown 标题或表格，可以用短段落和“·”开头的要点。`;
+
+async function run(label, prompt, { tier = 'default', live = false, chat = false, images } = {}) {
+  if (!AI.mode || AI.busy) return;
+  AI.busy = true; setAIEnabled(true); $('aiStop').hidden = false;
+  const ctl = new AbortController(); AI.ctl = ctl;
+  const body = addMsg('ai', '思考中…', label, live ? 'live' : '');
+  let input;
+  if (chat) { AI.turns.push({ role: 'user', content: prompt }); input = [{ role: 'user', content: RULES + '\n\n' + context() }, ...AI.turns.slice(-12)]; }
+  else input = `${RULES}\n\n${context()}\n\n【任务】${prompt}`;
+  try {
+    const opts = { signal: ctl.signal, modelTier: tier, onText: ({ text }) => { body.textContent = text; $('feed').scrollTop = $('feed').scrollHeight; } };
+    if (chat) opts.cache = false;
+    if (images) opts.images = images;
+    const { text } = await ask(input, opts);
+    body.textContent = text;
+    if (chat) AI.turns.push({ role: 'assistant', content: text });
+  } catch (e) {
+    if (chat) AI.turns.pop();
+    if (e && e.code === 'cancelled') body.textContent = (e.text || '') + '（已停止）';
+    else {
+      body.textContent = e && e.text ? e.text : '';
+      addMsg('ai', errCopy(e && e.code), null, 'err');
+      if (e && ['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled'].includes(e.code)) { AI.mode = null; setStatus('AI 不可用', false); }
+    }
+  } finally {
+    AI.busy = false; $('aiStop').hidden = true; setAIEnabled(!!AI.mode);
+  }
+}
+
+$('aiToday').addEventListener('click', () => run('点评今天', '点评我今天的饮食和运动：先一句话总结，再给 2–3 条结合当前周期阶段的具体建议，最后告诉我今天剩下的时间怎么吃/动。200 字以内。'));
+$('aiWeek').addEventListener('click', () => run('周期分析', '分析最近 14 天和各阶段均值：找出我的饮食和运动在不同周期阶段的规律（例如黄体期是否吃得多、经期是否运动少），指出 1 个做得好的地方和 2 个最值得改的地方，并给出下一个周期每个阶段的安排。350 字以内。', { tier: 'complex' }));
+$('aiPlan').addEventListener('click', () => {
+  const tmr = addDays(TODAY, 1), k = phaseOf(tmr);
+  run('明天的计划', `明天是 ${tmr}，预计处于${PHASES[k.key].name}（周期第 ${k.cd ?? '?'} 天）。按这个阶段给我明天的三餐加一次加餐（每项写食物和大约 kcal，总热量贴近我的目标），再给一个适合这个阶段的运动安排（类型、时长、强度）。`);
+});
+$('aiStop').addEventListener('click', () => AI.ctl && AI.ctl.abort());
+$('askForm').addEventListener('submit', e => {
+  e.preventDefault(); const q = $('askIn').value.trim(); if (!q || !AI.mode || AI.busy) return;
+  addMsg('me', q); $('askIn').value = ''; run(null, q, { chat: true });
+});
+$('suggest').addEventListener('click', e => { const b = e.target.closest('button'); if (!b || !AI.mode || AI.busy) return; addMsg('me', b.textContent); run(null, b.textContent, { chat: true }); });
+
+/* Instant feedback after the user logs something (debounced so a burst of adds is one call) */
+function onLogged(what) {
+  if (!$('autoFb').checked || !AI.mode || logDate !== TODAY) return;
+  clearTimeout(AI.autoTimer);
+  AI.autoTimer = setTimeout(() => {
+    if (AI.busy) return;
+    run('即时点评 · ' + what, `我刚刚记录了：${what}。用 1–2 句话即时反馈：这一项对今天目标意味着什么（还剩多少 kcal），结合当前周期阶段给一个具体的小建议。不超过 70 字。`, { tier: 'quick', live: true });
+  }, 1500);
+}
+
+/* Photo → estimated foods */
+$('photoIn').addEventListener('change', async e => {
+  const file = e.target.files && e.target.files[0]; e.target.value = '';
+  if (!file || !AI.mode || AI.busy) return;
+  AI.busy = true; setAIEnabled(true);
+  const body = addMsg('ai', '正在识别照片里的食物…', '拍照识别');
+  try {
+    const prompt = '这是一张食物照片。识别里面的每样食物并估算份量和热量。只回复 JSON 数组，例如 [{"name":"米饭 一碗","kcal":230}]，name 用简体中文写食物和份量，kcal 为整数。看不出食物就回复 []。';
+    let items;
+    if (AI.mode === 'claude') items = await AI.sample.json(prompt, { images: file, modelTier: 'default' });
+    else { const { text } = await callKeyAPI(prompt, { images: file }); items = JSON.parse((text.match(/\[[\s\S]*\]/) || ['[]'])[0]); }
+    items = (Array.isArray(items) ? items : []).map(x => ({ name: String(x.name || '').slice(0, 40), kcal: Math.round(Number(x.kcal)) })).filter(x => x.name && x.kcal >= 0 && x.kcal < 5000);
+    if (!items.length) { body.textContent = '没认出食物，可以换个角度再拍一张，或者手动记录。'; return; }
+    body.textContent = `识别到：${items.map(x => `${x.name} ${x.kcal} kcal`).join('、')}（合计 ${items.reduce((a, x) => a + x.kcal, 0)} kcal）`;
+    const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:8px;margin-top:8px';
+    const yes = Object.assign(document.createElement('button'), { className: 'btn primary', type: 'button', textContent: `添加到 ${fmtMD(logDate)}` });
+    const no = Object.assign(document.createElement('button'), { className: 'btn ghost', type: 'button', textContent: '不用了' });
+    yes.onclick = () => { items.forEach(x => ensure(logDate).food.push(x)); commit(); row.remove(); onLogged(items.map(x => x.name).join('、')); };
+    no.onclick = () => row.remove();
+    row.append(yes, no); body.parentElement.append(row);
+  } catch (err) {
+    body.textContent = errCopy(err && err.code);
+  } finally { AI.busy = false; setAIEnabled(!!AI.mode); }
+});
+
 renderSettings();
 renderAll();
+setAIEnabled(false);
+initAI();
 })();
 </script>
