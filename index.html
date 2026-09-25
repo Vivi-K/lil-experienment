@@ -1241,6 +1241,7 @@ async function initAI() {
       setStatus('已连接 Claude（使用你自己的 claude.ai 额度）', true);
       const lim = await sample.limits().catch(() => null);
       AI.imgMax = lim?.images ? lim.images.maxCount : 0;
+      if (lim && !lim.images) noPhotoMode();
       setAIEnabled(true); return;
     }
   }
@@ -1400,6 +1401,12 @@ function onLogged(what) {
 
 /* ---------- AI food analysis: text and/or photos → items with kcal & macros ---------- */
 let aiImgs = [], aiItems = [];
+// This Claude viewer cannot send images: hide the photo button and say so once
+function noPhotoMode() {
+  AI.noImages = true; $('aiImgWrap').hidden = true;
+  $('aiFoodText').placeholder = '用一句话描述你吃了什么，AI 帮你算热量和蛋白质。写清楚份量更准，例如：港式烧味双拼饭（叉烧+烧鸭），饭吃了一半，冻柠茶少甜。';
+  if (!$('aiFoodMsg').textContent) $('aiFoodMsg').textContent = '这里暂时不能用照片识别，用文字描述就好。';
+}
 const IMG_UNAVAILABLE = '你现在打开 app 的地方暂时不能把图片发给 AI（常见于手机 App 或较旧的版本），可以换成电脑浏览器打开 claude.ai 再试。';
 function renderThumbs() {
   $('aiThumbs').innerHTML = aiImgs.map((f, i) => `<div><img src="${URL.createObjectURL(f)}" alt="食物照片 ${i + 1}"><button type="button" data-rm-img="${i}" aria-label="移除这张照片">×</button></div>`).join('');
@@ -1456,7 +1463,7 @@ name 用简体中文写食物和份量；kcal、prot、carb、fat 为整数（�
     $('aiFoodMsg').textContent = noImg ? IMG_UNAVAILABLE + ' 这次只按文字估算。' : '';
     renderAiRes(String((r && r.note) || '').slice(0, 120));
   } catch (err) {
-    if (err && err.code === 'images_unavailable') { AI.imgMax = 0; AI.noImages = true; $('aiFoodMsg').textContent = IMG_UNAVAILABLE + (text ? ' 请再点一次，只按文字估算。' : ' 这次请先用文字描述。'); return; }
+    if (err && err.code === 'images_unavailable') { AI.imgMax = 0; AI.noImages = true; noPhotoMode(); $('aiFoodMsg').textContent = IMG_UNAVAILABLE + (text ? ' 请再点一次，只按文字估算。' : ' 这次请先用文字描述。'); return; }
     $('aiFoodMsg').textContent = err && err.code === 'invalid_json' ? '这次结果格式不对，再点一次分析试试。' : errCopy(err && err.code);
   } finally { AI.busy = false; setAIEnabled(!!AI.mode); }
 });
