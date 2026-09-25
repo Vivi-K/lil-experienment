@@ -1,0 +1,828 @@
+<title>月相能量账本</title>
+<meta name="description" content="结合月经周期分析每日热量摄入与运动消耗">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#FBF9FB; --surface:#FFFFFF; --sunk:#F2EEF3; --line:#E3DDE6;
+  --ink:#231C27; --ink2:#5E5563; --ink3:#8C8391;
+  --accent:#7A3B69; --accent-ink:#FFFFFF; --accent-soft:#F1E4EE;
+  --bar:#CFC5D3;
+  --p-men:#B8304A; --p-fol:#1693A8; --p-ovu:#C98200; --p-lut:#6A4CC0;
+  --good:#2E7D4F; --warn:#B26A00;
+  --display:"Bricolage Grotesque","PingFang SC","Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;
+  --body:system-ui,-apple-system,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#1A161D; --surface:#231E27; --sunk:#2B2530; --line:#3A3240;
+    --ink:#F1ECF3; --ink2:#BDB3C2; --ink3:#8F8595;
+    --accent:#D58BC0; --accent-ink:#1A161D; --accent-soft:#3A2836;
+    --bar:#4E4455;
+    --p-men:#D9546A; --p-fol:#2298AC; --p-ovu:#BF841C; --p-lut:#8A6FDA;
+    --good:#6CC08E; --warn:#E0A040;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#1A161D; --surface:#231E27; --sunk:#2B2530; --line:#3A3240;
+  --ink:#F1ECF3; --ink2:#BDB3C2; --ink3:#8F8595;
+  --accent:#D58BC0; --accent-ink:#1A161D; --accent-soft:#3A2836;
+  --bar:#4E4455;
+  --p-men:#D9546A; --p-fol:#2298AC; --p-ovu:#BF841C; --p-lut:#8A6FDA;
+  --good:#6CC08E; --warn:#E0A040;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;margin:0}
+.wrap{max-width:1080px;margin:0 auto;padding-inline:20px;padding-block:20px 60px;display:grid;gap:28px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:26px;font-weight:700;letter-spacing:-.01em}
+h2{font-size:19px;font-weight:700}
+h3{font-size:15px;font-weight:700}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--ink2)}
+.small{font-size:13px}
+.label{font-size:12px;letter-spacing:.06em;color:var(--ink3)}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+header.top p{margin:4px 0 0}
+.sample{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;background:var(--accent-soft);border-radius:10px;padding:10px 14px;font-size:14px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 12px;font-size:14px}
+.btn:hover{border-color:var(--ink3)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--ink2);padding:4px 8px}
+.btn.ghost:hover{color:var(--ink)}
+
+/* Hero: dial + today */
+.hero{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:28px;align-items:center}
+@media (max-width:760px){.hero{grid-template-columns:1fr}}
+.dial{width:100%;max-width:300px;margin-inline:auto;display:block}
+.dial text{fill:var(--ink)}
+.phase-card{display:grid;gap:14px}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px 3px 8px;font-size:13px;font-weight:600;background:var(--sunk);color:var(--ink)}
+.chip i{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--c)}
+.tips{margin:0;padding-left:18px;color:var(--ink2);display:grid;gap:4px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+@media (max-width:560px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{background:var(--surface);padding:12px 14px;display:grid;gap:2px}
+.stat b{font-family:var(--mono);font-size:22px;font-weight:500;font-variant-numeric:tabular-nums}
+.stat span.small{color:var(--ink3)}
+.meter{height:8px;border-radius:4px;background:var(--sunk);overflow:hidden;position:relative}
+.meter div{height:100%;background:var(--accent);border-radius:4px}
+.meter.over div{background:var(--warn)}
+
+/* Sections */
+section.block{display:grid;gap:14px}
+.sec-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+
+/* Logger */
+.logger{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+@media (max-width:760px){.logger{grid-template-columns:1fr}}
+.daybar{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.daybar input[type=date]{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 10px}
+.toggle{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:5px 12px 5px 8px;background:var(--surface);font-size:14px}
+.toggle[aria-pressed="true"]{background:var(--p-men);border-color:var(--p-men);color:#fff}
+.toggle .dot{width:10px;height:10px;border-radius:50%;background:var(--p-men)}
+.toggle[aria-pressed="true"] .dot{background:#fff}
+form.row{display:flex;flex-wrap:wrap;gap:8px}
+form.row input,form.row select{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 10px;min-width:0}
+form.row .grow{flex:1 1 140px}
+form.row .w{width:92px}
+.quick{display:flex;flex-wrap:wrap;gap:6px}
+.quick button{border:1px dashed var(--line);background:transparent;border-radius:999px;padding:3px 10px;font-size:13px;color:var(--ink2)}
+.quick button:hover{border-style:solid;color:var(--ink)}
+ul.entries{list-style:none;margin:0;padding:0;display:grid}
+ul.entries li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+ul.entries li:last-child{border-bottom:0}
+ul.entries .empty{color:var(--ink3);font-size:14px}
+.sum{display:flex;justify-content:space-between;font-weight:600;padding-top:4px}
+
+/* Chart */
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--ink2);align-items:center}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+.sw.line{height:2px;border-radius:1px}
+.chart-box{position:relative}
+.chart-box svg{display:block;width:100%;height:auto}
+.chart-box svg text{fill:var(--ink3);font-family:var(--mono);font-size:11px}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.45;min-width:150px;transform:translate(-50%,-100%);white-space:nowrap}
+.tip .num{font-size:12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--surface);padding:5px 12px;font-size:13px;color:var(--ink2)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+
+/* Phase compare */
+.grid2{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px}
+@media (max-width:860px){.grid2{grid-template-columns:1fr}}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:right;padding:9px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:600;color:var(--ink3);font-size:12px;letter-spacing:.04em}
+td.bar-cell{width:34%;min-width:110px}
+.hbar{height:10px;border-radius:0 4px 4px 0;background:var(--c)}
+.insights{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+.insights li{padding:10px 12px;border-radius:10px;background:var(--sunk);font-size:14px}
+
+/* Calendar */
+.cal-head{display:flex;align-items:center;gap:8px}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal .dow{font-size:12px;color:var(--ink3);text-align:center;padding-bottom:4px}
+.cal button{aspect-ratio:1/1;max-width:100%;border:1px solid transparent;border-radius:8px;background:var(--sunk);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-family:var(--mono);font-size:13px;position:relative;padding:0}
+.cal button .ph{width:70%;height:3px;border-radius:2px;background:var(--c,transparent)}
+.cal button.period{background:var(--p-men);color:#fff}
+.cal button.period .ph{background:#fff}
+.cal button.pred{outline:1.5px dashed var(--p-men);outline-offset:-3px}
+.cal button.sel{border-color:var(--ink)}
+.cal button.today::after{content:"";position:absolute;top:4px;right:5px;width:5px;height:5px;border-radius:50%;background:var(--accent)}
+.cal button.out{opacity:.35}
+.cal button.logged .ph{height:3px}
+
+/* Settings */
+.settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.field{display:grid;gap:4px;font-size:13px;color:var(--ink2)}
+.field input,.field select{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 10px;font-size:15px;color:var(--ink)}
+.backup{display:grid;gap:8px}
+.backup textarea{width:100%;min-height:80px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-family:var(--mono);font-size:12px;padding:8px}
+.note{font-size:13px;color:var(--ink3);max-width:70ch}
+.confirm{display:inline-flex;gap:8px;align-items:center;font-size:14px}
+@media (prefers-reduced-motion:no-preference){.meter div,.hbar{transition:width .3s ease}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>月相能量账本</h1>
+      <p class="muted">把每天吃进去的、动掉的热量，放回你的月经周期里看。</p>
+    </div>
+    <div class="label" id="todayLabel"></div>
+  </header>
+
+  <div class="sample" id="sampleBar" hidden>
+    <span>现在显示的是<b>示例数据</b>（虚构的 80 天记录），用来演示分析效果。</span>
+    <button class="btn primary" id="startReal" type="button">清空示例，开始记录我的数据</button>
+  </div>
+
+  <!-- HERO -->
+  <section class="hero" aria-label="今日概览">
+    <svg class="dial" id="dial" viewBox="0 0 300 300" role="img" aria-label="周期表盘"></svg>
+    <div class="phase-card">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <span class="chip" id="phaseChip"><i></i><span></span></span>
+        <span class="small muted" id="phaseSub"></span>
+      </div>
+      <h2 id="phaseTitle"></h2>
+      <ul class="tips" id="phaseTips"></ul>
+      <div class="stats" id="stats"></div>
+      <div>
+        <div class="meter" id="meter"><div></div></div>
+        <div class="small muted" id="meterText" style="margin-top:6px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOGGER -->
+  <section class="block" aria-labelledby="logH">
+    <div class="sec-head">
+      <h2 id="logH">记录</h2>
+      <div class="daybar">
+        <button class="btn ghost" id="prevDay" type="button" aria-label="前一天">←</button>
+        <input type="date" id="logDate" aria-label="记录日期">
+        <button class="btn ghost" id="nextDay" type="button" aria-label="后一天">→</button>
+        <button class="toggle" id="periodToggle" type="button" aria-pressed="false"><span class="dot"></span>这天是经期</button>
+      </div>
+    </div>
+    <div class="logger">
+      <div class="panel" style="display:grid;gap:12px;align-content:start">
+        <h3>饮食摄入</h3>
+        <form class="row" id="foodForm">
+          <input class="grow" id="foodName" list="foodList" placeholder="吃了什么" required aria-label="食物名称">
+          <input class="w num" id="foodKcal" type="number" min="0" max="5000" placeholder="kcal" required aria-label="热量">
+          <button class="btn primary" type="submit">添加</button>
+        </form>
+        <datalist id="foodList"></datalist>
+        <div class="quick" id="foodQuick"></div>
+        <ul class="entries" id="foodEntries"></ul>
+      </div>
+      <div class="panel" style="display:grid;gap:12px;align-content:start">
+        <h3>运动消耗</h3>
+        <form class="row" id="exForm">
+          <select class="grow" id="exType" aria-label="运动类型"></select>
+          <input class="w num" id="exMin" type="number" min="1" max="600" placeholder="分钟" required aria-label="时长（分钟）">
+          <button class="btn primary" type="submit">添加</button>
+        </form>
+        <div class="small muted" id="exPreview">按 MET × 体重 × 时长估算消耗</div>
+        <ul class="entries" id="exEntries"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- TREND -->
+  <section class="block" aria-labelledby="trendH">
+    <div class="sec-head">
+      <h2 id="trendH">趋势</h2>
+      <div class="seg" id="rangeSeg" role="group" aria-label="时间范围">
+        <button type="button" data-r="30" aria-pressed="true">30 天</button>
+        <button type="button" data-r="60" aria-pressed="false">60 天</button>
+        <button type="button" data-r="90" aria-pressed="false">90 天</button>
+      </div>
+    </div>
+    <div class="panel" style="display:grid;gap:10px">
+      <div class="legend">
+        <span><i class="sw" style="background:var(--bar)"></i>摄入</span>
+        <span><i class="sw line" style="background:var(--accent)"></i>总消耗（基础 + 运动）</span>
+        <span style="margin-left:auto">底部色带：</span>
+        <span><i class="sw" style="background:var(--p-men)"></i>经期</span>
+        <span><i class="sw" style="background:var(--p-fol)"></i>卵泡期</span>
+        <span><i class="sw" style="background:var(--p-ovu)"></i>排卵期</span>
+        <span><i class="sw" style="background:var(--p-lut)"></i>黄体期</span>
+      </div>
+      <div class="chart-box" id="chartBox">
+        <svg id="chart" role="img" aria-label="每日摄入与消耗趋势"></svg>
+        <div class="tip" id="tip" hidden></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PHASE ANALYSIS -->
+  <section class="block" aria-labelledby="phaseH">
+    <div class="sec-head">
+      <h2 id="phaseH">按周期阶段对比</h2>
+      <span class="small muted" id="phaseRange"></span>
+    </div>
+    <div class="grid2">
+      <div class="panel tbl-wrap">
+        <table>
+          <thead><tr><th>阶段</th><th>记录天数</th><th>日均摄入</th><th class="bar-cell" style="text-align:left">摄入对比</th><th>日均运动</th><th>日均盈亏</th></tr></thead>
+          <tbody id="phaseBody"></tbody>
+        </table>
+      </div>
+      <ul class="insights" id="insights"></ul>
+    </div>
+  </section>
+
+  <!-- CALENDAR -->
+  <section class="block" aria-labelledby="calH">
+    <div class="sec-head">
+      <h2 id="calH">周期日历</h2>
+      <div class="cal-head">
+        <button class="btn ghost" id="calPrev" type="button" aria-label="上个月">←</button>
+        <span class="num" id="calTitle"></span>
+        <button class="btn ghost" id="calNext" type="button" aria-label="下个月">→</button>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="panel">
+        <div class="cal" id="cal"></div>
+      </div>
+      <div class="panel" style="display:grid;gap:10px;align-content:start">
+        <h3>周期信息</h3>
+        <div id="cycleInfo" class="small" style="display:grid;gap:6px"></div>
+        <p class="note">点日历上的日期会切换到那天的记录。实心红色是你标记的经期，虚线框是预测的下次经期。周期长度按你最近的记录自动计算。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="block" aria-labelledby="setH">
+    <h2 id="setH">我的资料</h2>
+    <div class="panel" style="display:grid;gap:16px">
+      <div class="settings">
+        <label class="field">身高 cm<input id="sHeight" type="number" min="120" max="220" class="num"></label>
+        <label class="field">体重 kg<input id="sWeight" type="number" min="30" max="200" step="0.1" class="num"></label>
+        <label class="field">年龄<input id="sAge" type="number" min="12" max="80" class="num"></label>
+        <label class="field">日常活动（不含运动）
+          <select id="sAct">
+            <option value="1.2">久坐（办公室）</option>
+            <option value="1.3">轻度（常走动）</option>
+            <option value="1.4">中度（站立工作）</option>
+          </select></label>
+        <label class="field">目标
+          <select id="sGoal">
+            <option value="0">维持体重</option>
+            <option value="-275">慢减（约 0.25 kg/周）</option>
+            <option value="-550">减脂（约 0.5 kg/周）</option>
+            <option value="250">增肌</option>
+          </select></label>
+        <label class="field">默认周期长度（天）<input id="sCycle" type="number" min="21" max="40" class="num"></label>
+        <label class="field">默认经期天数<input id="sPeriod" type="number" min="2" max="9" class="num"></label>
+      </div>
+      <p class="note">基础代谢用 Mifflin-St Jeor 公式估算；黄体期静息代谢通常会上升约 2.5–10%，这里按 +6% 计入当天目标。数字是估算，不是医疗建议。周期明显不规律、经期异常疼痛或出血过多，请咨询医生。</p>
+      <div class="backup">
+        <h3>备份与恢复</h3>
+        <p class="note">数据只保存在这个浏览器里。换设备或清除浏览器数据前，先复制备份存好。</p>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+          <button class="btn" id="copyBackup" type="button">复制备份</button>
+          <button class="btn" id="importBtn" type="button">从下方文本恢复</button>
+          <span class="confirm" id="clearWrap">
+            <button class="btn" id="clearBtn" type="button">清空所有数据</button>
+          </span>
+          <span class="small muted" id="backupMsg" role="status"></span>
+        </div>
+        <textarea id="backupText" aria-label="备份文本" placeholder="备份内容会出现在这里；恢复时把备份粘贴进来"></textarea>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+'use strict';
+const KEY = 'moon-energy-v1';
+const DAY = 86400000;
+
+/* ---------- date utils (local dates as YYYY-MM-DD) ---------- */
+const pad = n => String(n).padStart(2, '0');
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return iso(d); };
+const diffDays = (a, b) => Math.round((parse(a) - parse(b)) / DAY);
+const TODAY = iso(new Date());
+const fmtMD = s => { const d = parse(s); return `${d.getMonth() + 1}月${d.getDate()}日`; };
+const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
+
+/* ---------- reference data ---------- */
+const FOODS = [
+  ['米饭 一碗', 230], ['鸡蛋 一个', 72], ['牛奶 250ml', 135], ['燕麦 40g', 150], ['全麦面包 一片', 80],
+  ['鸡胸肉 100g', 165], ['三文鱼 100g', 208], ['豆腐 100g', 80], ['面条 一碗', 280], ['饺子 10个', 420],
+  ['苹果 一个', 95], ['香蕉 一根', 105], ['酸奶 一杯', 120], ['坚果 一小把', 170], ['黑巧克力 20g', 110],
+  ['奶茶 中杯', 350], ['拿铁 中杯', 190], ['沙拉（带酱）', 250], ['麻辣烫 一份', 600], ['火锅 一顿', 900]
+];
+const QUICK = ['米饭 一碗', '鸡蛋 一个', '牛奶 250ml', '鸡胸肉 100g', '苹果 一个', '奶茶 中杯'];
+const EX = [
+  ['快走', 4.3], ['慢跑', 7.0], ['跑步（较快）', 9.8], ['骑行', 7.5], ['游泳', 6.0], ['力量训练', 5.0],
+  ['HIIT', 8.0], ['跳绳', 11.0], ['瑜伽', 2.5], ['普拉提', 3.0], ['舞蹈', 5.0], ['爬楼梯', 8.0], ['拉伸散步', 2.8]
+];
+const PHASES = {
+  men: { name: '经期', color: 'var(--p-men)', title: '经期：先照顾好身体',
+    tips: ['疲劳或痛经时，快走、瑜伽、拉伸就够了', '多吃含铁食物：红肉、动物肝脏、菠菜、豆类', '别用节食补偿，这几天吃够更重要'] },
+  fol: { name: '卵泡期', color: 'var(--p-fol)', title: '卵泡期：精力回升，适合加练',
+    tips: ['雌激素上升，恢复快，适合力量训练和高强度间歇', '胰岛素敏感性较好，碳水安排在训练前后', '想减脂的话，这是最好执行的阶段'] },
+  ovu: { name: '排卵期', color: 'var(--p-ovu)', title: '排卵期：力量高峰，注意热身',
+    tips: ['很多人这几天力量和状态最好', '韧带松弛度可能增加，做好热身，跳跃和变向动作要稳', '蛋白质保持每公斤体重 1.2–1.6 g'] },
+  lut: { name: '黄体期', color: 'var(--p-lut)', title: '黄体期：代谢略升，食欲变大很正常',
+    tips: ['静息代谢上升，每天多吃 100–300 kcal 属于正常范围', '优先高蛋白和高纤维，想吃甜时选水果、酸奶、黑巧', '经前几天容易累，训练可以换成中低强度'] },
+  none: { name: '未知', color: 'var(--ink3)', title: '标记一次经期，开始周期分析',
+    tips: ['在“记录”里把经期那天标记为“这天是经期”', '有了第一次经期记录，就能推算阶段和预测下次'] }
+};
+const PH_ORDER = ['men', 'fol', 'ovu', 'lut'];
+
+/* ---------- state ---------- */
+const DEFAULT_PROFILE = { height: 163, weight: 55, age: 28, act: 1.2, goal: 0, cycle: 28, period: 5 };
+let state = load();
+let logDate = TODAY;
+let range = 30;
+let calMonth = TODAY.slice(0, 7);
+
+function blank() { return { profile: { ...DEFAULT_PROFILE }, days: {}, sample: false }; }
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) { const s = JSON.parse(raw); if (s && s.days && s.profile) { s.profile = { ...DEFAULT_PROFILE, ...s.profile }; return s; } }
+  } catch (e) { /* storage unavailable */ }
+  return makeSample();
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ignore */ } }
+function day(d) { return state.days[d] || { food: [], ex: [], period: false }; }
+function ensure(d) { if (!state.days[d]) state.days[d] = { food: [], ex: [], period: false }; return state.days[d]; }
+
+/* Deterministic example data so the page opens with something to analyse */
+function makeSample() {
+  const s = blank(); s.sample = true;
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const lens = [29, 27, 28];
+  let start = addDays(TODAY, -(lens.reduce((a, b) => a + b) - 9));
+  const starts = [start]; for (const l of lens) { start = addDays(start, l); starts.push(start); }
+  starts.pop();
+  for (let i = 80; i >= 0; i--) {
+    const d = addDays(TODAY, -i);
+    const rec = { food: [], ex: [], period: false };
+    const st = starts.filter(x => x <= d).pop();
+    const cd = st ? diffDays(d, st) + 1 : null;
+    if (st && cd <= 5 && d <= TODAY) rec.period = true;
+    const len = 28, ov = len - 14;
+    const ph = cd == null ? 'fol' : cd <= 5 ? 'men' : cd < ov - 1 ? 'fol' : cd <= ov + 1 ? 'ovu' : 'lut';
+    if (rnd() < .12 && i > 0) { s.days[d] = rec; continue; }
+    const base = { men: 1750, fol: 1680, ovu: 1720, lut: 1950 }[ph];
+    const meals = [['燕麦 40g', 150], ['牛奶 250ml', 135], ['米饭 一碗', 230], ['鸡胸肉 100g', 165], ['面条 一碗', 280], ['豆腐 100g', 80], ['苹果 一个', 95]];
+    let total = 0; const n = 4 + Math.floor(rnd() * 2);
+    for (let k = 0; k < n && total < base - 150; k++) { const m = meals[Math.floor(rnd() * meals.length)]; rec.food.push({ name: m[0], kcal: m[1] }); total += m[1]; }
+    const rest = Math.max(120, Math.round((base + (rnd() - .5) * 360 - total) / 10) * 10);
+    const extra = ph === 'lut' && rnd() < .5 ? ['奶茶 中杯', 350] : ph === 'men' && rnd() < .4 ? ['黑巧克力 20g', 110] : null;
+    rec.food.push({ name: '晚餐', kcal: rest });
+    if (extra) rec.food.push({ name: extra[0], kcal: extra[1] });
+    const p = { men: .25, fol: .7, ovu: .65, lut: .45 }[ph];
+    if (rnd() < p) {
+      const pool = ph === 'men' ? [['快走', 4.3], ['瑜伽', 2.5]] : ph === 'lut' ? [['快走', 4.3], ['普拉提', 3.0], ['慢跑', 7.0]] : [['慢跑', 7.0], ['力量训练', 5.0], ['HIIT', 8.0], ['骑行', 7.5]];
+      const e = pool[Math.floor(rnd() * pool.length)];
+      rec.ex.push({ type: e[0], min: [30, 40, 45, 60][Math.floor(rnd() * 4)], met: e[1] });
+    }
+    if (i === 0) { rec.food = rec.food.slice(0, 3); rec.ex = rec.ex.slice(0, 1); }
+    s.days[d] = rec;
+  }
+  return s;
+}
+
+/* ---------- energy model ---------- */
+const P = () => state.profile;
+const bmr = () => Math.round(10 * P().weight + 6.25 * P().height - 5 * P().age - 161);
+const baseBurn = () => Math.round(bmr() * P().act);
+const exKcal = e => Math.round(e.met * P().weight * e.min / 60);
+const intake = d => day(d).food.reduce((a, f) => a + f.kcal, 0);
+const exBurn = d => day(d).ex.reduce((a, e) => a + exKcal(e), 0);
+const lutealBonus = () => Math.round(bmr() * 0.06);
+function totalBurn(d) {
+  const ph = phaseOf(d).key;
+  return baseBurn() + exBurn(d) + (ph === 'lut' ? lutealBonus() : 0);
+}
+const target = d => totalBurn(d) + Number(P().goal);
+const logged = d => day(d).food.length > 0;
+
+/* ---------- cycle model ---------- */
+function periodStarts() {
+  const ds = Object.keys(state.days).filter(d => state.days[d].period).sort();
+  // a new period begins when the previous marked day is more than 2 days back
+  return ds.filter((d, i) => i === 0 || diffDays(d, ds[i - 1]) > 2);
+}
+function cycleStats() {
+  const starts = periodStarts();
+  const gaps = [];
+  for (let i = 1; i < starts.length; i++) { const g = diffDays(starts[i], starts[i - 1]); if (g >= 18 && g <= 45) gaps.push(g); }
+  const recent = gaps.slice(-6);
+  const len = recent.length ? Math.round(recent.reduce((a, b) => a + b) / recent.length) : P().cycle;
+  // period length: average run length of marked days
+  const runs = starts.map(s => { let n = 0, d = s; while (day(d).period) { n++; d = addDays(d, 1); } return n; }).filter(n => n > 0);
+  const completeRuns = runs.slice(0, -1).length ? runs.slice(0, -1) : runs;
+  const plen = completeRuns.length ? Math.round(completeRuns.reduce((a, b) => a + b) / completeRuns.length) : P().period;
+  return { starts, len, plen: Math.max(2, Math.min(9, plen)), gaps: recent };
+}
+let CS = cycleStats();
+function phaseOf(d) {
+  const { starts, len, plen } = CS;
+  const past = starts.filter(s => s <= d);
+  if (!past.length) return { key: 'none', cd: null, predicted: false };
+  const st = past[past.length - 1];
+  let cd = diffDays(d, st) + 1;
+  const predicted = d > TODAY && cd > len;
+  if (predicted) cd = ((cd - 1) % len) + 1;
+  const ov = len - 14;
+  let inPeriod;
+  if (day(d).period) inPeriod = true;
+  else if (d < TODAY) inPeriod = false;                       // past: only what was marked
+  else if (d === TODAY) inPeriod = cd <= plen && day(addDays(d, -1)).period; // ongoing, not yet marked today
+  else inPeriod = cd <= plen;                                  // future: prediction
+  let key;
+  if (inPeriod) key = 'men';
+  else if (cd > len) key = 'lut';                              // late period: still luteal
+  else if (cd < ov - 1) key = 'fol';
+  else if (cd <= ov + 1) key = 'ovu';
+  else key = 'lut';
+  return { key, cd, predicted, start: st, len, ov };
+}
+function nextPeriod() {
+  const { starts, len } = CS;
+  if (!starts.length) return null;
+  let n = addDays(starts[starts.length - 1], len);
+  while (n <= TODAY && diffDays(TODAY, n) > 0 && !day(n).period) {
+    // overdue: stay on the expected date if within 10 days, else roll forward
+    if (diffDays(TODAY, n) <= 10) break;
+    n = addDays(n, len);
+  }
+  return n;
+}
+
+/* ---------- rendering: hero ---------- */
+const $ = id => document.getElementById(id);
+const fmt = n => Math.round(n).toLocaleString('zh-CN');
+
+function renderHero() {
+  const ph = phaseOf(TODAY);
+  const info = PHASES[ph.key];
+  $('todayLabel').textContent = `${fmtMD(TODAY)} 星期${WEEK[parse(TODAY).getDay()]}`;
+  const chip = $('phaseChip'); chip.style.setProperty('--c', info.color); chip.querySelector('span').textContent = info.name;
+  const np = nextPeriod();
+  $('phaseSub').textContent = ph.cd ? `周期第 ${ph.cd} 天 / 约 ${CS.len} 天${np ? ` · 预计 ${fmtMD(np)} 来月经（${Math.max(0, diffDays(np, TODAY))} 天后）` : ''}` : '';
+  $('phaseTitle').textContent = info.title;
+  $('phaseTips').innerHTML = info.tips.map(t => `<li>${t}</li>`).join('');
+  const inT = intake(TODAY), exT = exBurn(TODAY), tb = totalBurn(TODAY), tg = target(TODAY);
+  const bonus = ph.key === 'lut' ? `含黄体期 +${lutealBonus()}` : `基础 ${fmt(baseBurn())}`;
+  $('stats').innerHTML = [
+    ['今日摄入', fmt(inT), `${day(TODAY).food.length} 项记录`],
+    ['运动消耗', fmt(exT), `${day(TODAY).ex.reduce((a, e) => a + e.min, 0)} 分钟`],
+    ['总消耗', fmt(tb), bonus],
+    ['还可以吃', fmt(Math.max(0, tg - inT)), tg - inT < 0 ? `已超 ${fmt(inT - tg)}` : `目标 ${fmt(tg)}`]
+  ].map(([l, v, s]) => `<div class="stat"><span class="label">${l}</span><b>${v}</b><span class="small">${s}</span></div>`).join('');
+  const pct = tg > 0 ? inT / tg : 0;
+  $('meter').classList.toggle('over', pct > 1.05);
+  $('meter').firstElementChild.style.width = Math.min(100, pct * 100) + '%';
+  $('meterText').textContent = `今日目标 ${fmt(tg)} kcal，已完成 ${Math.round(pct * 100)}%`;
+  renderDial(ph);
+}
+
+function renderDial(ph) {
+  const svg = $('dial'); const cx = 150, cy = 150, R = 118, w = 22;
+  const len = CS.len, plen = CS.plen, ov = len - 14;
+  const segs = [['men', 1, plen], ['fol', plen + 1, ov - 2], ['ovu', ov - 1, ov + 1], ['lut', ov + 2, len]];
+  const ang = d => (d - 1) / len * Math.PI * 2 - Math.PI / 2;
+  const pt = (a, r) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+  let out = `<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="var(--sunk)" stroke-width="${w}"/>`;
+  const gap = 0.02;
+  for (const [k, a, b] of segs) {
+    if (b < a) continue;
+    const a0 = ang(a) + gap, a1 = ang(b + 1) - gap;
+    const [x0, y0] = pt(a0, R), [x1, y1] = pt(a1, R);
+    const large = a1 - a0 > Math.PI ? 1 : 0;
+    const dim = ph.key !== 'none' && ph.key !== k ? ' opacity=".35"' : '';
+    out += `<path d="M${x0} ${y0} A${R} ${R} 0 ${large} 1 ${x1} ${y1}" fill="none" stroke="${PHASES[k].color}" stroke-width="${w}" stroke-linecap="butt"${dim}><title>${PHASES[k].name}：第 ${a}–${b} 天</title></path>`;
+  }
+  for (const d of [1, 7, 14, 21]) {
+    if (d > len) continue;
+    const [x, y] = pt(ang(d + 0.5), R + w / 2 + 12);
+    out += `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" font-family="var(--mono)" font-size="11" style="fill:var(--ink3)">${d}</text>`;
+  }
+  if (ph.cd) {
+    const [x, y] = pt(ang(Math.min(ph.cd, len) + 0.5), R);
+    out += `<circle cx="${x}" cy="${y}" r="13" fill="var(--bg)" stroke="var(--ink)" stroke-width="2.5"/>`;
+    out += `<circle cx="${x}" cy="${y}" r="5" fill="var(--ink)"/>`;
+  }
+  out += `<text x="${cx}" y="${cy - 22}" text-anchor="middle" font-size="13" style="fill:var(--ink2)">周期第</text>`;
+  out += `<text x="${cx}" y="${cy + 18}" text-anchor="middle" font-family="var(--display)" font-weight="700" font-size="54">${ph.cd ?? '—'}</text>`;
+  out += `<text x="${cx}" y="${cy + 46}" text-anchor="middle" font-size="13" style="fill:var(--ink2)">天 · ${PHASES[ph.key].name}</text>`;
+  svg.innerHTML = out;
+  svg.setAttribute('aria-label', ph.cd ? `周期第 ${ph.cd} 天，${PHASES[ph.key].name}` : '尚无经期记录');
+}
+
+/* ---------- rendering: logger ---------- */
+function renderLogger() {
+  $('logDate').value = logDate;
+  $('logDate').max = TODAY;
+  $('nextDay').disabled = logDate >= TODAY;
+  const rec = day(logDate);
+  const t = $('periodToggle'); t.setAttribute('aria-pressed', rec.period ? 'true' : 'false');
+  const fe = $('foodEntries');
+  fe.innerHTML = rec.food.length ? rec.food.map((f, i) =>
+    `<li><span>${esc(f.name)}</span><span style="display:flex;gap:6px;align-items:center"><span class="num">${fmt(f.kcal)}</span><button class="btn ghost" data-del-food="${i}" aria-label="删除 ${esc(f.name)}">×</button></span></li>`).join('')
+    + `<li class="sum"><span>合计</span><span class="num">${fmt(intake(logDate))} kcal</span></li>`
+    : `<li class="empty">${fmtMD(logDate)} 还没有饮食记录</li>`;
+  const ee = $('exEntries');
+  ee.innerHTML = rec.ex.length ? rec.ex.map((e, i) =>
+    `<li><span>${esc(e.type)} <span class="muted small num">${e.min} 分钟</span></span><span style="display:flex;gap:6px;align-items:center"><span class="num">${fmt(exKcal(e))}</span><button class="btn ghost" data-del-ex="${i}" aria-label="删除 ${esc(e.type)}">×</button></span></li>`).join('')
+    + `<li class="sum"><span>合计</span><span class="num">${fmt(exBurn(logDate))} kcal</span></li>`
+    : `<li class="empty">${fmtMD(logDate)} 还没有运动记录</li>`;
+  updateExPreview();
+}
+function updateExPreview() {
+  const m = Number($('exMin').value); const met = Number($('exType').value);
+  $('exPreview').textContent = m > 0 ? `预计消耗约 ${fmt(met * P().weight * m / 60)} kcal（MET ${met}）` : '按 MET × 体重 × 时长估算消耗';
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+/* ---------- rendering: trend chart ---------- */
+let chartDays = [];
+function renderChart() {
+  const svg = $('chart');
+  const W = Math.max(320, $('chartBox').clientWidth || 800), H = W < 520 ? 240 : 280;
+  const m = { l: 44, r: 10, t: 12, b: 34 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b - 14;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  chartDays = []; for (let i = range - 1; i >= 0; i--) chartDays.push(addDays(TODAY, -i));
+  const rows = chartDays.map(d => ({ d, inT: intake(d), burn: totalBurn(d), ph: phaseOf(d).key, logged: logged(d) }));
+  const maxV = Math.max(2400, ...rows.map(r => Math.max(r.inT, r.burn)));
+  const step = maxV > 3200 ? 1000 : 500;
+  const top = Math.ceil(maxV / step) * step;
+  const y = v => m.t + ih - v / top * ih;
+  const bw = iw / rows.length;
+  let out = '';
+  for (let v = 0; v <= top; v += step) {
+    out += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/>`;
+    out += `<text x="${m.l - 6}" y="${y(v)}" text-anchor="end" dominant-baseline="middle">${v}</text>`;
+  }
+  const barW = Math.max(2, bw - 2);
+  rows.forEach((r, i) => {
+    if (!r.logged) return;
+    const x = m.l + i * bw + (bw - barW) / 2, h = Math.max(1, ih - (y(r.inT) - m.t));
+    const rad = Math.min(4, barW / 2);
+    out += `<path d="M${x} ${y(0)} V${y(r.inT) + rad} Q${x} ${y(r.inT)} ${x + rad} ${y(r.inT)} H${x + barW - rad} Q${x + barW} ${y(r.inT)} ${x + barW} ${y(r.inT) + rad} V${y(0)} Z" fill="var(--bar)"/>`;
+  });
+  const pts = rows.map((r, i) => `${(m.l + i * bw + bw / 2).toFixed(1)},${y(r.burn).toFixed(1)}`);
+  out += `<polyline points="${pts.join(' ')}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>`;
+  // phase band
+  const by = m.t + ih + 6;
+  rows.forEach((r, i) => {
+    if (r.ph === 'none') return;
+    out += `<rect x="${m.l + i * bw}" y="${by}" width="${bw + 0.3}" height="6" fill="${PHASES[r.ph].color}"/>`;
+  });
+  // x labels
+  const every = range <= 30 ? 7 : range <= 60 ? 14 : 21;
+  rows.forEach((r, i) => {
+    if ((rows.length - 1 - i) % every !== 0) return;
+    out += `<text x="${m.l + i * bw + bw / 2}" y="${H - 6}" text-anchor="middle">${r.d === TODAY ? '今天' : r.d.slice(5).replace('-', '/')}</text>`;
+  });
+  // end marker
+  const last = rows[rows.length - 1];
+  out += `<circle cx="${m.l + (rows.length - 1) * bw + bw / 2}" cy="${y(last.burn)}" r="4" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>`;
+  out += `<line id="cross" x1="0" x2="0" y1="${m.t}" y2="${by + 6}" stroke="var(--ink3)" stroke-width="1" stroke-dasharray="3 3" visibility="hidden"/>`;
+  out += `<rect id="hit" x="${m.l}" y="${m.t}" width="${iw}" height="${ih + 20}" fill="transparent"/>`;
+  svg.innerHTML = out;
+  const hit = svg.querySelector('#hit'), cross = svg.querySelector('#cross'), tip = $('tip');
+  const show = ev => {
+    const rect = svg.getBoundingClientRect(); const sx = W / rect.width;
+    const px = (ev.clientX - rect.left) * sx;
+    const i = Math.max(0, Math.min(rows.length - 1, Math.floor((px - m.l) / bw)));
+    const r = rows[i]; const cx = m.l + i * bw + bw / 2;
+    cross.setAttribute('x1', cx); cross.setAttribute('x2', cx); cross.setAttribute('visibility', 'visible');
+    const net = r.inT - r.burn;
+    tip.innerHTML = `<b>${fmtMD(r.d)}</b> · ${PHASES[r.ph].name}<br>` +
+      (r.logged ? `摄入 <span class="num">${fmt(r.inT)}</span><br>消耗 <span class="num">${fmt(r.burn)}</span><br>${net >= 0 ? '盈余' : '缺口'} <span class="num">${fmt(Math.abs(net))}</span> kcal` : `消耗 <span class="num">${fmt(r.burn)}</span><br><span style="opacity:.7">这天没有饮食记录</span>`);
+    tip.hidden = false;
+    const bx = rect.width, tx = cx / sx;
+    tip.style.left = Math.max(80, Math.min(bx - 80, tx)) + 'px';
+    tip.style.top = (Math.min(y(Math.max(r.inT, r.burn)), m.t + ih) / sx - 10) + 'px';
+  };
+  hit.addEventListener('pointermove', show);
+  hit.addEventListener('pointerdown', show);
+  hit.addEventListener('pointerleave', () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); });
+  hit.addEventListener('click', ev => {
+    const rect = svg.getBoundingClientRect(); const px = (ev.clientX - rect.left) * W / rect.width;
+    const i = Math.max(0, Math.min(rows.length - 1, Math.floor((px - m.l) / bw)));
+    setLogDate(rows[i].d);
+  });
+}
+
+/* ---------- rendering: phase comparison ---------- */
+function renderPhases() {
+  const days = Object.keys(state.days).filter(d => d <= TODAY && logged(d)).sort().slice(-120);
+  const agg = {}; PH_ORDER.forEach(k => agg[k] = { n: 0, inT: 0, ex: 0, net: 0 });
+  for (const d of days) {
+    const k = phaseOf(d).key; if (!agg[k]) continue;
+    const a = agg[k]; a.n++; a.inT += intake(d); a.ex += exBurn(d); a.net += intake(d) - totalBurn(d);
+  }
+  const avg = k => agg[k].n ? { inT: agg[k].inT / agg[k].n, ex: agg[k].ex / agg[k].n, net: agg[k].net / agg[k].n } : null;
+  const maxIn = Math.max(1, ...PH_ORDER.map(k => avg(k)?.inT || 0));
+  $('phaseRange').textContent = days.length ? `基于最近 ${days.length} 天有饮食记录的数据` : '';
+  $('phaseBody').innerHTML = PH_ORDER.map(k => {
+    const a = avg(k); const c = PHASES[k].color;
+    return `<tr><td><span class="chip" style="--c:${c}"><i></i>${PHASES[k].name}</span></td>
+      <td class="num">${agg[k].n}</td>
+      <td class="num">${a ? fmt(a.inT) : '—'}</td>
+      <td class="bar-cell"><div class="hbar" style="--c:${c};width:${a ? a.inT / maxIn * 100 : 0}%"></div></td>
+      <td class="num">${a ? fmt(a.ex) : '—'}</td>
+      <td class="num" style="color:${a && a.net > 0 ? 'var(--warn)' : 'var(--good)'}">${a ? (a.net > 0 ? '+' : '−') + fmt(Math.abs(a.net)) : '—'}</td></tr>`;
+  }).join('');
+  const ins = [];
+  const L = avg('lut'), F = avg('fol'), M = avg('men'), O = avg('ovu');
+  if (L && F) {
+    const d = L.inT - F.inT;
+    ins.push(d > 60 ? `黄体期日均比卵泡期多吃 <b class="num">${fmt(d)}</b> kcal。${d <= 320 ? '这在正常的代谢上升范围内，不用有负担。' : '超出了代谢上升的幅度，可以提前备好高蛋白零食，减少随手加餐。'}`
+      : `黄体期和卵泡期的摄入差不多（差 <span class="num">${fmt(Math.abs(d))}</span> kcal），食欲波动控制得很稳。`);
+  }
+  if (F && L) {
+    const d = F.ex - L.ex;
+    if (Math.abs(d) > 40) ins.push(d > 0 ? `卵泡期运动消耗日均比黄体期高 <b class="num">${fmt(d)}</b> kcal，训练节奏和激素变化是一致的。` : `黄体期运动反而比卵泡期多 <b class="num">${fmt(-d)}</b> kcal，可以试试把高强度训练挪到卵泡期。`);
+  }
+  if (M) ins.push(M.ex < 120 ? `经期运动量偏少（日均 <span class="num">${fmt(M.ex)}</span> kcal）。身体允许的话，20–30 分钟快走或瑜伽有助于缓解经期不适。` : `经期也保持了运动（日均 <span class="num">${fmt(M.ex)}</span> kcal），注意听身体的信号。`);
+  const allNet = PH_ORDER.map(avg).filter(Boolean);
+  if (allNet.length) {
+    const tot = PH_ORDER.reduce((s, k) => s + agg[k].net, 0), n = PH_ORDER.reduce((s, k) => s + agg[k].n, 0);
+    const wk = tot / n * 7 / 7700;
+    ins.push(`按记录推算，平均每天${tot / n >= 0 ? '盈余' : '缺口'} <b class="num">${fmt(Math.abs(tot / n))}</b> kcal，约等于每周体重 ${wk >= 0 ? '+' : '−'}<span class="num">${Math.abs(wk).toFixed(2)}</span> kg。`);
+  }
+  if (!ins.length) ins.push('多记录几天饮食，并标记一次经期，这里就会出现按阶段的分析。');
+  $('insights').innerHTML = ins.map(t => `<li>${t}</li>`).join('');
+}
+
+/* ---------- rendering: calendar ---------- */
+function renderCalendar() {
+  const [yy, mm] = calMonth.split('-').map(Number);
+  $('calTitle').textContent = `${yy} 年 ${mm} 月`;
+  const first = new Date(yy, mm - 1, 1);
+  const startD = iso(new Date(yy, mm - 1, 1 - first.getDay()));
+  const np = nextPeriod();
+  let html = WEEK.map(w => `<div class="dow">${w}</div>`).join('');
+  for (let i = 0; i < 42; i++) {
+    const d = addDays(startD, i);
+    if (i >= 35 && d.slice(0, 7) !== calMonth) break;
+    const ph = phaseOf(d);
+    const rec = day(d);
+    const cls = [];
+    if (d.slice(0, 7) !== calMonth) cls.push('out');
+    if (rec.period) cls.push('period');
+    if (np && d >= np && d < addDays(np, CS.plen) && d > TODAY) cls.push('pred');
+    if (d === logDate) cls.push('sel');
+    if (d === TODAY) cls.push('today');
+    const label = `${fmtMD(d)}，${PHASES[ph.key].name}${ph.cd ? `，周期第 ${ph.cd} 天` : ''}${logged(d) ? `，摄入 ${fmt(intake(d))} kcal` : ''}`;
+    html += `<button type="button" class="${cls.join(' ')}" data-date="${d}" style="--c:${ph.key === 'none' ? 'transparent' : PHASES[ph.key].color}" title="${label}" aria-label="${label}" ${d > TODAY ? 'data-future="1"' : ''}><span>${parse(d).getDate()}</span><span class="ph"></span></button>`;
+  }
+  $('cal').innerHTML = html;
+  const st = CS.starts;
+  $('cycleInfo').innerHTML = [
+    ['平均周期', `${CS.len} 天${CS.gaps.length ? `（基于 ${CS.gaps.length} 个周期）` : '（默认值）'}`],
+    ['经期长度', `${CS.plen} 天`],
+    ['上次经期开始', st.length ? fmtMD(st[st.length - 1]) : '还没有记录'],
+    ['预计下次', np ? `${fmtMD(np)}（${diffDays(np, TODAY) >= 0 ? diffDays(np, TODAY) + ' 天后' : '已推迟 ' + -diffDays(np, TODAY) + ' 天'}）` : '—'],
+    ['预计排卵日', st.length ? fmtMD(addDays(np || st[st.length - 1], -14)) : '—'],
+    ['周期长度波动', CS.gaps.length > 1 ? `${Math.min(...CS.gaps)}–${Math.max(...CS.gaps)} 天` : '—']
+  ].map(([a, b]) => `<div style="display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding-bottom:6px"><span class="muted">${a}</span><span class="num">${b}</span></div>`).join('');
+}
+
+/* ---------- settings ---------- */
+const SETS = { sHeight: 'height', sWeight: 'weight', sAge: 'age', sAct: 'act', sGoal: 'goal', sCycle: 'cycle', sPeriod: 'period' };
+function renderSettings() { for (const [id, k] of Object.entries(SETS)) $(id).value = P()[k]; }
+
+function renderAll() {
+  CS = cycleStats();
+  $('sampleBar').hidden = !state.sample;
+  renderHero(); renderLogger(); renderChart(); renderPhases(); renderCalendar();
+}
+function commit() { save(); renderAll(); }
+function setLogDate(d) { logDate = d > TODAY ? TODAY : d; calMonth = logDate.slice(0, 7); renderLogger(); renderCalendar(); }
+
+/* ---------- events ---------- */
+$('foodList').innerHTML = FOODS.map(([n, k]) => `<option value="${n}">${k} kcal</option>`).join('');
+$('foodQuick').innerHTML = QUICK.map(n => { const k = FOODS.find(f => f[0] === n)[1]; return `<button type="button" data-quick="${n}">+ ${n} <span class="num">${k}</span></button>`; }).join('');
+$('exType').innerHTML = EX.map(([n, m]) => `<option value="${m}">${n}</option>`).join('');
+
+$('foodName').addEventListener('input', e => { const f = FOODS.find(x => x[0] === e.target.value); if (f) $('foodKcal').value = f[1]; });
+$('foodForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = $('foodName').value.trim(), kcal = Math.round(Number($('foodKcal').value));
+  if (!name || !(kcal >= 0)) return;
+  ensure(logDate).food.push({ name, kcal }); $('foodName').value = ''; $('foodKcal').value = ''; commit(); $('foodName').focus();
+});
+$('foodQuick').addEventListener('click', e => {
+  const b = e.target.closest('[data-quick]'); if (!b) return;
+  const f = FOODS.find(x => x[0] === b.dataset.quick); ensure(logDate).food.push({ name: f[0], kcal: f[1] }); commit();
+});
+$('exForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const sel = $('exType'), min = Math.round(Number($('exMin').value));
+  if (!(min > 0)) return;
+  ensure(logDate).ex.push({ type: sel.options[sel.selectedIndex].text, met: Number(sel.value), min }); $('exMin').value = ''; commit();
+});
+$('exType').addEventListener('change', updateExPreview);
+$('exMin').addEventListener('input', updateExPreview);
+document.addEventListener('click', e => {
+  const f = e.target.closest('[data-del-food]'); if (f) { day(logDate).food.splice(Number(f.dataset.delFood), 1); commit(); return; }
+  const x = e.target.closest('[data-del-ex]'); if (x) { day(logDate).ex.splice(Number(x.dataset.delEx), 1); commit(); }
+});
+$('periodToggle').addEventListener('click', () => { const r = ensure(logDate); r.period = !r.period; commit(); });
+$('logDate').addEventListener('change', e => { if (e.target.value) setLogDate(e.target.value); });
+$('prevDay').addEventListener('click', () => setLogDate(addDays(logDate, -1)));
+$('nextDay').addEventListener('click', () => setLogDate(addDays(logDate, 1)));
+$('rangeSeg').addEventListener('click', e => {
+  const b = e.target.closest('[data-r]'); if (!b) return;
+  range = Number(b.dataset.r);
+  $('rangeSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+  renderChart();
+});
+$('cal').addEventListener('click', e => {
+  const b = e.target.closest('[data-date]'); if (!b || b.dataset.future) return;
+  setLogDate(b.dataset.date);
+  document.getElementById('logH').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+$('calPrev').addEventListener('click', () => { const [y, m] = calMonth.split('-').map(Number); calMonth = iso(new Date(y, m - 2, 1)).slice(0, 7); renderCalendar(); });
+$('calNext').addEventListener('click', () => { const [y, m] = calMonth.split('-').map(Number); calMonth = iso(new Date(y, m, 1)).slice(0, 7); renderCalendar(); });
+for (const [id, k] of Object.entries(SETS)) {
+  $(id).addEventListener('change', e => { const v = Number(e.target.value); if (Number.isFinite(v) && v > 0 || k === 'goal') { state.profile[k] = v; commit(); } });
+}
+$('startReal').addEventListener('click', () => { const p = state.profile; state = blank(); state.profile = p; logDate = TODAY; commit(); });
+
+$('copyBackup').addEventListener('click', () => {
+  const txt = JSON.stringify(state); $('backupText').value = txt;
+  const done = m => $('backupMsg').textContent = m;
+  try {
+    navigator.clipboard.writeText(txt).then(() => done('已复制到剪贴板'), () => { $('backupText').select(); done('已放进下方文本框，请手动复制'); });
+  } catch (e) { $('backupText').select(); done('已放进下方文本框，请手动复制'); }
+});
+$('importBtn').addEventListener('click', () => {
+  try {
+    const s = JSON.parse($('backupText').value);
+    if (!s || typeof s.days !== 'object' || typeof s.profile !== 'object') throw 0;
+    state = { profile: { ...DEFAULT_PROFILE, ...s.profile }, days: s.days, sample: false };
+    commit(); renderSettings(); $('backupMsg').textContent = '已恢复';
+  } catch (e) { $('backupMsg').textContent = '恢复失败：文本不是有效的备份，请粘贴完整的备份内容'; }
+});
+function renderClear(asking) {
+  const wrap = $('clearWrap');
+  wrap.innerHTML = asking
+    ? `<span>确定清空全部记录？</span><button class="btn" id="clearYes" type="button" style="color:var(--p-men)">清空</button><button class="btn ghost" id="clearNo" type="button">取消</button>`
+    : `<button class="btn" id="clearBtn" type="button">清空所有数据</button>`;
+  if (asking) {
+    $('clearYes').onclick = () => { const p = state.profile; state = blank(); state.profile = p; commit(); renderClear(false); $('backupMsg').textContent = '已清空'; };
+    $('clearNo').onclick = () => renderClear(false);
+  } else $('clearBtn').onclick = () => renderClear(true);
+}
+renderClear(false);
+
+let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(renderChart, 120); });
+renderSettings();
+renderAll();
+})();
+</script>
