@@ -277,6 +277,7 @@ td.bar-cell{width:34%;min-width:110px}
 .cd-grid i.now{background:var(--surface);outline:2px solid var(--accent);outline-offset:-2px}
 .quote{grid-column:1/-1;border-top:1px solid var(--line);padding-top:12px;display:grid;gap:4px}
 .quote q{font-family:var(--display);font-size:17px;line-height:1.5;quotes:"“" "”"}
+.quote .q2{font-family:var(--body);font-size:14px;color:var(--ink2);font-weight:400}
 .quote cite{font-style:normal;font-size:12px;color:var(--ink3)}
 .quote .qbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .cd-edit{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -296,6 +297,22 @@ td.bar-cell{width:34%;min-width:110px}
 .lab-tbl td.name{white-space:normal;min-width:120px}
 details.paste summary{cursor:pointer;font-size:14px;color:var(--ink2)}
 details.paste textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-family:var(--mono);font-size:12px;padding:8px;margin-top:8px}
+/* Training parts */
+.parts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.parts{grid-template-columns:1fr}}
+.part{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:8px;align-content:start}
+.part h3{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.part .cnt{font-family:var(--mono);font-size:13px;color:var(--ink2)}
+.pips{display:flex;gap:5px}
+.pips i{width:22px;height:8px;border-radius:4px;background:var(--sunk)}
+.pips i.on{background:var(--accent)}
+.part details summary{cursor:pointer;font-size:13px;color:var(--ink2)}
+.part ul{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--ink2);display:grid;gap:2px}
+.ci-wrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+.ci-wrap summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline}
+/* Body progress */
+.body-tbl td.good{color:var(--good);font-weight:600}
+.body-tbl td.bad{color:var(--warn)}
 .confirm{display:inline-flex;gap:8px;align-items:center;font-size:14px}
 @media (prefers-reduced-motion:no-preference){.meter div,.hbar{transition:width .3s ease}}
 </style>
@@ -318,12 +335,13 @@ details.paste textarea{width:100%;min-height:120px;border:1px solid var(--line);
     </div>
     <form class="cd-edit" id="cdEdit" hidden>
       <label class="small">开始日期 <input type="date" id="cdStart" required></label>
-      <input id="cdGoalIn" placeholder="这 100 天的目标，例如：更强壮、更平静" maxlength="40" style="flex:1 1 220px" aria-label="100 天目标">
+      <input id="cdGoalIn" placeholder="这 100 天的目标，默认：瘦瘦的肚子 · 翘翘的屁股 · 宽宽的肩" maxlength="40" style="flex:1 1 220px" aria-label="100 天目标">
       <button class="btn primary" type="submit">保存</button>
       <button class="btn ghost" type="button" id="cdCancel">取消</button>
     </form>
     <div class="quote">
       <q id="qText"></q>
+      <q id="qText2" class="q2"></q>
       <div class="qbar"><cite id="qSrc"></cite><button class="btn ghost" type="button" id="qNext" style="font-size:13px">换一句</button></div>
     </div>
   </section>
@@ -331,7 +349,6 @@ details.paste textarea{width:100%;min-height:120px;border:1px solid var(--line);
   <nav class="tabs" role="tablist" aria-label="页面">
     <button type="button" role="tab" data-tab="today" aria-selected="true">今天</button>
     <button type="button" role="tab" data-tab="insight" aria-selected="false">分析</button>
-    <button type="button" role="tab" data-tab="coach" aria-selected="false">AI 教练</button>
     <button type="button" role="tab" data-tab="me" aria-selected="false">我的</button>
   </nav>
 
@@ -360,50 +377,50 @@ details.paste textarea{width:100%;min-height:120px;border:1px solid var(--line);
     </div>
   </section>
 
-  <!-- CHECK-IN -->
-  <section class="block" aria-labelledby="ciH">
+  <!-- AI COACH -->
+  <section class="block" aria-labelledby="coachH">
     <div class="sec-head">
-      <h2 id="ciH">今天感觉怎么样</h2>
-      <span class="small muted" id="ciSaved" role="status"></span>
+      <h2 id="coachH">AI 教练</h2>
+      <span class="coach-status" id="coachStatus"><i></i><span>正在连接…</span></span>
     </div>
-    <div class="gentle" id="gentle" hidden></div>
-    <div class="checkin">
-      <div class="panel" style="display:grid;gap:14px;align-content:start">
-        <div style="display:grid;gap:6px">
-          <span class="label">心情</span>
-          <div class="moods" id="moods" role="group" aria-label="今天的心情">
-            <button type="button" data-v="1"><b>1</b>很难熬</button>
-            <button type="button" data-v="2"><b>2</b>低落</button>
-            <button type="button" data-v="3"><b>3</b>一般</button>
-            <button type="button" data-v="4"><b>4</b>不错</button>
-            <button type="button" data-v="5"><b>5</b>很好</button>
-          </div>
-        </div>
-        <div style="display:grid;gap:6px">
-          <span class="label">今天有没有（点选）</span>
-          <div class="tags" id="moodTags"></div>
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center">
-          <div style="display:grid;gap:4px"><span class="label">想喝酒的程度</span>
-            <div class="seg" id="urgeSeg" role="group" aria-label="想喝酒的程度">
-              <button type="button" data-u="0">没有</button><button type="button" data-u="1">有点</button><button type="button" data-u="2">很想</button><button type="button" data-u="3">忍不住</button>
-            </div></div>
-          <div style="display:grid;gap:4px"><span class="label">今天喝了几杯</span>
-            <div class="stepper"><button type="button" id="drinkMinus" aria-label="减一杯">−</button><span id="drinkN">0</span><button type="button" id="drinkPlus" aria-label="加一杯">+</button></div></div>
-        </div>
-        <input id="moodNote" placeholder="一句话记下今天（可不填）" aria-label="今天的备注" style="border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px">
+    <div class="panel coach">
+      <div class="coach-top">
+        <button class="btn primary" id="aiToday" type="button">点评今天</button>
+        <button class="btn" id="aiWeek" type="button">分析最近一个周期</button>
+        <button class="btn" id="aiTrain" type="button">今天练什么</button>
+        <button class="btn" id="aiPlan" type="button">给我明天的计划</button>
+        <button class="btn ghost" id="aiStop" type="button" hidden>停止</button>
+        <label class="switch" style="margin-left:auto"><input type="checkbox" id="autoFb" checked> 每次记录后即时点评</label>
       </div>
-      <div class="panel" style="display:grid;gap:12px;align-content:start">
-        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px">
-          <div><span class="label">距离上次喝酒</span><div><span class="big-num" id="afDays">—</span> <span class="muted">天</span></div></div>
-          <span class="small muted" id="afSince" style="text-align:right"></span>
-        </div>
-        <div class="af-grid" id="afGrid"></div>
-        <div style="display:grid;gap:4px"><span class="label">最近 30 天</span><div class="dots" id="afDots" aria-label="最近 30 天是否喝酒"></div>
-          <span class="small muted">绿色：没喝　橙色：喝了　灰色：没记录</span></div>
-        <button class="sos-btn" type="button" id="sosOpen">想喝酒，或者现在很难受<span>点这里，先陪你撑过接下来的 10 分钟</span></button>
+      <div class="coach-bg" id="coachBg"></div>
+      <div class="feed" id="feed" aria-live="polite"></div>
+      <div class="suggest" id="suggest">
+        <button type="button">怎么练出翘臀？</button>
+        <button type="button">肩膀怎么练宽？</button>
+        <button type="button">黄体期总想吃甜的怎么办？</button>
+                <button type="button">我今天晚饭怎么吃比较好？</button>
+      </div>
+      <form class="ask" id="askForm">
+        <input id="askIn" placeholder="问问 AI：比如“今天奶茶喝多了，明天怎么调整？”" aria-label="向 AI 提问" autocomplete="off">
+        <button class="btn primary" type="submit">发送</button>
+      </form>
+      <div class="key-row" id="keyRow" hidden>
+        <span class="small muted">在本地打开时，需要填你的 Anthropic API Key：</span>
+        <input id="apiKey" type="password" placeholder="sk-ant-..." aria-label="Anthropic API Key">
+        <button class="btn" id="saveKey" type="button">保存</button>
+        <span class="note" style="flex-basis:100%">Key 只保存在这个浏览器里，请求直接从浏览器发到 Anthropic。不要在别人的电脑上保存。</span>
       </div>
     </div>
+  </section>
+
+  <!-- TRAINING -->
+  <section class="block" aria-labelledby="trH">
+    <div class="sec-head">
+      <h2 id="trH">本周训练 · 目标部位</h2>
+      <span class="small muted" id="trPhase"></span>
+    </div>
+    <div class="parts" id="parts"></div>
+    <span class="small muted" id="trOther"></span>
   </section>
 
   <!-- LOGGER -->
@@ -452,43 +469,82 @@ details.paste textarea{width:100%;min-height:120px;border:1px solid var(--line);
   </section>
 
   </div>
-  <div class="tab-panel" data-panel="coach" hidden>
-  <!-- AI COACH -->
-  <section class="block" aria-labelledby="coachH">
-    <div class="sec-head">
-      <h2 id="coachH">AI 教练</h2>
-      <span class="coach-status" id="coachStatus"><i></i><span>正在连接…</span></span>
+  <!-- CHECK-IN -->
+  <section class="block" aria-labelledby="ciH">
+    <div class="gentle" id="gentle" hidden></div>
+    <details class="ci-wrap" id="ciWrap">
+    <summary><span id="ciH" style="font-weight:700">今天状态</span><span class="small muted" id="ciSum"></span><span class="small muted" id="ciSaved" role="status"></span></summary>
+    <div class="checkin" style="margin-top:12px">
+      <div class="panel" style="display:grid;gap:14px;align-content:start">
+        <div style="display:grid;gap:6px">
+          <span class="label">心情</span>
+          <div class="moods" id="moods" role="group" aria-label="今天的心情">
+            <button type="button" data-v="1"><b>1</b>很难熬</button>
+            <button type="button" data-v="2"><b>2</b>低落</button>
+            <button type="button" data-v="3"><b>3</b>一般</button>
+            <button type="button" data-v="4"><b>4</b>不错</button>
+            <button type="button" data-v="5"><b>5</b>很好</button>
+          </div>
+        </div>
+        <div style="display:grid;gap:6px">
+          <span class="label">今天有没有（点选）</span>
+          <div class="tags" id="moodTags"></div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center">
+          <div style="display:grid;gap:4px"><span class="label">想喝酒的程度</span>
+            <div class="seg" id="urgeSeg" role="group" aria-label="想喝酒的程度">
+              <button type="button" data-u="0">没有</button><button type="button" data-u="1">有点</button><button type="button" data-u="2">很想</button><button type="button" data-u="3">忍不住</button>
+            </div></div>
+          <div style="display:grid;gap:4px"><span class="label">今天喝了几杯</span>
+            <div class="stepper"><button type="button" id="drinkMinus" aria-label="减一杯">−</button><span id="drinkN">0</span><button type="button" id="drinkPlus" aria-label="加一杯">+</button></div></div>
+        </div>
+        <input id="moodNote" placeholder="一句话记下今天（可不填）" aria-label="今天的备注" style="border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px">
+      </div>
+      <div class="panel" style="display:grid;gap:12px;align-content:start">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px">
+          <div><span class="label">距离上次喝酒</span><div><span class="big-num" id="afDays">—</span> <span class="muted">天</span></div></div>
+          <span class="small muted" id="afSince" style="text-align:right"></span>
+        </div>
+        <div class="af-grid" id="afGrid"></div>
+        <div style="display:grid;gap:4px"><span class="label">最近 30 天</span><div class="dots" id="afDots" aria-label="最近 30 天是否喝酒"></div>
+          <span class="small muted">绿色：没喝　橙色：喝了　灰色：没记录</span></div>
+        <button class="sos-btn" type="button" id="sosOpen">想喝酒的时候点这里<span>10 分钟呼吸，陪你把这阵冲动放过去</span></button>
+      </div>
     </div>
-    <div class="panel coach">
-      <div class="coach-top">
-        <button class="btn primary" id="aiToday" type="button">点评今天</button>
-        <button class="btn" id="aiWeek" type="button">分析最近一个周期</button>
-        <button class="btn" id="aiPlan" type="button">给我明天的计划</button>
-        <button class="btn ghost" id="aiStop" type="button" hidden>停止</button>
-        <label class="switch" style="margin-left:auto"><input type="checkbox" id="autoFb" checked> 每次记录后即时点评</label>
-      </div>
-      <div class="coach-bg" id="coachBg"></div>
-      <div class="feed" id="feed" aria-live="polite"></div>
-      <div class="suggest" id="suggest">
-        <button type="button">黄体期总想吃甜的怎么办？</button>
-        <button type="button">经期还能做力量训练吗？</button>
-        <button type="button">我今天晚饭怎么吃比较好？</button>
-      </div>
-      <form class="ask" id="askForm">
-        <input id="askIn" placeholder="问问 AI：比如“今天奶茶喝多了，明天怎么调整？”" aria-label="向 AI 提问" autocomplete="off">
-        <button class="btn primary" type="submit">发送</button>
-      </form>
-      <div class="key-row" id="keyRow" hidden>
-        <span class="small muted">在本地打开时，需要填你的 Anthropic API Key：</span>
-        <input id="apiKey" type="password" placeholder="sk-ant-..." aria-label="Anthropic API Key">
-        <button class="btn" id="saveKey" type="button">保存</button>
-        <span class="note" style="flex-basis:100%">Key 只保存在这个浏览器里，请求直接从浏览器发到 Anthropic。不要在别人的电脑上保存。</span>
-      </div>
-    </div>
+    </details>
   </section>
 
   </div>
   <div class="tab-panel" data-panel="insight" hidden>
+  <!-- BODY -->
+  <section class="block" aria-labelledby="bodyH">
+    <div class="sec-head">
+      <h2 id="bodyH">身材进度</h2>
+      <span class="small muted">腰围变小、臀围和肩围不掉，就是在减脂增肌</span>
+    </div>
+    <div class="grid2">
+      <div class="panel tbl-wrap">
+        <table class="body-tbl">
+          <thead><tr><th>指标</th><th>起点</th><th>最近</th><th>变化</th><th style="text-align:left">方向</th></tr></thead>
+          <tbody id="bodyBody"></tbody>
+        </table>
+      </div>
+      <div class="panel" style="display:grid;gap:10px;align-content:start">
+        <h3>记一次（每周同一天早上空腹量）</h3>
+        <form class="row" id="bodyForm">
+          <input type="date" id="bDate" required aria-label="测量日期" style="border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 10px">
+          <input class="w num" id="bWeight" type="number" step="0.1" placeholder="体重 kg" aria-label="体重 kg">
+          <input class="w num" id="bWaist" type="number" step="0.1" placeholder="腰围 cm" aria-label="腰围 cm（肚脐一圈）">
+          <input class="w num" id="bHip" type="number" step="0.1" placeholder="臀围 cm" aria-label="臀围 cm（最翘处一圈）">
+          <input class="w num" id="bShoulder" type="number" step="0.1" placeholder="肩围 cm" aria-label="肩围 cm（肩最宽处一圈）">
+          <button class="btn primary" type="submit">保存</button>
+        </form>
+        <span class="small" id="bodyMsg" role="status"></span>
+        <p class="note">腰围量肚脐一圈，臀围量最翘的地方，肩围量两肩最宽处一圈。经前水肿会让腰围多 1–2 cm，比较时尽量看同一个周期阶段。填了体重会同步更新「我的资料」里的体重。</p>
+      </div>
+    </div>
+  </section>
+
   <!-- TREND -->
   <section class="block" aria-labelledby="trendH">
     <div class="sec-head">
@@ -836,6 +892,7 @@ const FOODS = [
 ];
 const QUICK = ['鸡蛋 一个', '鸡胸肉 100g', '豆浆 250ml', '隔夜燕麦（植物奶）', '食堂清淡套餐', '奶茶 中杯'];
 const EX = [
+  ['臀腿训练', 5.0], ['肩背训练', 5.0], ['核心训练', 3.8],
   ['快走', 4.3], ['慢跑', 7.0], ['跑步（较快）', 9.8], ['骑行', 7.5], ['游泳', 6.0], ['力量训练', 5.0],
   ['HIIT', 8.0], ['跳绳', 11.0], ['瑜伽', 2.5], ['普拉提', 3.0], ['舞蹈', 5.0], ['爬楼梯', 8.0], ['拉伸散步', 2.8]
 ];
@@ -860,11 +917,11 @@ let logDate = TODAY;
 let range = 30;
 let calMonth = TODAY.slice(0, 7);
 
-function blank() { return { profile: { ...DEFAULT_PROFILE }, days: {}, whoop: {}, journal: {}, labs: [], reasons: [], sample: false, onboarded: false }; }
+function blank() { return { profile: { ...DEFAULT_PROFILE }, days: {}, whoop: {}, journal: {}, labs: [], reasons: [], body: [], sample: false, onboarded: false }; }
 function load() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) { const s = JSON.parse(raw); if (s && s.days && s.profile) { s.profile = { ...DEFAULT_PROFILE, ...s.profile }; s.whoop = s.whoop || {}; s.journal = s.journal || {}; s.labs = s.labs || []; s.reasons = s.reasons || []; return s; } }
+    if (raw) { const s = JSON.parse(raw); if (s && s.days && s.profile) { s.profile = { ...DEFAULT_PROFILE, ...s.profile }; s.whoop = s.whoop || {}; s.journal = s.journal || {}; s.labs = s.labs || []; s.reasons = s.reasons || []; s.body = s.body || []; return s; } }
   } catch (e) { /* storage unavailable */ }
   return makeSample();
 }
@@ -1028,8 +1085,7 @@ function renderHero() {
   $('meter').classList.toggle('over', pct > 1.05);
   $('meter').firstElementChild.style.width = Math.min(100, pct * 100) + '%';
   $('meterText').textContent = `今日目标 ${fmt(tg)} kcal（不低于 ${fmt(P().floor)}），已吃 ${Math.round(pct * 100)}%`;
-  const low = lowMoodToday();
-  $('stats').hidden = low; $('meter').parentElement.hidden = low;
+
   renderDial(ph);
   // latest WHOOP morning metrics (today's recovery is scored on waking)
   const wd = wh(TODAY) ? TODAY : wh(addDays(TODAY, -1)) ? addDays(TODAY, -1) : null;
@@ -1258,7 +1314,7 @@ function renderSettings() { for (const [id, k] of Object.entries(SETS)) $(id).va
 function renderAll() {
   CS = cycleStats();
   $('sampleBar').hidden = !state.sample;
-  renderCountdown(); renderHero(); renderCheckin(); renderLogger(); renderChart(); renderWhoop(); renderPhases(); renderCalendar(); renderLabs();
+  renderCountdown(); renderHero(); renderTraining(); renderBody(); renderCheckin(); renderLogger(); renderChart(); renderWhoop(); renderPhases(); renderCalendar(); renderLabs();
 }
 function commit() { save(); renderAll(); }
 function setLogDate(d) { logDate = d > TODAY ? TODAY : d; calMonth = logDate.slice(0, 7); renderLogger(); renderCalendar(); }
@@ -1325,7 +1381,7 @@ $('importBtn').addEventListener('click', () => {
   try {
     const s = JSON.parse($('backupText').value);
     if (!s || typeof s.days !== 'object' || typeof s.profile !== 'object') throw 0;
-    state = { profile: { ...DEFAULT_PROFILE, ...s.profile }, days: s.days, whoop: s.whoop || {}, journal: s.journal || {}, labs: s.labs || [], reasons: s.reasons || [], lock: s.lock || state.lock || null, countdown: s.countdown || state.countdown, sample: false, onboarded: true };
+    state = { profile: { ...DEFAULT_PROFILE, ...s.profile }, days: s.days, whoop: s.whoop || {}, journal: s.journal || {}, labs: s.labs || [], reasons: s.reasons || [], lock: s.lock || state.lock || null, countdown: s.countdown || state.countdown, body: s.body || [], sample: false, onboarded: true };
     commit(); renderSettings(); $('backupMsg').textContent = '已恢复';
   } catch (e) { $('backupMsg').textContent = '恢复失败：文本不是有效的备份，请粘贴完整的备份内容'; }
 });
@@ -1353,7 +1409,7 @@ function setStatus(text, on) {
   const el = $('coachStatus'); el.classList.toggle('on', !!on); el.querySelector('span').textContent = text;
 }
 function setAIEnabled(on) {
-  ['aiToday', 'aiWeek', 'aiPlan', 'aiFoodGo'].forEach(id => $(id).disabled = !on || AI.busy);
+  ['aiToday', 'aiTrain', 'aiWeek', 'aiPlan', 'aiFoodGo'].forEach(id => $(id).disabled = !on || AI.busy);
   $('askForm').querySelector('button').disabled = !on || AI.busy;
   $('suggest').querySelectorAll('button').forEach(b => b.disabled = !on || AI.busy);
 }
@@ -1442,7 +1498,7 @@ function context() {
 【最近14天】
 ${recent.join('\n')}
 【各阶段均值】
-${agg.join('\n')}${whAgg.length ? '\n【WHOOP 各阶段均值】\n' + whAgg.join('\n') : ''}${labsCtx()}${moodCtx()}${P().about ? '\n【用户自述背景】\n' + P().about : ''}${state.sample ? '\n（注意：这些是示例数据）' : ''}`;
+${agg.join('\n')}${whAgg.length ? '\n【WHOOP 各阶段均值】\n' + whAgg.join('\n') : ''}${bodyCtx()}${labsCtx()}${moodCtx()}${P().about ? '\n【用户自述背景】\n' + P().about : ''}${state.sample ? '\n（注意：这些是示例数据）' : ''}`;
 }
 function labsCtx() {
   const by = {}; for (const x of state.labs || []) if (!by[x.name] || by[x.name].date < x.date) by[x.name] = x;
@@ -1456,9 +1512,12 @@ function moodCtx() {
 }
 const RULES = `你是一位懂女性生理周期的营养与运动教练，用简体中文回答。语气温和、直接、具体，不说教，不制造焦虑，不鼓励极端节食。
 结合用户当前的周期阶段解释她的数据（例如黄体期代谢和食欲上升、经期精力偏低、卵泡期适合高强度训练）。给出可以马上执行的建议，数字要具体（kcal、克数、分钟数）。
-如果用户目标是减脂保肌：强调蛋白质达标、每周至少 3 次渐进式力量训练、温和热量缺口，不要为了多掉秤牺牲肌肉；训练日和卵泡期可以多吃碳水，黄体期可以把缺口放小。
+【最高目标】这个 app 的核心是帮她减脂增肌（身体重组），具体想要：瘦瘦的肚子、翘翘的屁股、宽宽的肩。所有饮食和训练建议都围绕这三点，并说明和目标的关系。
+· 训练：翘臀每周 2–3 次（臀推、罗马尼亚硬拉、保加利亚分腿蹲、髋外展、臀桥）；宽肩每周 2 次，侧平举是肩宽关键，配合推举、高位下拉/引体、反向飞鸟、划船，背阔变宽会让腰显得更细；平腹核心每周 2–3 次短时（死虫、Pallof 推、悬垂举腿、侧平板）。渐进超负荷，每组 6–20 次、离力竭 1–3 次。卵泡期冲重量，经前一周总量减 20–30%。
+· 平坦小腹靠全身减脂，不存在局部减脂；少腹胀（经前、外卖、酒精、高盐）会让肚子明显更平。
+· 饮食：蛋白质每公斤体重约 2 g，分 4 餐左右吃；温和热量缺口，训练日和卵泡期多给碳水，黄体期缺口放小；不为了掉秤牺牲肌肉。体重不降但腰围降、臀围和肩围不掉，就是进步。
 有 WHOOP 数据时，用恢复分数、HRV、静息心率、睡眠来判断当天训练强度（例如恢复低于 34% 建议恢复性训练），并说明黄体期 HRV 下降、静息心率和体温升高是正常的周期现象。
-用户正在努力不用酒精逃避情绪：绝不建议喝酒放松，提到喝酒时不批评、不说教，肯定她每一个没喝的日子；喝了也只帮她照顾好身体和第二天。心情低落（≤2 分）的日子不要提热量缺口和减脂，只关心吃饱、睡好、有人陪。每日摄入建议不低于用户设置的最低摄入。
+不建议用喝酒放松；她说喝了也不批评，只帮她照顾好第二天。每日摄入建议不低于用户设置的最低摄入。只有在她主动提到情绪时才谈心理话题，平时专注身材目标。
 如果用户流露出伤害自己或不想活的念头，温和而直接地回应，用户住在香港：请她立刻拨打「情绪通」18111 或撒玛利亚防止自杀会 2389 2222，紧急时打 999 或去最近医院急症室，并鼓励她联系身边信任的人。
 不做医疗诊断；遇到异常出血、剧烈疼痛、周期严重紊乱等情况，建议就医。不要用 Markdown 标题或表格，可以用短段落和“·”开头的要点。`;
 
@@ -1489,8 +1548,9 @@ async function run(label, prompt, { tier = 'default', live = false, chat = false
   }
 }
 
-$('aiToday').addEventListener('click', () => run('点评今天', '点评我今天的饮食和运动：先一句话总结，再给 2–3 条结合当前周期阶段的具体建议，最后告诉我今天剩下的时间怎么吃/动。200 字以内。'));
+$('aiToday').addEventListener('click', () => run('点评今天', '点评我今天的饮食和运动：先一句话总结，再给 2–3 条结合当前周期阶段、围绕瘦肚子/翘臀/宽肩的具体建议，最后告诉我今天剩下的时间怎么吃/动。200 字以内。'));
 $('aiWeek').addEventListener('click', () => run('周期分析', '分析最近 14 天和各阶段均值：找出我的饮食和运动在不同周期阶段的规律（例如黄体期是否吃得多、经期是否运动少），指出 1 个做得好的地方和 2 个最值得改的地方，并给出下一个周期每个阶段的安排。350 字以内。', { tier: 'complex' }));
+$('aiTrain').addEventListener('click', () => run('今天练什么', '根据今天的周期阶段、WHOOP 恢复和睡眠、本周各部位已经练了几次，安排今天的训练：练哪个部位（优先补本周落后的翘臀/宽肩/平腹），列 4–6 个动作，每个写组数×次数和休息时间，总时长控制在 60 分钟内。如果今天更适合休息或轻练，直接说并给替代方案。'));
 $('aiPlan').addEventListener('click', () => {
   const tmr = addDays(TODAY, 1), k = phaseOf(tmr);
   run('明天的计划', `明天是 ${tmr}，预计处于${PHASES[k.key].name}（周期第 ${k.cd ?? '?'} 天）。按这个阶段给我明天的三餐加一次加餐（每项写食物和大约 kcal，总热量贴近我的目标），再给一个适合这个阶段的运动安排（类型、时长、强度）。`);
@@ -1591,7 +1651,7 @@ function drank(d) {
   const j = jr(d); if (j && j.alcohol != null) return j.alcohol;
   return null;
 }
-function lowMoodToday() { const m = mood(TODAY); return !!(m && m.m && m.m <= 2); }
+function lowMoodToday() { const m = mood(TODAY); return !!(m && m.m && m.m <= 1); }
 function lowStreak() { let n = 0, d = TODAY; for (;;) { const m = mood(d); if (m && m.m && m.m <= 2) { n++; d = addDays(d, -1); } else if (d === TODAY) d = addDays(d, -1); else break; if (n > 60) break; } return n; }
 function alcoholStats() {
   const known = [];
@@ -1619,14 +1679,12 @@ function renderCheckin() {
     .map(([l, v]) => `<div><span class="label">${l}</span><b>${v}</b></div>`).join('');
   let dots = ''; for (let i = 29; i >= 0; i--) { const d = addDays(TODAY, -i), v = drank(d); dots += `<i class="${v === true ? 'drink' : v === false ? 'free' : ''}" title="${fmtMD(d)}${v === true ? ' 喝了' : v === false ? ' 没喝' : ' 没记录'}"></i>`; }
   $('afDots').innerHTML = dots;
+  $('ciSum').textContent = `心情 ${m.m ? m.m + '/5' : '未记录'} · 已 ${a.since ?? '—'} 天没喝酒`;
   // gentle mode for hard days
   const g = $('gentle'), ls = lowStreak(), ph = phaseOf(TODAY);
   if (lowMoodToday()) {
     g.hidden = false;
-    g.innerHTML = `<h3>今天先照顾好自己，减脂的事明天再说</h3>
-      <span class="small">今天不看热量缺口，也不要求训练。只要做到这几件就很好：</span>
-      <ul><li>按时吃三顿饭，吃到不饿（${fmt(P().floor)} kcal 以上）</li><li>喝够水，出门晒 10 分钟太阳或者走一走</li><li>今晚早点上床，不喝酒</li>${ph.key === 'lut' ? '<li>现在是经前，情绪更容易往下掉，这是激素在起作用，会过去的</li>' : ''}</ul>
-      ${ls >= 3 ? `<span class="small"><b>已经连续 ${ls} 天心情很低了。</b>这不是你不够努力。找一个信任的人说说，或者打 <b class="num">18111</b>（24 小时，免费）聊聊。如果持续两周以上，请去看家庭医生或精神科医生。</span>` : ''}`;
+    g.innerHTML = `<span class="small"><b>今天状态不好，先吃饱、睡好，训练可以换成散步。</b>${ph.key === 'lut' ? '经前情绪起伏是激素影响，会过去。' : ''}${ls >= 5 ? ` 已经连续 ${ls} 天心情很低，可以找信任的人聊聊，或打 <b class="num">18111</b>。` : ''}</span>`;
   } else g.hidden = true;
 }
 $('moods').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) setMood({ m: Number(b.dataset.v) }); });
@@ -1699,14 +1757,94 @@ $('sosDrank').addEventListener('click', () => {
 });
 $('sosTalk').addEventListener('click', () => {
   closeSOS();
-  goTab('coach'); document.getElementById('coachH').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  goTab('today'); document.getElementById('coachH').scrollIntoView({ behavior: 'smooth', block: 'start' });
   const q = '我现在很难受，有点想用酒精逃避。先别给我讲道理，陪我说说话，帮我想想接下来一个小时怎么过。';
   if (AI.mode && !AI.busy) { addMsg('me', q); run(null, q, { chat: true }); } else $('askIn').value = q;
 });
 $('reasonForm').addEventListener('submit', e => { e.preventDefault(); const t = $('reasonIn').value.trim(); if (!t) return; state.reasons.push(t.slice(0, 120)); $('reasonIn').value = ''; save(); renderReasons(); });
 $('reasons').addEventListener('click', e => { const b = e.target.closest('[data-del-reason]'); if (!b) return; state.reasons.splice(Number(b.dataset.delReason), 1); save(); renderReasons(); });
+/* ---------- body goals: weekly training by target area ---------- */
+const PARTS = [
+  { k: 'glute', name: '翘臀', goal: 3, re: /臀|腿|深蹲|硬拉|桥|分腿|glute|leg|squat|deadlift/i, log: ['臀腿训练', 5.0, 55],
+    moves: ['臀推 4×8–12（主项，逐周加重）', '罗马尼亚硬拉 3×8–10', '保加利亚分腿蹲 3×10/腿（身体前倾练臀）', '绳索后踢或髋外展 3×15', '臀桥收尾 2×20'] },
+  { k: 'shoulder', name: '宽肩', goal: 2, re: /肩|背|推举|引体|下拉|划船|shoulder|back|pull|press|row/i, log: ['肩背训练', 5.0, 50],
+    moves: ['哑铃侧平举 4×12–20（肩宽的关键，每次都做）', '坐姿哑铃推举 3×8–10', '高位下拉或辅助引体 3×8–12（背部变宽）', '反向飞鸟 3×15（后束，站姿更挺）', '坐姿划船 3×10'] },
+  { k: 'core', name: '平腹', goal: 3, re: /核心|腹|平板|core|abs|plank/i, log: ['核心训练', 3.8, 15],
+    moves: ['死虫 3×10/侧', 'Pallof 抗旋推 3×12/侧', '悬垂举腿或反向卷腹 3×10', '侧平板 3×30 秒/侧', '平坦小腹靠全身减脂和少腹胀，核心训练负责收紧和姿态'] }
+];
+function weekStart(d) { const w = parse(d).getDay(); return addDays(d, -((w + 6) % 7)); }
+function partCounts() {
+  const ws = weekStart(TODAY), out = { glute: 0, shoulder: 0, core: 0, other: 0 };
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(ws, i); if (d > TODAY) break;
+    for (const e of day(d).ex) {
+      const hit = PARTS.filter(p => p.re.test(e.type));
+      hit.forEach(p => out[p.k]++);
+      if (!hit.length && /力量|strength|weight/i.test(e.type)) out.other++;
+    }
+  }
+  return out;
+}
+function renderTraining() {
+  const c = partCounts(), ph = phaseOf(TODAY), w = wh(TODAY) || wh(addDays(TODAY, -1));
+  const phaseTip = { men: '经期：按感觉练，重量降一点也没关系', fol: '卵泡期：冲重量、做主项 PR 的好时候', ovu: '排卵期：力量高峰，热身做足', lut: ph.cd && ph.cd >= CS.len - 6 ? '经前一周：总量减 20–30%，保持动作质量' : '黄体期：保持重量，组数可以少一点', none: '' }[ph.key];
+  $('trPhase').textContent = phaseTip + (w && w.recovery != null ? ` · 恢复 ${w.recovery}%${w.recovery < 34 ? '，今天适合轻练' : ''}` : '');
+  $('parts').innerHTML = PARTS.map(p => `<div class="part">
+      <h3>${p.name}<span class="cnt">本周 ${c[p.k]} / ${p.goal} 次</span></h3>
+      <div class="pips">${Array.from({ length: p.goal }, (_, i) => `<i class="${i < c[p.k] ? 'on' : ''}"></i>`).join('')}</div>
+      <button class="btn" type="button" data-part="${p.k}">+ 今天练了${p.log[0].replace('训练', '')}（${p.log[2]} 分钟）</button>
+      <details><summary>推荐动作</summary><ul>${p.moves.map(m => `<li>${m}</li>`).join('')}</ul></details>
+    </div>`).join('');
+  $('trOther').textContent = c.other ? `本周还有 ${c.other} 次没标部位的力量训练（比如 WHOOP 导入的），在记录里新加一条对应部位就能算进来。` : '';
+}
+$('parts').addEventListener('click', e => {
+  const b = e.target.closest('[data-part]'); if (!b) return;
+  const p = PARTS.find(x => x.k === b.dataset.part);
+  ensure(TODAY).ex.push({ type: p.log[0], met: p.log[1], min: p.log[2] }); commit();
+  onLogged(`${p.log[0]} ${p.log[2]} 分钟`);
+});
+
+/* ---------- body progress ---------- */
+const BODY = [
+  { k: 'weight', name: '体重', unit: 'kg', want: 0, note: '重组期体重可能不怎么变，看围度' },
+  { k: 'waist', name: '腰围', unit: 'cm', want: -1 },
+  { k: 'hip', name: '臀围', unit: 'cm', want: 1, note: '减脂时保持不掉就很好' },
+  { k: 'shoulder', name: '肩围', unit: 'cm', want: 1 },
+  { k: 'whr', name: '腰臀比', unit: '', want: -1, calc: r => r.waist && r.hip ? r.waist / r.hip : null, dp: 3 },
+  { k: 'swr', name: '肩腰比', unit: '', want: 1, calc: r => r.shoulder && r.waist ? r.shoulder / r.waist : null, dp: 2 }
+];
+function renderBody() {
+  const rows = (state.body || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+  const val = (r, m) => m.calc ? m.calc(r) : r[m.k] ?? null;
+  $('bodyBody').innerHTML = rows.length ? BODY.map(m => {
+    const hist = rows.filter(r => val(r, m) != null); if (!hist.length) return '';
+    const f = hist[0], l = hist[hist.length - 1], a = val(f, m), z = val(l, m), d = z - a, dp = m.dp ?? 1;
+    const cls = hist.length < 2 || !m.want || Math.abs(d) < 1e-9 ? '' : d * m.want > 0 ? 'good' : 'bad';
+    return `<tr><td style="text-align:left">${m.name}${m.unit ? ` <span class="small muted">${m.unit}</span>` : ''}</td><td class="num">${a.toFixed(dp)}<br><span class="small muted">${f.date.slice(5).replace('-', '/')}</span></td><td class="num">${z.toFixed(dp)}<br><span class="small muted">${l.date.slice(5).replace('-', '/')}</span></td><td class="num ${cls}">${hist.length < 2 ? '—' : (d > 0 ? '+' : '') + d.toFixed(dp)}</td><td class="small" style="white-space:normal;text-align:left">${m.want > 0 ? '↑ 越大越好' : m.want < 0 ? '↓ 越小越好' : ''}${m.note ? `<br><span class="muted">${m.note}</span>` : ''}</td></tr>`;
+  }).join('') : `<tr><td colspan="5" style="text-align:left;white-space:normal" class="muted">还没有记录。先量一次腰围、臀围、肩围作为起点，之后每周量一次。</td></tr>`;
+  if (!$('bDate').value) $('bDate').value = TODAY;
+}
+$('bodyForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const n = id => { const v = Number($(id).value); return $(id).value !== '' && v > 0 ? v : null; };
+  const r = { date: $('bDate').value, weight: n('bWeight'), waist: n('bWaist'), hip: n('bHip'), shoulder: n('bShoulder') };
+  if (!r.date || [r.weight, r.waist, r.hip, r.shoulder].every(v => v == null)) { $('bodyMsg').textContent = '至少填一项。'; return; }
+  state.body = (state.body || []).filter(x => x.date !== r.date).concat(r);
+  const newest = state.body.filter(x => x.weight).sort((a, b) => b.date.localeCompare(a.date))[0];
+  if (newest && newest.date === r.date && r.weight) state.profile.weight = r.weight;
+  commit(); renderSettings(); ['bWeight', 'bWaist', 'bHip', 'bShoulder'].forEach(id => $(id).value = '');
+  $('bodyMsg').textContent = `已保存 ${fmtMD(r.date)} 的数据`;
+});
+function bodyCtx() {
+  const rows = (state.body || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+  const c = partCounts();
+  let t = `\n【本周训练】翘臀 ${c.glute}/3 次，宽肩 ${c.shoulder}/2 次，平腹核心 ${c.core}/3 次，未标部位的力量训练 ${c.other} 次。`;
+  if (rows.length) { const f = rows[0], l = rows[rows.length - 1]; t += `\n【身材进度】起点 ${f.date}：体重${f.weight ?? '-'} 腰${f.waist ?? '-'} 臀${f.hip ?? '-'} 肩${f.shoulder ?? '-'}；最近 ${l.date}：体重${l.weight ?? '-'} 腰${l.waist ?? '-'} 臀${l.hip ?? '-'} 肩${l.shoulder ?? '-'}。`; }
+  return t;
+}
+
 /* ---------- tabs ---------- */
-const TABS = ['today', 'insight', 'coach', 'me'];
+const TABS = ['today', 'insight', 'me'];
 let tab = 'today';
 function goTab(t) {
   if (!TABS.includes(t)) t = 'today';
@@ -1719,23 +1857,23 @@ function goTab(t) {
 document.querySelector('.tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; goTab(b.dataset.tab); window.scrollTo({ top: document.querySelector('.tabs').offsetTop - 4, behavior: 'smooth' }); });
 
 /* ---------- 100-day countdown & daily quote ---------- */
+// [中文, English, 出处, 主题] — the original language is listed in the source
 const QUOTES = [
-  ['We are what we repeatedly do. Excellence, then, is not an act, but a habit.', 'Will Durant，《哲学的故事》（1926），概括亚里士多德的思想', '成长'],
-  ['千里之行，始于足下。', '老子《道德经》第六十四章', '成长'],
-  ['不积跬步，无以至千里；不积小流，无以成江海。', '荀子《劝学》', '成长'],
-  ['知人者智，自知者明。胜人者有力，自胜者强。', '老子《道德经》第三十三章', '成长'],
-  ['What we do every day matters more than what we do once in a while.', 'Gretchen Rubin，《The Happiness Project》（2009）', '健康'],
-  ['Almost everything will work again if you unplug it for a few minutes, including you.', 'Anne Lamott，TED 演讲《12 truths I learned from life and writing》（2017）', '健康'],
-  ['Caring for myself is not self-indulgence, it is self-preservation.', 'Audre Lorde，《A Burst of Light》（1988）', '健康'],
-  ['You do not have to be good. You only have to let the soft animal of your body love what it loves.', 'Mary Oliver，诗作《Wild Geese》（1986）', '健康'],
-  ['回首向来萧瑟处，归去，也无风雨也无晴。', '苏轼《定风波》', '成长'],
-  ['竹杖芒鞋轻胜马，谁怕？一蓑烟雨任平生。', '苏轼《定风波》', '成长'],
-  ['Good relationships keep us happier and healthier.', 'Robert Waldinger，TED 演讲《What makes a good life?》（2015），哈佛成人发展研究', '亲密关系'],
-  ['Love is patient, love is kind.', '《圣经·哥林多前书》13:4', '亲密关系'],
-  ['Connection is why we\'re here. It is what gives purpose and meaning to our lives.', 'Brené Brown，TED 演讲《The power of vulnerability》（2010）', '亲密关系'],
-  ['七転び八起き（跌倒七次，第八次站起来）。', '日本谚语', '运动'],
-  ['It never gets easier, you just go faster.', 'Greg LeMond，三届环法自行车赛冠军', '运动'],
-  ['Motivation is what gets you started. Habit is what keeps you going.', 'Jim Ryun，美国中长跑运动员、奥运银牌得主', '运动']
+  ['我们反复做的事，造就了我们。卓越不是一次行动，而是一种习惯。', 'We are what we repeatedly do. Excellence, then, is not an act, but a habit.', 'Will Durant，《哲学的故事》（1926），概括亚里士多德的思想', '成长'],
+  ['千里之行，始于足下。', 'A journey of a thousand miles begins with a single step.', '老子《道德经》第六十四章', '成长'],
+  ['不积跬步，无以至千里；不积小流，无以成江海。', 'Without small steps, there is no journey of a thousand miles; without small streams, there are no rivers or seas.', '荀子《劝学》', '成长'],
+  ['知人者智，自知者明。胜人者有力，自胜者强。', 'Knowing others is wisdom; knowing yourself is clarity. Overcoming others takes force; overcoming yourself is true strength.', '老子《道德经》第三十三章', '成长'],
+  ['每天做的事，比偶尔做的事更重要。', 'What we do every day matters more than what we do once in a while.', 'Gretchen Rubin，《The Happiness Project》（2009）', '健康'],
+  ['几乎所有东西，拔掉电源几分钟再插上，都会重新运转，包括你。', 'Almost everything will work again if you unplug it for a few minutes, including you.', 'Anne Lamott，TED 演讲《12 truths I learned from life and writing》（2017）', '健康'],
+  ['照顾自己不是放纵，而是自我保全。', 'Caring for myself is not self-indulgence, it is self-preservation.', 'Audre Lorde，《A Burst of Light》（1988）', '健康'],
+  ['回首向来萧瑟处，归去，也无风雨也无晴。', 'Looking back on the bleak road I came by, I head home: neither storm nor shine.', '苏轼《定风波》', '成长'],
+  ['竹杖芒鞋轻胜马，谁怕？一蓑烟雨任平生。', 'Bamboo staff and straw sandals beat any horse. Who is afraid? In a straw cape I will face a lifetime of misty rain.', '苏轼《定风波》', '成长'],
+  ['良好的关系让我们更快乐，也更健康。', 'Good relationships keep us happier and healthier.', 'Robert Waldinger，TED 演讲《What makes a good life?》（2015），哈佛成人发展研究', '亲密关系'],
+  ['爱是恒久忍耐，又有恩慈。', 'Love is patient, love is kind.', '《圣经·哥林多前书》13:4', '亲密关系'],
+  ['联结是我们存在的意义，它赋予生活目的和意义。', 'Connection is why we\'re here. It is what gives purpose and meaning to our lives.', 'Brené Brown，TED 演讲《The power of vulnerability》（2010）', '亲密关系'],
+  ['跌倒七次，第八次站起来。', 'Fall seven times, stand up eight.', '日本谚语「七転び八起き」', '运动'],
+  ['从来不会变得更轻松，只是你会变得更快。', 'It never gets easier, you just go faster.', 'Greg LeMond，三届环法自行车赛冠军', '运动'],
+  ['动力让你开始，习惯让你坚持。', 'Motivation is what gets you started. Habit is what keeps you going.', 'Jim Ryun，美国中长跑运动员、奥运银牌得主', '运动']
 ];
 let qOffset = 0;
 function cdState() {
@@ -1747,13 +1885,13 @@ function renderCountdown() {
   const done = Math.max(0, Math.min(100, n));
   $('cdDay').textContent = n < 1 ? `还有 ${1 - n} 天开始` : n > 100 ? '100 天完成' : `第 ${n} 天`;
   $('cdOf').textContent = n >= 1 && n <= 100 ? `/ 100 · 还剩 ${100 - n} 天` : '';
-  $('cdGoal').textContent = c.goal ? `目标：${c.goal}` : '点「修改开始日期和目标」写下这 100 天想成为的样子';
+  $('cdGoal').textContent = `目标：${c.goal || '瘦瘦的肚子 · 翘翘的屁股 · 宽宽的肩'}`;
   $('cdRange').textContent = `${fmtMD(c.start)} → ${fmtMD(end)}`;
   let g = ''; for (let i = 1; i <= 100; i++) g += `<i class="${i < n ? 'done' : i === n ? 'now' : ''}"></i>`;
   $('cdGrid').innerHTML = g;
   $('cdGrid').setAttribute('title', `已经走过 ${Math.max(0, Math.min(100, n - 1))} 天`);
   const q = QUOTES[(((Math.max(1, n) - 1) + qOffset) % QUOTES.length + QUOTES.length) % QUOTES.length];
-  $('qText').textContent = q[0]; $('qSrc').textContent = `—— ${q[1]} · ${q[2]}`;
+  $('qText').textContent = q[0]; $('qText2').textContent = q[1]; $('qSrc').textContent = `—— ${q[2]} · ${q[3]}`;
 }
 $('qNext').addEventListener('click', () => { qOffset++; renderCountdown(); });
 $('cdEditBtn').addEventListener('click', () => { const c = cdState(); $('cdStart').value = c.start; $('cdGoalIn').value = c.goal || ''; $('cdEdit').hidden = false; $('cdGoalIn').focus(); });
