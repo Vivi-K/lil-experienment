@@ -202,6 +202,44 @@ td.bar-cell{width:34%;min-width:110px}
 .wh-now span{font-size:12px;border-radius:999px;background:var(--sunk);padding:3px 10px;color:var(--ink2)}
 .wh-now b{font-family:var(--mono);font-weight:500;color:var(--ink)}
 .src{font-size:11px;border-radius:4px;padding:1px 5px;background:var(--sunk);color:var(--ink3);margin-left:4px;letter-spacing:.03em}
+/* Check-in, alcohol-free, SOS */
+.checkin{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px}
+@media (max-width:760px){.checkin{grid-template-columns:1fr}}
+.moods{display:flex;gap:6px;flex-wrap:wrap}
+.moods button{flex:1 1 52px;min-width:52px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 4px;display:grid;justify-items:center;gap:2px;font-size:12px;color:var(--ink2)}
+.moods button b{font-family:var(--display);font-size:20px;color:var(--ink)}
+.moods button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tags button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;font-size:13px;color:var(--ink2)}
+.tags button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.stepper button{border:0;background:var(--surface);width:34px;height:32px;font-size:16px}
+.stepper span{min-width:36px;text-align:center;font-family:var(--mono)}
+.big-num{font-family:var(--display);font-size:44px;font-weight:700;line-height:1}
+.af-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+.af-grid div{background:var(--surface);padding:10px;display:grid;gap:2px}
+.af-grid b{font-family:var(--mono);font-size:18px;font-weight:500}
+.dots{display:grid;grid-template-columns:repeat(15,minmax(0,1fr));gap:3px}
+.dots i{aspect-ratio:1/1;border-radius:3px;background:var(--sunk)}
+.dots i.free{background:var(--good)}
+.dots i.drink{background:var(--warn)}
+.sos-btn{border:1.5px solid var(--accent);background:var(--surface);color:var(--accent);border-radius:12px;padding:12px 14px;text-align:left;display:grid;gap:2px;font-size:15px;font-weight:600;width:100%}
+.sos-btn span{font-weight:400;font-size:13px;color:var(--ink2)}
+.gentle{border-radius:12px;background:var(--accent-soft);padding:14px 16px;display:grid;gap:6px}
+.gentle ul{margin:0;padding-left:18px;display:grid;gap:3px}
+.breath{width:150px;height:150px;border-radius:50%;margin:8px auto;display:grid;place-items:center;background:var(--accent-soft);border:2px solid var(--accent);font-size:15px;transform:scale(.7);transition:transform 4s ease-in-out}
+.breath.in{transform:scale(1)}
+.breath.hold{transform:scale(1)}
+.breath.out{transform:scale(.7);transition-duration:6s}
+@media (prefers-reduced-motion:reduce){.breath,.breath.out{transition:none}}
+.sos-list{margin:0;padding-left:18px;display:grid;gap:6px}
+.hotline{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:4px;font-size:14px}
+.hotline .num{font-size:20px;user-select:all}
+.reasons li{display:flex;justify-content:space-between;gap:8px;align-items:center}
+/* Labs */
+.lab-flag{font-size:12px;border-radius:4px;padding:1px 6px;margin-left:4px}
+.lab-flag.hi{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.lab-flag.lo{background:color-mix(in srgb,var(--p-fol) 18%,transparent);color:var(--p-fol)}
 .confirm{display:inline-flex;gap:8px;align-items:center;font-size:14px}
 @media (prefers-reduced-motion:no-preference){.meter div,.hbar{transition:width .3s ease}}
 </style>
@@ -235,6 +273,52 @@ td.bar-cell{width:34%;min-width:110px}
       <div>
         <div class="meter" id="meter"><div></div></div>
         <div class="small muted" id="meterText" style="margin-top:6px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHECK-IN -->
+  <section class="block" aria-labelledby="ciH">
+    <div class="sec-head">
+      <h2 id="ciH">今天感觉怎么样</h2>
+      <span class="small muted" id="ciSaved" role="status"></span>
+    </div>
+    <div class="gentle" id="gentle" hidden></div>
+    <div class="checkin">
+      <div class="panel" style="display:grid;gap:14px;align-content:start">
+        <div style="display:grid;gap:6px">
+          <span class="label">心情</span>
+          <div class="moods" id="moods" role="group" aria-label="今天的心情">
+            <button type="button" data-v="1"><b>1</b>很难熬</button>
+            <button type="button" data-v="2"><b>2</b>低落</button>
+            <button type="button" data-v="3"><b>3</b>一般</button>
+            <button type="button" data-v="4"><b>4</b>不错</button>
+            <button type="button" data-v="5"><b>5</b>很好</button>
+          </div>
+        </div>
+        <div style="display:grid;gap:6px">
+          <span class="label">今天有没有（点选）</span>
+          <div class="tags" id="moodTags"></div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center">
+          <div style="display:grid;gap:4px"><span class="label">想喝酒的程度</span>
+            <div class="seg" id="urgeSeg" role="group" aria-label="想喝酒的程度">
+              <button type="button" data-u="0">没有</button><button type="button" data-u="1">有点</button><button type="button" data-u="2">很想</button><button type="button" data-u="3">忍不住</button>
+            </div></div>
+          <div style="display:grid;gap:4px"><span class="label">今天喝了几杯</span>
+            <div class="stepper"><button type="button" id="drinkMinus" aria-label="减一杯">−</button><span id="drinkN">0</span><button type="button" id="drinkPlus" aria-label="加一杯">+</button></div></div>
+        </div>
+        <input id="moodNote" placeholder="一句话记下今天（可不填）" aria-label="今天的备注" style="border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px">
+      </div>
+      <div class="panel" style="display:grid;gap:12px;align-content:start">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px">
+          <div><span class="label">距离上次喝酒</span><div><span class="big-num" id="afDays">—</span> <span class="muted">天</span></div></div>
+          <span class="small muted" id="afSince" style="text-align:right"></span>
+        </div>
+        <div class="af-grid" id="afGrid"></div>
+        <div style="display:grid;gap:4px"><span class="label">最近 30 天</span><div class="dots" id="afDots" aria-label="最近 30 天是否喝酒"></div>
+          <span class="small muted">绿色：没喝　橙色：喝了　灰色：没记录</span></div>
+        <button class="sos-btn" type="button" id="sosOpen">想喝酒，或者现在很难受<span>点这里，先陪你撑过接下来的 10 分钟</span></button>
       </div>
     </div>
   </section>
@@ -411,6 +495,36 @@ td.bar-cell{width:34%;min-width:110px}
     </div>
   </section>
 
+  <!-- LABS -->
+  <section class="block" aria-labelledby="labH">
+    <div class="sec-head">
+      <h2 id="labH">化验记录</h2>
+      <label class="btn photo-btn" id="labPhotoWrap" hidden>拍照识别化验单<input type="file" id="labPhoto" accept="image/*" aria-label="上传化验单照片"></label>
+    </div>
+    <div class="grid2">
+      <div class="panel tbl-wrap">
+        <table>
+          <thead><tr><th>项目</th><th>最近一次</th><th>参考范围</th><th>日期</th><th>变化</th><th></th></tr></thead>
+          <tbody id="labBody"></tbody>
+        </table>
+      </div>
+      <div class="panel" style="display:grid;gap:10px;align-content:start">
+        <h3>手动添加</h3>
+        <form class="row" id="labForm">
+          <input class="grow" id="labName" list="labList" placeholder="项目，如 TgAb" required aria-label="化验项目">
+          <input class="w num" id="labVal" type="number" step="any" placeholder="结果" required aria-label="结果">
+          <input class="w" id="labUnit" placeholder="单位" aria-label="单位">
+          <input class="w" id="labRef" placeholder="范围 如 <4" aria-label="参考范围">
+          <input type="date" id="labDate" required aria-label="采样日期" style="border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 10px">
+          <button class="btn primary" type="submit">添加</button>
+        </form>
+        <datalist id="labList"></datalist>
+        <span class="small" id="labMsg" role="status"></span>
+        <p class="note">数据只保存在这个浏览器里。AI 教练给饮食建议时会参考最近一次的结果。化验单的解读请以医生为准。</p>
+      </div>
+    </div>
+  </section>
+
   <!-- SETTINGS -->
   <section class="block" aria-labelledby="setH">
     <h2 id="setH">我的资料</h2>
@@ -435,7 +549,10 @@ td.bar-cell{width:34%;min-width:110px}
           </select></label>
         <label class="field">默认周期长度（天）<input id="sCycle" type="number" min="21" max="40" class="num"></label>
         <label class="field">默认经期天数<input id="sPeriod" type="number" min="2" max="9" class="num"></label>
+        <label class="field">每日最低摄入 kcal<input id="sFloor" type="number" min="1000" max="2500" step="50" class="num"></label>
       </div>
+      <label class="field">给 AI 教练的背景（健康情况、饮食限制、作息，写得越具体建议越贴合；只存在这个浏览器里）
+        <textarea id="sAbout" rows="4" style="border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;font:inherit;color:var(--ink)" placeholder="例如：乳制品容易让我发炎；午饭只能吃学校食堂；不爱吃冷的；晚上压力大时想吃甜食……"></textarea></label>
       <p class="note">基础代谢用 Mifflin-St Jeor 公式估算；黄体期静息代谢通常会上升约 2.5–10%，这里按 +6% 计入当天目标。数字是估算，不是医疗建议。周期明显不规律、经期异常疼痛或出血过多，请咨询医生。</p>
       <div class="backup">
         <h3>备份与恢复</h3>
@@ -452,6 +569,43 @@ td.bar-cell{width:34%;min-width:110px}
       </div>
     </div>
   </section>
+</div>
+
+<div class="onb" id="sos" hidden role="dialog" aria-modal="true" aria-labelledby="sosH">
+  <div class="onb-card">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+      <div>
+        <h2 id="sosH">先停一下，我们一起过这 10 分钟</h2>
+        <p class="muted small" style="margin:6px 0 0" id="sosLead">想喝的冲动像海浪，会涨上来，也会退下去，通常 10–20 分钟就会弱很多。你不需要现在就决定什么，只要先陪自己待一会儿。</p>
+      </div>
+      <button class="btn ghost" type="button" id="sosClose" aria-label="关闭" style="white-space:nowrap;flex:none">关闭</button>
+    </div>
+    <div style="display:grid;gap:6px;justify-items:center">
+      <div class="breath" id="breath" aria-live="polite">准备好就开始</div>
+      <div style="display:flex;gap:8px;align-items:center"><button class="btn primary" type="button" id="breathBtn">开始 10 分钟</button><span class="num small muted" id="breathTime"></span></div>
+    </div>
+    <div style="display:grid;gap:6px">
+      <h3>现在可以做的一件小事</h3>
+      <ul class="sos-list" id="sosActs"></ul>
+    </div>
+    <div style="display:grid;gap:6px">
+      <h3>我为什么不想用酒精逃避</h3>
+      <ul class="sos-list reasons" id="reasons"></ul>
+      <form class="row" id="reasonForm"><input class="grow" id="reasonIn" placeholder="加一条你自己的理由" aria-label="添加理由"><button class="btn" type="submit">添加</button></form>
+    </div>
+    <div style="display:grid;gap:6px">
+      <h3>想找人说说</h3>
+      <div class="hotline"><span>「情绪通」精神健康支援热线 · 24 小时，精神科护士接听，免费</span><span class="num">18111</span></div>
+      <div class="hotline"><span>撒玛利亚防止自杀会 · 24 小时情绪支援（粤语），可以只是聊聊</span><span class="num">2389 2222</span></div>
+      <p class="note">如果你有伤害自己的想法，或者觉得撑不住了，请马上打 999，或者直接去最近医院的急症室。人在内地时可以打 12356。</p>
+      <button class="btn" type="button" id="sosTalk">和 AI 教练说说现在的感受</button>
+    </div>
+    <div class="onb-actions">
+      <button class="btn" type="button" id="sosDrank">我还是喝了</button>
+      <button class="btn primary" type="button" id="sosOk">我撑过去了</button>
+    </div>
+    <span class="small muted" id="sosMsg" role="status"></span>
+  </div>
 </div>
 
 <div class="onb" id="onb" hidden role="dialog" aria-modal="true" aria-labelledby="onbH">
@@ -530,10 +684,10 @@ const FOODS = [
   ['米饭 一碗', 230, 4], ['鸡蛋 一个', 72, 6], ['牛奶 250ml', 135, 8], ['燕麦 40g', 150, 5], ['全麦面包 一片', 80, 4],
   ['鸡胸肉 100g', 165, 31], ['三文鱼 100g', 208, 20], ['牛肉（瘦）100g', 150, 26], ['虾仁 100g', 99, 24], ['豆腐 100g', 80, 8],
   ['希腊酸奶 一杯', 130, 15], ['蛋白粉 一勺', 120, 24], ['面条 一碗', 280, 9], ['饺子 10个', 420, 18], ['红薯 一个', 130, 2],
-  ['苹果 一个', 95, 0], ['香蕉 一根', 105, 1], ['酸奶 一杯', 120, 5], ['坚果 一小把', 170, 6], ['黑巧克力 20g', 110, 2],
+  ['豆浆 250ml', 80, 7], ['隔夜燕麦（植物奶）', 300, 12], ['食堂清淡套餐', 550, 25], ['豌豆蛋白粉 一勺', 110, 22], ['巴西坚果 2颗', 66, 1], ['南瓜子 20g', 115, 6], ['毛豆 100g', 130, 12], ['苹果 一个', 95, 0], ['香蕉 一根', 105, 1], ['酸奶 一杯', 120, 5], ['坚果 一小把', 170, 6], ['黑巧克力 20g', 110, 2],
   ['奶茶 中杯', 350, 3], ['拿铁 中杯', 190, 10], ['沙拉（带酱）', 250, 6], ['麻辣烫 一份', 600, 25], ['火锅 一顿', 900, 45]
 ];
-const QUICK = ['鸡蛋 一个', '鸡胸肉 100g', '希腊酸奶 一杯', '蛋白粉 一勺', '米饭 一碗', '奶茶 中杯'];
+const QUICK = ['鸡蛋 一个', '鸡胸肉 100g', '豆浆 250ml', '隔夜燕麦（植物奶）', '食堂清淡套餐', '奶茶 中杯'];
 const EX = [
   ['快走', 4.3], ['慢跑', 7.0], ['跑步（较快）', 9.8], ['骑行', 7.5], ['游泳', 6.0], ['力量训练', 5.0],
   ['HIIT', 8.0], ['跳绳', 11.0], ['瑜伽', 2.5], ['普拉提', 3.0], ['舞蹈', 5.0], ['爬楼梯', 8.0], ['拉伸散步', 2.8]
@@ -553,17 +707,17 @@ const PHASES = {
 const PH_ORDER = ['men', 'fol', 'ovu', 'lut'];
 
 /* ---------- state ---------- */
-const DEFAULT_PROFILE = { height: 163, weight: 55, age: 28, act: 1.2, goal: -300, cycle: 33, period: 5 };
+const DEFAULT_PROFILE = { height: 163, weight: 55, age: 28, act: 1.2, goal: -300, cycle: 33, period: 5, floor: 1450, about: '' };
 let state = load();
 let logDate = TODAY;
 let range = 30;
 let calMonth = TODAY.slice(0, 7);
 
-function blank() { return { profile: { ...DEFAULT_PROFILE }, days: {}, whoop: {}, journal: {}, sample: false, onboarded: false }; }
+function blank() { return { profile: { ...DEFAULT_PROFILE }, days: {}, whoop: {}, journal: {}, labs: [], reasons: [], sample: false, onboarded: false }; }
 function load() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) { const s = JSON.parse(raw); if (s && s.days && s.profile) { s.profile = { ...DEFAULT_PROFILE, ...s.profile }; s.whoop = s.whoop || {}; s.journal = s.journal || {}; return s; } }
+    if (raw) { const s = JSON.parse(raw); if (s && s.days && s.profile) { s.profile = { ...DEFAULT_PROFILE, ...s.profile }; s.whoop = s.whoop || {}; s.journal = s.journal || {}; s.labs = s.labs || []; s.reasons = s.reasons || []; return s; } }
   } catch (e) { /* storage unavailable */ }
   return makeSample();
 }
@@ -645,7 +799,7 @@ function totalBurn(d) {
   const ph = phaseOf(d).key;
   return baseBurn() + exBurn(d) + (ph === 'lut' ? lutealBonus() : 0);
 }
-const target = d => totalBurn(d) + Number(P().goal);
+const target = d => Math.max(Number(P().floor) || 0, totalBurn(d) + Number(P().goal));
 const logged = d => day(d).food.length > 0;
 
 /* ---------- cycle model ---------- */
@@ -721,12 +875,14 @@ function renderHero() {
     ['今日摄入', fmt(inT), `${day(TODAY).food.length} 项记录`],
     ['蛋白质 g', `${fmt(pr)}<span class="small" style="color:var(--ink3)"> / ${pt}</span>`, pr >= pt ? '已达标' : `还差 ${fmt(pt - pr)} g`],
     ['总消耗', fmt(tb), bonus],
-    ['还可以吃', fmt(Math.max(0, tg - inT)), tg - inT < 0 ? `已超 ${fmt(inT - tg)}` : `目标 ${fmt(tg)}`]
+    ['还可以吃', fmt(Math.max(0, tg - inT)), tg - inT < 0 ? `多了 ${fmt(inT - tg)}，看一周平均就好` : `目标 ${fmt(tg)}`]
   ].map(([l, v, s]) => `<div class="stat"><span class="label">${l}</span><b>${v}</b><span class="small">${s}</span></div>`).join('');
   const pct = tg > 0 ? inT / tg : 0;
   $('meter').classList.toggle('over', pct > 1.05);
   $('meter').firstElementChild.style.width = Math.min(100, pct * 100) + '%';
-  $('meterText').textContent = `今日目标 ${fmt(tg)} kcal，已完成 ${Math.round(pct * 100)}%`;
+  $('meterText').textContent = `今日目标 ${fmt(tg)} kcal（不低于 ${fmt(P().floor)}），已吃 ${Math.round(pct * 100)}%`;
+  const low = lowMoodToday();
+  $('stats').hidden = low; $('meter').parentElement.hidden = low;
   renderDial(ph);
   // latest WHOOP morning metrics (today's recovery is scored on waking)
   const wd = wh(TODAY) ? TODAY : wh(addDays(TODAY, -1)) ? addDays(TODAY, -1) : null;
@@ -949,13 +1105,13 @@ function renderCalendar() {
 }
 
 /* ---------- settings ---------- */
-const SETS = { sHeight: 'height', sWeight: 'weight', sAge: 'age', sAct: 'act', sGoal: 'goal', sCycle: 'cycle', sPeriod: 'period' };
-function renderSettings() { for (const [id, k] of Object.entries(SETS)) $(id).value = P()[k]; }
+const SETS = { sHeight: 'height', sWeight: 'weight', sAge: 'age', sAct: 'act', sGoal: 'goal', sCycle: 'cycle', sPeriod: 'period', sFloor: 'floor' };
+function renderSettings() { for (const [id, k] of Object.entries(SETS)) $(id).value = P()[k]; $('sAbout').value = P().about || ''; }
 
 function renderAll() {
   CS = cycleStats();
   $('sampleBar').hidden = !state.sample;
-  renderHero(); renderLogger(); renderChart(); renderWhoop(); renderPhases(); renderCalendar();
+  renderHero(); renderCheckin(); renderLogger(); renderChart(); renderWhoop(); renderPhases(); renderCalendar(); renderLabs();
 }
 function commit() { save(); renderAll(); }
 function setLogDate(d) { logDate = d > TODAY ? TODAY : d; calMonth = logDate.slice(0, 7); renderLogger(); renderCalendar(); }
@@ -1022,7 +1178,7 @@ $('importBtn').addEventListener('click', () => {
   try {
     const s = JSON.parse($('backupText').value);
     if (!s || typeof s.days !== 'object' || typeof s.profile !== 'object') throw 0;
-    state = { profile: { ...DEFAULT_PROFILE, ...s.profile }, days: s.days, whoop: s.whoop || {}, journal: s.journal || {}, sample: false, onboarded: true };
+    state = { profile: { ...DEFAULT_PROFILE, ...s.profile }, days: s.days, whoop: s.whoop || {}, journal: s.journal || {}, labs: s.labs || [], reasons: s.reasons || [], sample: false, onboarded: true };
     commit(); renderSettings(); $('backupMsg').textContent = '已恢复';
   } catch (e) { $('backupMsg').textContent = '恢复失败：文本不是有效的备份，请粘贴完整的备份内容'; }
 });
@@ -1147,12 +1303,24 @@ function context() {
 【最近14天】
 ${recent.join('\n')}
 【各阶段均值】
-${agg.join('\n')}${whAgg.length ? '\n【WHOOP 各阶段均值】\n' + whAgg.join('\n') : ''}${state.sample ? '\n（注意：这些是示例数据）' : ''}`;
+${agg.join('\n')}${whAgg.length ? '\n【WHOOP 各阶段均值】\n' + whAgg.join('\n') : ''}${labsCtx()}${moodCtx()}${P().about ? '\n【用户自述背景】\n' + P().about : ''}${state.sample ? '\n（注意：这些是示例数据）' : ''}`;
+}
+function labsCtx() {
+  const by = {}; for (const x of state.labs || []) if (!by[x.name] || by[x.name].date < x.date) by[x.name] = x;
+  const l = Object.values(by); if (!l.length) return '';
+  return '\n【最近化验结果】\n' + l.map(x => `${x.name} ${x.value}${x.unit || ''}（参考 ${x.ref || '-'}，${x.date}${labFlag(x) === 'hi' ? '，偏高' : labFlag(x) === 'lo' ? '，偏低' : ''}）`).join('；');
+}
+function moodCtx() {
+  const lines = []; for (let i = 6; i >= 0; i--) { const d = addDays(TODAY, -i), m = mood(d); if (m) lines.push(`${d}｜心情${m.m ?? '-'}/5${m.tags ? '｜' + MOOD_TAGS.filter(([k]) => m.tags[k]).map(t => t[1]).join('、') : ''}｜想喝酒${['没有', '有点', '很想', '忍不住'][m.urge] ?? '-'}｜喝了${m.drinks ?? '-'}杯${m.resisted ? '｜忍住了' + m.resisted + '次' : ''}${m.note ? '｜' + m.note : ''}`); }
+  const a = alcoholStats();
+  return `\n【心情与酒精】距离上次喝酒 ${a.since ?? '未知'} 天，本月没喝 ${a.monthFree}/${a.monthKnown} 天，最长连续 ${a.best} 天。${lines.length ? '\n' + lines.join('\n') : ''}`;
 }
 const RULES = `你是一位懂女性生理周期的营养与运动教练，用简体中文回答。语气温和、直接、具体，不说教，不制造焦虑，不鼓励极端节食。
 结合用户当前的周期阶段解释她的数据（例如黄体期代谢和食欲上升、经期精力偏低、卵泡期适合高强度训练）。给出可以马上执行的建议，数字要具体（kcal、克数、分钟数）。
 如果用户目标是减脂保肌：强调蛋白质达标、每周至少 3 次渐进式力量训练、温和热量缺口，不要为了多掉秤牺牲肌肉；训练日和卵泡期可以多吃碳水，黄体期可以把缺口放小。
 有 WHOOP 数据时，用恢复分数、HRV、静息心率、睡眠来判断当天训练强度（例如恢复低于 34% 建议恢复性训练），并说明黄体期 HRV 下降、静息心率和体温升高是正常的周期现象。
+用户正在努力不用酒精逃避情绪：绝不建议喝酒放松，提到喝酒时不批评、不说教，肯定她每一个没喝的日子；喝了也只帮她照顾好身体和第二天。心情低落（≤2 分）的日子不要提热量缺口和减脂，只关心吃饱、睡好、有人陪。每日摄入建议不低于用户设置的最低摄入。
+如果用户流露出伤害自己或不想活的念头，温和而直接地回应，用户住在香港：请她立刻拨打「情绪通」18111 或撒玛利亚防止自杀会 2389 2222，紧急时打 999 或去最近医院急症室，并鼓励她联系身边信任的人。
 不做医疗诊断；遇到异常出血、剧烈疼痛、周期严重紊乱等情况，建议就医。不要用 Markdown 标题或表格，可以用短段落和“·”开头的要点。`;
 
 async function run(label, prompt, { tier = 'default', live = false, chat = false, images } = {}) {
@@ -1229,6 +1397,185 @@ $('photoIn').addEventListener('change', async e => {
   } catch (err) {
     body.textContent = errCopy(err && err.code);
   } finally { AI.busy = false; setAIEnabled(!!AI.mode); }
+});
+
+/* ---------- check-in & alcohol-free ---------- */
+const MOOD_TAGS = [['stress', '压力大'], ['anxious', '焦虑'], ['lonely', '孤单'], ['tired', '很累'], ['craving', '想吃甜的'], ['proud', '为自己骄傲'], ['connected', '和人聊得好']];
+const mood = d => day(d).mood || null;
+function setMood(patch) {
+  const r = ensure(TODAY); r.mood = { ...(r.mood || {}), ...patch };
+  save(); renderCheckin(); renderHero();
+  $('ciSaved').textContent = '已保存';
+}
+// true = drank, false = known alcohol-free, null = unknown (manual log wins over WHOOP journal)
+function drank(d) {
+  const m = mood(d);
+  if (m && m.drinks != null) return m.drinks > 0;
+  const j = jr(d); if (j && j.alcohol != null) return j.alcohol;
+  return null;
+}
+function lowMoodToday() { const m = mood(TODAY); return !!(m && m.m && m.m <= 2); }
+function lowStreak() { let n = 0, d = TODAY; for (;;) { const m = mood(d); if (m && m.m && m.m <= 2) { n++; d = addDays(d, -1); } else if (d === TODAY) d = addDays(d, -1); else break; if (n > 60) break; } return n; }
+function alcoholStats() {
+  const known = [];
+  for (let i = 0; i < 400; i++) { const d = addDays(TODAY, -i); const v = drank(d); if (v != null) known.push({ d, v }); }
+  const lastDrink = known.find(x => x.v);
+  const since = lastDrink ? diffDays(TODAY, lastDrink.d) : (known.length ? diffDays(TODAY, known[known.length - 1].d) + 1 : null);
+  const month = TODAY.slice(0, 7);
+  const inMonth = known.filter(x => x.d.startsWith(month)), m30 = known.filter(x => diffDays(TODAY, x.d) < 30);
+  // longest alcohol-free run among logged days
+  let best = 0, run = 0, prev = null;
+  for (const x of [...known].reverse()) { if (x.v) { run = 0; } else { run = prev && diffDays(x.d, prev) > 3 ? 1 : run + 1; best = Math.max(best, run); } prev = x.d; }
+  return { since, lastDrink: lastDrink && lastDrink.d, monthFree: inMonth.filter(x => !x.v).length, monthKnown: inMonth.length, free30: m30.filter(x => !x.v).length, drink30: m30.filter(x => x.v).length, best };
+}
+function renderCheckin() {
+  const m = mood(TODAY) || {};
+  $('moods').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.v) === m.m)));
+  $('moodTags').innerHTML = MOOD_TAGS.map(([k, n]) => `<button type="button" data-k="${k}" aria-pressed="${!!(m.tags || {})[k]}">${n}</button>`).join('');
+  $('urgeSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.u) === (m.urge ?? -1))));
+  $('drinkN').textContent = m.drinks ?? 0;
+  if (document.activeElement !== $('moodNote')) $('moodNote').value = m.note || '';
+  const a = alcoholStats();
+  $('afDays').textContent = a.since ?? '—';
+  $('afSince').textContent = a.lastDrink ? `上次：${fmtMD(a.lastDrink)}` : '还没有喝酒记录';
+  $('afGrid').innerHTML = [['本月没喝', `${a.monthFree}<span class="small muted"> / ${a.monthKnown} 天</span>`], ['30 天内没喝', `${a.free30} 天`], ['最长连续', `${a.best} 天`]]
+    .map(([l, v]) => `<div><span class="label">${l}</span><b>${v}</b></div>`).join('');
+  let dots = ''; for (let i = 29; i >= 0; i--) { const d = addDays(TODAY, -i), v = drank(d); dots += `<i class="${v === true ? 'drink' : v === false ? 'free' : ''}" title="${fmtMD(d)}${v === true ? ' 喝了' : v === false ? ' 没喝' : ' 没记录'}"></i>`; }
+  $('afDots').innerHTML = dots;
+  // gentle mode for hard days
+  const g = $('gentle'), ls = lowStreak(), ph = phaseOf(TODAY);
+  if (lowMoodToday()) {
+    g.hidden = false;
+    g.innerHTML = `<h3>今天先照顾好自己，减脂的事明天再说</h3>
+      <span class="small">今天不看热量缺口，也不要求训练。只要做到这几件就很好：</span>
+      <ul><li>按时吃三顿饭，吃到不饿（${fmt(P().floor)} kcal 以上）</li><li>喝够水，出门晒 10 分钟太阳或者走一走</li><li>今晚早点上床，不喝酒</li>${ph.key === 'lut' ? '<li>现在是经前，情绪更容易往下掉，这是激素在起作用，会过去的</li>' : ''}</ul>
+      ${ls >= 3 ? `<span class="small"><b>已经连续 ${ls} 天心情很低了。</b>这不是你不够努力。找一个信任的人说说，或者打 <b class="num">18111</b>（24 小时，免费）聊聊。如果持续两周以上，请去看家庭医生或精神科医生。</span>` : ''}`;
+  } else g.hidden = true;
+}
+$('moods').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) setMood({ m: Number(b.dataset.v) }); });
+$('moodTags').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (!b) return; const t = { ...((mood(TODAY) || {}).tags || {}) }; t[b.dataset.k] = !t[b.dataset.k]; setMood({ tags: t }); });
+$('urgeSeg').addEventListener('click', e => { const b = e.target.closest('[data-u]'); if (!b) return; const u = Number(b.dataset.u); setMood({ urge: u }); if (u >= 2) openSOS(); });
+$('drinkPlus').addEventListener('click', () => setMood({ drinks: ((mood(TODAY) || {}).drinks || 0) + 1 }));
+$('drinkMinus').addEventListener('click', () => setMood({ drinks: Math.max(0, ((mood(TODAY) || {}).drinks || 0) - 1) }));
+$('moodNote').addEventListener('change', e => setMood({ note: e.target.value.trim().slice(0, 200) }));
+
+/* ---------- SOS: urge surfing ---------- */
+let breathTimer = null;
+function defaultReasons() {
+  const r = [];
+  const eff = (() => { const jd = Object.keys(state.journal || {}); const y = jd.filter(d => jr(d).alcohol === true), n = jd.filter(d => jr(d).alcohol === false);
+    const hv = ds => { const v = ds.map(d => wh(addDays(d, 1))).filter(w => w && w.hrv != null).map(w => w.hrv); return v.length >= 4 ? v.reduce((a, b) => a + b) / v.length : null; };
+    const a = hv(y), b = hv(n); return a != null && b != null ? Math.round(b - a) : null; })();
+  if (eff && eff > 3) r.push(`我的数据：喝酒后第二天 HRV 平均低 ${eff} ms，恢复会变差，练的肌肉也长得慢`);
+  const a = alcoholStats();
+  if (a.since >= 3) r.push(`我已经 ${a.since} 天没喝了，这是我自己挣来的`);
+  r.push('酒精只会把难受往后推，明天醒来问题还在，还多了宿醉和自责');
+  r.push('酒精会加重焦虑和抑郁，也会影响睡眠和甲状腺的状态');
+  return r;
+}
+function renderReasons() {
+  $('reasons').innerHTML = defaultReasons().map(t => `<li><span>${esc(t)}</span></li>`).join('')
+    + (state.reasons || []).map((t, i) => `<li><span>${esc(t)}</span><button class="btn ghost" type="button" data-del-reason="${i}" aria-label="删除">×</button></li>`).join('');
+}
+function openSOS() {
+  const ph = phaseOf(TODAY);
+  $('sosLead').textContent = '想喝的冲动像海浪，会涨上来，也会退下去，通常 10–20 分钟就会弱很多。你不需要现在就决定什么，只要先陪自己待一会儿。' + (ph.key === 'lut' ? ' 现在是经前，情绪和冲动都会被激素放大，这不是你的错。' : '');
+  const solo = (() => { const jd = Object.keys(state.journal || {}); const y = jd.filter(d => jr(d).solo === true); return y.length >= 5; })();
+  $('sosActs').innerHTML = [
+    '倒一杯气泡水，加柠檬或几片黄瓜，手里有东西喝会好很多',
+    '洗个热水澡，或者用热水泡脚 10 分钟',
+    '出门走 10 分钟，不用去哪，走一圈就回来',
+    solo ? '给自己一段独处时间：你的 WHOOP 数据显示，有独处时间的第二天 HRV 更高' : '给自己一段安静的独处时间，关掉社交软件',
+    '吃点东西：一碗热汤、一个鸡蛋、一根香蕉。饿和累会让想喝的感觉更强',
+    '给一个朋友发条消息，不用解释原因，说一句“在干嘛”就行'
+  ].map(t => `<li>${t}</li>`).join('');
+  renderReasons();
+  $('sosMsg').textContent = '';
+  $('sos').hidden = false; document.body.style.overflow = 'hidden';
+}
+function closeSOS() { stopBreath(); $('sos').hidden = true; document.body.style.overflow = ''; }
+function stopBreath() { clearInterval(breathTimer); breathTimer = null; $('breathBtn').textContent = '开始 10 分钟'; $('breathTime').textContent = ''; const b = $('breath'); b.className = 'breath'; b.textContent = '准备好就开始'; }
+$('breathBtn').addEventListener('click', () => {
+  if (breathTimer) return stopBreath();
+  const end = Date.now() + 600000, steps = [['in', '吸气 4 秒', 4], ['hold', '停住 4 秒', 4], ['out', '慢慢呼气 6 秒', 6]];
+  let i = 0, left = 0; const b = $('breath');
+  $('breathBtn').textContent = '停止';
+  const tick = () => {
+    const rem = Math.max(0, end - Date.now());
+    $('breathTime').textContent = `${Math.floor(rem / 60000)}:${pad(Math.floor(rem / 1000) % 60)}`;
+    if (rem <= 0) { stopBreath(); b.textContent = '10 分钟到了，现在感觉怎么样？'; return; }
+    if (left <= 0) { const [c, t, n] = steps[i % 3]; b.className = 'breath ' + c; b.textContent = t; left = n; i++; }
+    left--;
+  };
+  tick(); breathTimer = setInterval(tick, 1000);
+});
+$('sosOpen').addEventListener('click', openSOS);
+$('sosClose').addEventListener('click', closeSOS);
+$('sosOk').addEventListener('click', () => {
+  const r = ensure(TODAY); r.mood = { ...(r.mood || {}), resisted: ((r.mood || {}).resisted || 0) + 1 }; if (r.mood.drinks == null) r.mood.drinks = 0; save(); renderCheckin();
+  $('sosMsg').textContent = '做得很好。这一次的“没喝”也算数，已经记下了。';
+  setTimeout(closeSOS, 1600);
+});
+$('sosDrank').addEventListener('click', () => {
+  const r = ensure(TODAY); r.mood = { ...(r.mood || {}), drinks: Math.max(1, (r.mood || {}).drinks || 0) }; save(); renderCheckin();
+  $('sosMsg').textContent = '记下了。一次喝酒不会抹掉你之前的每一天。今晚多喝水、吃点东西，明天照常就好。';
+});
+$('sosTalk').addEventListener('click', () => {
+  closeSOS();
+  document.getElementById('coachH').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const q = '我现在很难受，有点想用酒精逃避。先别给我讲道理，陪我说说话，帮我想想接下来一个小时怎么过。';
+  if (AI.mode && !AI.busy) { addMsg('me', q); run(null, q, { chat: true }); } else $('askIn').value = q;
+});
+$('reasonForm').addEventListener('submit', e => { e.preventDefault(); const t = $('reasonIn').value.trim(); if (!t) return; state.reasons.push(t.slice(0, 120)); $('reasonIn').value = ''; save(); renderReasons(); });
+$('reasons').addEventListener('click', e => { const b = e.target.closest('[data-del-reason]'); if (!b) return; state.reasons.splice(Number(b.dataset.delReason), 1); save(); renderReasons(); });
+$('sAbout').addEventListener('change', e => { state.profile.about = e.target.value.slice(0, 2000); save(); });
+
+/* ---------- labs ---------- */
+const LAB_NAMES = ['TSH', 'FT3', 'FT4', 'TgAb 抗甲状腺球蛋白抗体', 'TPOAb 抗甲状腺过氧化物酶抗体', '25-羟基维生素D', '镁', '铁蛋白', '血红蛋白', '空腹血糖', '空腹胰岛素', '低密度脂蛋白', '总蛋白', '睾酮', '皮质醇'];
+function refBounds(ref) {
+  const t = String(ref || '').replace(/\s/g, '');
+  let m = t.match(/^([\d.]+)[-–~]([\d.]+)$/); if (m) return [Number(m[1]), Number(m[2])];
+  m = t.match(/^[<＜≤]([\d.]+)$/); if (m) return [null, Number(m[1])];
+  m = t.match(/^[>＞≥]([\d.]+)$/); if (m) return [Number(m[1]), null];
+  return [null, null];
+}
+function labFlag(x) { const [lo, hi] = refBounds(x.ref); if (hi != null && x.value > hi) return 'hi'; if (lo != null && x.value < lo) return 'lo'; return ''; }
+function renderLabs() {
+  const labs = state.labs || [];
+  const by = {}; for (const x of labs) (by[x.name] || (by[x.name] = [])).push(x);
+  const names = Object.keys(by).sort((a, b) => (labFlag(by[b].slice(-1)[0]) ? 1 : 0) - (labFlag(by[a].slice(-1)[0]) ? 1 : 0) || a.localeCompare(b));
+  $('labBody').innerHTML = names.length ? names.map(n => {
+    const list = by[n].sort((a, b) => a.date.localeCompare(b.date)), last = list[list.length - 1], prev = list[list.length - 2], f = labFlag(last);
+    const trend = prev ? `${last.value > prev.value ? '↑' : last.value < prev.value ? '↓' : '→'} 上次 ${prev.value}` : '—';
+    const idx = labs.indexOf(last);
+    return `<tr><td style="white-space:normal">${esc(n)}</td><td class="num">${last.value}${last.unit ? ' ' + esc(last.unit) : ''}${f ? `<span class="lab-flag ${f}">${f === 'hi' ? '偏高' : '偏低'}</span>` : ''}</td><td class="num">${esc(last.ref || '—')}</td><td class="num">${last.date.slice(5).replace('-', '/')}</td><td class="small">${trend}</td><td><button class="btn ghost" type="button" data-del-lab="${idx}" aria-label="删除 ${esc(n)} 这条">×</button></td></tr>`;
+  }).join('') : `<tr><td colspan="6" style="text-align:left;white-space:normal" class="muted">还没有化验记录。可以手动添加，或者拍照识别化验单。</td></tr>`;
+  $('labList').innerHTML = LAB_NAMES.map(n => `<option value="${n}">`).join('');
+  if (!$('labDate').value) $('labDate').value = TODAY;
+  $('labPhotoWrap').hidden = !AI.mode;
+}
+$('labForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const x = { name: $('labName').value.trim(), value: Number($('labVal').value), unit: $('labUnit').value.trim(), ref: $('labRef').value.trim(), date: $('labDate').value };
+  if (!x.name || !Number.isFinite(x.value) || !x.date) return;
+  state.labs.push(x); save(); renderLabs(); ['labName', 'labVal', 'labUnit', 'labRef'].forEach(id => $(id).value = ''); $('labMsg').textContent = `已添加 ${x.name}`;
+});
+$('labBody').addEventListener('click', e => { const b = e.target.closest('[data-del-lab]'); if (!b) return; state.labs.splice(Number(b.dataset.delLab), 1); save(); renderLabs(); });
+$('labPhoto').addEventListener('change', async e => {
+  const file = e.target.files && e.target.files[0]; e.target.value = '';
+  if (!file || !AI.mode || AI.busy) return;
+  $('labMsg').textContent = '正在识别化验单…';
+  try {
+    const prompt = '这是一张医院化验单照片（可能是横着拍的）。提取每一个检验项目。只回复 JSON 数组，例如 [{"name":"TgAb 抗甲状腺球蛋白抗体","value":155.1,"unit":"IU/mL","ref":"<4.00","date":"2026-09-05"}]。name 用中文项目名，常见英文缩写放前面；value 为数字（写着"<0.26"这类的取 0.26）；ref 原样照抄参考范围，有多个阶段的范围就留空；date 用采样日期 YYYY-MM-DD。不要包含姓名、病历号、电话等个人信息。';
+    let items;
+    if (AI.mode === 'claude') items = await AI.sample.json(prompt, { images: file, modelTier: 'default' });
+    else { const { text } = await callKeyAPI(prompt, { images: file }); items = JSON.parse((text.match(/\[[\s\S]*\]/) || ['[]'])[0]); }
+    items = (Array.isArray(items) ? items : []).map(x => ({ name: String(x.name || '').slice(0, 40), value: Number(x.value), unit: String(x.unit || '').slice(0, 16), ref: String(x.ref || '').slice(0, 24), date: /^\d{4}-\d{2}-\d{2}$/.test(x.date) ? x.date : TODAY })).filter(x => x.name && Number.isFinite(x.value));
+    if (!items.length) { $('labMsg').textContent = '没识别出检验项目，可以换一张更清楚的照片，或者手动添加。'; return; }
+    // same test on the same date replaces the old value
+    state.labs = state.labs.filter(o => !items.some(x => x.name === o.name && x.date === o.date)).concat(items);
+    save(); renderLabs(); $('labMsg').textContent = `识别并添加了 ${items.length} 项，请对照化验单核对一遍。`;
+  } catch (err) { $('labMsg').textContent = errCopy(err && err.code); }
 });
 
 /* ---------- WHOOP import ---------- */
@@ -1543,7 +1890,7 @@ $('onbForm').addEventListener('submit', e => {
   if (prev && diffDays(last, prev) < 18) return err('再上一次月经应该比上次早至少 18 天，请检查日期');
   const plen = Math.min(9, Math.max(2, v('oPlen') || 5)), cycle = Math.min(45, Math.max(21, v('oCycle') || 33));
   if (state.sample) state = blank();
-  state.profile = { height: v('oHeight'), weight: v('oWeight'), age: v('oAge'), act: Number($('oAct').value), goal: Number($('oGoal').querySelector('input:checked').value), cycle, period: plen };
+  state.profile = { ...DEFAULT_PROFILE, ...state.profile, height: v('oHeight'), weight: v('oWeight'), age: v('oAge'), act: Number($('oAct').value), goal: Number($('oGoal').querySelector('input:checked').value), cycle, period: plen };
   for (const st of [prev, last].filter(Boolean)) for (let i = 0; i < plen; i++) { const d = addDays(st, i); if (d <= TODAY) ensure(d).period = true; }
   state.onboarded = true; logDate = TODAY; calMonth = TODAY.slice(0, 7);
   commit(); renderSettings();
