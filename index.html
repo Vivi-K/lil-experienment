@@ -456,7 +456,9 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
       <form class="ask" id="askForm">
         <input id="askIn" placeholder="问问 AI：比如“今天奶茶喝多了，明天怎么调整？”" aria-label="向 AI 提问" autocomplete="off">
         <button class="btn primary" type="submit">发送</button>
+        <button class="btn" type="button" id="askDeep" title="先在 PubMed 检索最新研究，再根据论文摘要回答（约 30–90 秒）">查 PubMed</button>
       </form>
+      <span class="small muted" id="deepHint">想深挖某个问题时点「查 PubMed」：先实时检索论文，再根据摘要回答，大约 30–90 秒。</span>
       <div class="key-row" id="keyRow" hidden>
         <span class="small muted">在本地打开时，需要填你的 Anthropic API Key：</span>
         <input id="apiKey" type="password" placeholder="sk-ant-..." aria-label="Anthropic API Key">
@@ -1463,7 +1465,7 @@ function setStatus(text, on) {
 }
 function setAIEnabled(on) {
   ['aiToday', 'aiTrain', 'aiWeek', 'aiPlan', 'aiFoodGo'].forEach(id => $(id).disabled = !on || AI.busy);
-  $('askForm').querySelector('button').disabled = !on || AI.busy;
+  $('askForm').querySelectorAll('button').forEach(b => b.disabled = !on || AI.busy);
   $('suggest').querySelectorAll('button').forEach(b => b.disabled = !on || AI.busy);
 }
 async function initAI() {
@@ -1584,12 +1586,17 @@ const EVIDENCE = [
 ];
 const EV_BY_ID = Object.fromEntries(EVIDENCE.map(e => [e.id, e]));
 const EVIDENCE_TEXT = EVIDENCE.map(e => `[${e.id}] ${e.cite}：${e.claim}`).join('\n');
-function renderRefs(bodyEl, text) {
-  const ids = [...new Set((text.match(/\[E\d{1,2}\]/g) || []).map(x => x.slice(1, -1)))].filter(id => EV_BY_ID[id]);
+function renderRefs(bodyEl, text, papers) {
+  const extra = papers || {};
+  const ids = [...new Set((text.match(/\[(?:E|P)\d{1,2}\]/g) || []).map(x => x.slice(1, -1)))].filter(id => EV_BY_ID[id] || extra[id]);
   const old = bodyEl.parentElement.querySelector('.refs'); if (old) old.remove();
   if (!ids.length) return;
   const box = document.createElement('div'); box.className = 'refs';
-  box.innerHTML = '<b>参考研究</b>' + ids.map(id => { const e = EV_BY_ID[id]; return `<span>[${id}] ${esc(e.cite)} · <a href="https://doi.org/${e.doi}" target="_blank" rel="noopener">DOI</a></span>`; }).join('');
+  box.innerHTML = '<b>参考研究</b>' + ids.map(id => {
+    const e = EV_BY_ID[id] || extra[id];
+    const links = [e.doi ? `<a href="https://doi.org/${esc(e.doi)}" target="_blank" rel="noopener">DOI</a>` : '', e.pmid ? `<a href="https://pubmed.ncbi.nlm.nih.gov/${esc(e.pmid)}/" target="_blank" rel="noopener">PubMed</a>` : ''].filter(Boolean).join(' · ');
+    return `<span>[${id}] ${esc(e.cite)}${e.title ? `：${esc(e.title)}` : ''}${links ? ' · ' + links : ''}</span>`;
+  }).join('') + (Object.keys(extra).length ? '<span class="muted">实时检索来源：PubMed（美国国家医学图书馆）</span>' : '');
   bodyEl.parentElement.append(box);
 }
 
@@ -1927,6 +1934,87 @@ function bodyCtx() {
   if (rows.length) { const f = rows[0], l = rows[rows.length - 1]; t += `\n【身材进度】起点 ${f.date}：体重${f.weight ?? '-'} 腰${f.waist ?? '-'} 臀${f.hip ?? '-'} 肩${f.shoulder ?? '-'}；最近 ${l.date}：体重${l.weight ?? '-'} 腰${l.waist ?? '-'} 臀${l.hip ?? '-'} 肩${l.shoulder ?? '-'}。`; }
   return t;
 }
+
+/* ---------- live PubMed search through the viewer's PubMed connector ---------- */
+const PUBMED = 'PubMed';
+let mcpNs;
+async function getMcp() {
+  if (mcpNs !== undefined) return mcpNs;
+  mcpNs = window.claude && typeof window.claude.use === 'function' ? await window.claude.use('mcp').catch(() => null) : null;
+  return mcpNs;
+}
+const asObj = v => { if (typeof v === 'string') { try { return JSON.parse(v); } catch (e) { return {}; } } return v || {}; };
+function mcpErrCopy(e) {
+  const code = e && e.code;
+  return ({
+    no_mcp: AI.mode === 'key' ? '在本地打开时连不上 PubMed，这个功能只能在 claude.ai 里用。' : '你现在打开 app 的地方不支持连接器，暂时不能实时检索。可以换成电脑浏览器打开 claude.ai 再试。',
+    server_not_connected: '你的 Claude 账号还没连上 PubMed：到 claude.ai 设置 → 连接器（Connectors）里添加 PubMed，再回来点一次。',
+    needs_reauth: 'PubMed 连接器需要重新连接：到 claude.ai 设置 → 连接器里重新连接 PubMed。',
+    selection_required: '你的账号里有不止一个 PubMed 连接器，请在弹出的窗口里选一个，再点一次。',
+    not_in_manifest: '你没有允许这个页面使用 PubMed。刷新页面后再点一次，弹窗里选择允许。',
+    not_granted: '你没有允许这个页面使用连接器。刷新页面后再点一次，弹窗里选择允许。',
+    capability_disabled: '你现在打开 app 的地方不支持连接器，暂时不能实时检索。',
+    blocked_by_policy: '你所在组织的设置不允许使用 PubMed 连接器。',
+    server_unavailable: 'PubMed 暂时连不上，过一会儿再试。',
+    tool_error: `PubMed 返回了错误：${(e && e.message) || ''}`,
+    cancelled: '已停止。'
+  })[code] || errCopy(code);
+}
+async function askJSON(prompt, opts) {
+  if (AI.mode === 'claude') return AI.sample.json(prompt, opts);
+  const { text } = await callKeyAPI(prompt, opts);
+  return JSON.parse((text.match(/\{[\s\S]*\}/) || ['{}'])[0]);
+}
+async function deepAsk(q) {
+  if (!AI.mode || AI.busy) return;
+  addMsg('me', q + '（查 PubMed）');
+  AI.busy = true; setAIEnabled(true); $('aiStop').hidden = false; $('askDeep').disabled = true;
+  const ctl = new AbortController(); AI.ctl = ctl; const signal = ctl.signal;
+  const body = addMsg('ai', '正在把问题整理成检索词…', '查最新研究 · PubMed');
+  try {
+    const mcp = await getMcp(); if (!mcp) throw { code: 'no_mcp' };
+    const plan = await askJSON(`把下面这个健康问题转换成 PubMed 英文检索式，用于查找人体研究（优先系统综述、荟萃分析、随机对照试验）。
+只回复 JSON：{"queries":["...","..."]}，给 1–2 条，每条 3–6 个英文关键词，可以用 AND/OR；和女性相关时加 (women OR female)。不要加日期和期刊限制。
+问题：${q}
+背景：31 岁女性，目标减脂增肌（瘦小腹、翘臀、宽肩），规律力量训练。`, { modelTier: 'quick', signal });
+    const queries = (Array.isArray(plan && plan.queries) ? plan.queries : []).map(String).filter(Boolean).slice(0, 2);
+    if (!queries.length) queries.push(q);
+    body.textContent = `正在检索 PubMed：${queries.join('  /  ')}`;
+    const pmids = [];
+    for (const query of queries) {
+      const r = await mcp.callTool(PUBMED, 'search_articles', { query, max_results: 5, sort: 'relevance', date_from: '2005' }, { signal });
+      for (const id of (asObj(r.payload).pmids || [])) if (!pmids.includes(String(id)) && pmids.length < 6) pmids.push(String(id));
+    }
+    let papers = [];
+    if (pmids.length) {
+      body.textContent = `找到 ${pmids.length} 篇，正在读取摘要…`;
+      const m = await mcp.callTool(PUBMED, 'get_article_metadata', { pmids }, { signal });
+      papers = (asObj(m.payload).articles || []).map((a, i) => {
+        const au = (a.authors || [])[0] || {}, j = a.journal || {}, idf = a.identifiers || {};
+        return { id: 'P' + (i + 1), cite: `${au.last_name || au.name || ''}${(a.authors || []).length > 1 ? ' et al.' : ''} ${j.iso_abbreviation || j.title || ''} ${(a.publication_date || {}).year || ''}`.trim(),
+          title: a.title || '', doi: idf.doi || a.doi || '', pmid: idf.pmid || '', types: (a.article_types || []).join('、'), abstract: String(a.abstract || '').slice(0, 1600) };
+      }).filter(x => x.abstract);
+    }
+    const byId = Object.fromEntries(papers.map(x => [x.id, x]));
+    body.textContent = papers.length ? `正在阅读 ${papers.length} 篇论文摘要并整理回答…` : '没检索到合适的论文，改用内置证据库回答…';
+    const lit = papers.map(x => `[${x.id}] ${x.cite}（${x.types || '文章'}）《${x.title}》\n摘要：${x.abstract}`).join('\n\n');
+    const prompt = `${RULES}\n\n${context()}\n\n【PubMed 实时检索结果】\n${lit || '（没有检索到相关论文）'}\n\n【任务】回答用户的问题：${q}
+要求：优先依据上面的 [P#] 论文摘要，也可以用证据库里的 [E#]。每个关键结论后标编号，并说明研究类型（荟萃分析、随机对照试验、综述、观察性研究）、受试者是谁（是否女性、是否有训练经验）以及主要数字。只使用摘要里真实出现的信息，不要补充摘要里没有的数字或结论。最后用 2–3 条告诉她结合自己的目标（瘦小腹、翘臀、宽肩）具体怎么做，并说明证据强弱和局限。450 字以内。`;
+    const { text } = await ask(prompt, { signal, modelTier: 'default', cache: false, onText: ({ text }) => { body.textContent = text; $('feed').scrollTop = $('feed').scrollHeight; } });
+    body.textContent = text; renderRefs(body, text, byId);
+    AI.turns.push({ role: 'user', content: q }, { role: 'assistant', content: text });
+  } catch (e) {
+    if (e && e.code === 'cancelled') body.textContent = ((e.text || '') + '（已停止）').trim();
+    else { body.textContent = e && e.text ? e.text : ''; addMsg('ai', mcpErrCopy(e), null, 'err'); }
+  } finally {
+    AI.busy = false; $('aiStop').hidden = true; $('askDeep').disabled = false; setAIEnabled(!!AI.mode);
+  }
+}
+$('askDeep').addEventListener('click', () => {
+  const q = $('askIn').value.trim();
+  if (!q) { $('askIn').focus(); $('deepHint').textContent = '先在输入框写下想查的问题，比如「经前腹胀怎么吃」「女性吃肌酸有没有用」，再点「查 PubMed」。'; return; }
+  $('askIn').value = ''; deepAsk(q);
+});
 
 /* ---------- tabs ---------- */
 const TABS = ['today', 'insight', 'me'];
