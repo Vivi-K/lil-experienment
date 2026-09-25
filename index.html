@@ -249,6 +249,17 @@ td.bar-cell{width:34%;min-width:110px}
 .lab-flag{font-size:12px;border-radius:4px;padding:1px 6px;margin-left:4px}
 .lab-flag.hi{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
 .lab-flag.lo{background:color-mix(in srgb,var(--p-fol) 18%,transparent);color:var(--p-fol)}
+/* AI background card */
+.about-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:8px;background:var(--bg)}
+.about-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.about-preview{margin:0;color:var(--ink2);font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;border-radius:999px;padding:2px 10px;background:var(--sunk);color:var(--ink2);width:max-content;max-width:100%}
+.pill.ok{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
+.pill.warn{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+.about-card.flash{border-color:var(--good);box-shadow:0 0 0 3px color-mix(in srgb,var(--good) 25%,transparent)}
+@media (prefers-reduced-motion:no-preference){.about-card{transition:box-shadow .6s,border-color .6s}}
+.coach-bg{font-size:13px;color:var(--ink2);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.coach-bg button{border:0;background:none;color:var(--accent);text-decoration:underline;padding:0;font-size:13px}
 .confirm{display:inline-flex;gap:8px;align-items:center;font-size:14px}
 @media (prefers-reduced-motion:no-preference){.meter div,.hbar{transition:width .3s ease}}
 </style>
@@ -346,6 +357,7 @@ td.bar-cell{width:34%;min-width:110px}
         <button class="btn ghost" id="aiStop" type="button" hidden>停止</button>
         <label class="switch" style="margin-left:auto"><input type="checkbox" id="autoFb" checked> 每次记录后即时点评</label>
       </div>
+      <div class="coach-bg" id="coachBg"></div>
       <div class="feed" id="feed" aria-live="polite"></div>
       <div class="suggest" id="suggest">
         <button type="button">黄体期总想吃甜的怎么办？</button>
@@ -566,8 +578,25 @@ td.bar-cell{width:34%;min-width:110px}
         <label class="field">默认经期天数<input id="sPeriod" type="number" min="2" max="9" class="num"></label>
         <label class="field">每日最低摄入 kcal<input id="sFloor" type="number" min="1000" max="2500" step="50" class="num"></label>
       </div>
-      <label class="field">给 AI 教练的背景（健康情况、饮食限制、作息，写得越具体建议越贴合；只存在这个浏览器里）
-        <textarea id="sAbout" rows="4" style="border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;font:inherit;color:var(--ink)" placeholder="例如：乳制品容易让我发炎；午饭只能吃学校食堂；不爱吃冷的；晚上压力大时想吃甜食……"></textarea></label>
+      <div class="about-card" id="aboutCard">
+        <div class="about-head">
+          <div style="display:grid;gap:4px;min-width:0">
+            <h3>给 AI 教练的背景</h3>
+            <span class="pill" id="aboutPill"></span>
+          </div>
+          <button class="btn" type="button" id="aboutEdit"></button>
+        </div>
+        <p class="about-preview" id="aboutPreview"></p>
+        <div id="aboutEditor" hidden style="display:grid;gap:8px">
+          <span class="small muted">健康情况、化验结果、饮食限制、作息，写得越具体建议越贴合。只存在这个浏览器里，用 AI 时随问题发给你自己账号的 Claude。</span>
+          <textarea id="sAbout" rows="10" style="border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;font:inherit;color:var(--ink);width:100%" placeholder="例如：乳制品容易让我发炎；午饭只能吃学校食堂；不爱吃冷的；晚上压力大时想吃甜食……" aria-label="给 AI 教练的背景"></textarea>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button class="btn primary" type="button" id="aboutSave">保存</button>
+            <button class="btn ghost" type="button" id="aboutCancel">取消</button>
+            <span class="small muted num" id="aboutCount"></span>
+          </div>
+        </div>
+      </div>
       <p class="note">基础代谢用 Mifflin-St Jeor 公式估算；黄体期静息代谢通常会上升约 2.5–10%，这里按 +6% 计入当天目标。数字是估算，不是医疗建议。周期明显不规律、经期异常疼痛或出血过多，请咨询医生。</p>
       <div class="backup">
         <h3>备份与恢复</h3>
@@ -722,7 +751,7 @@ const PHASES = {
 const PH_ORDER = ['men', 'fol', 'ovu', 'lut'];
 
 /* ---------- state ---------- */
-const DEFAULT_PROFILE = { height: 163, weight: 55, age: 28, act: 1.2, goal: -300, cycle: 33, period: 5, floor: 1450, about: '' };
+const DEFAULT_PROFILE = { height: 163, weight: 55, age: 28, act: 1.2, goal: -300, cycle: 33, period: 5, floor: 1450, about: '', aboutAt: 0 };
 let state = load();
 let logDate = TODAY;
 let range = 30;
@@ -1121,7 +1150,7 @@ function renderCalendar() {
 
 /* ---------- settings ---------- */
 const SETS = { sHeight: 'height', sWeight: 'weight', sAge: 'age', sAct: 'act', sGoal: 'goal', sCycle: 'cycle', sPeriod: 'period', sFloor: 'floor' };
-function renderSettings() { for (const [id, k] of Object.entries(SETS)) $(id).value = P()[k]; $('sAbout').value = P().about || ''; }
+function renderSettings() { for (const [id, k] of Object.entries(SETS)) $(id).value = P()[k]; renderAbout(); }
 
 function renderAll() {
   CS = cycleStats();
@@ -1573,7 +1602,33 @@ $('sosTalk').addEventListener('click', () => {
 });
 $('reasonForm').addEventListener('submit', e => { e.preventDefault(); const t = $('reasonIn').value.trim(); if (!t) return; state.reasons.push(t.slice(0, 120)); $('reasonIn').value = ''; save(); renderReasons(); });
 $('reasons').addEventListener('click', e => { const b = e.target.closest('[data-del-reason]'); if (!b) return; state.reasons.splice(Number(b.dataset.delReason), 1); save(); renderReasons(); });
-$('sAbout').addEventListener('change', e => { state.profile.about = e.target.value.slice(0, 2000); save(); });
+/* ---------- AI background card: collapsed by default, explicit save ---------- */
+const fmtStamp = t => { const d = new Date(t); return `${d.getMonth() + 1}月${d.getDate()}日 ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+let aboutJustSaved = false;
+function renderAbout() {
+  const a = (P().about || '').trim(), at = P().aboutAt, editing = !$('aboutEditor').hidden;
+  const pill = $('aboutPill');
+  pill.className = 'pill ' + (a ? 'ok' : 'warn');
+  pill.textContent = a ? (aboutJustSaved ? `✓ 刚刚更新 · AI 教练下次回答就会用上` : `✓ 已保存${at ? ' · ' + fmtStamp(at) + ' 更新' : ''} · AI 教练会参考`) : '还没填写 · AI 教练不了解你的健康情况';
+  $('aboutPreview').textContent = a || '点「填写」把你的健康情况、化验结果、饮食限制写进来。';
+  $('aboutPreview').hidden = editing;
+  $('aboutEdit').textContent = editing ? '收起' : a ? '更新' : '填写';
+  $('coachBg').innerHTML = a ? `<span class="pill ok">✓ 已读取你的背景资料</span><span>${at ? fmtStamp(at) + ' 更新' : ''}</span><button type="button" id="coachBgEdit">查看或修改</button>`
+    : `<span class="pill warn">还没有背景资料</span><span>AI 不知道你的健康情况和饮食限制</span><button type="button" id="coachBgEdit">去填写</button>`;
+  $('coachBgEdit').onclick = () => { $('aboutCard').scrollIntoView({ behavior: 'smooth', block: 'center' }); openAbout(); };
+}
+function openAbout() { $('sAbout').value = P().about || ''; $('aboutEditor').hidden = false; aboutJustSaved = false; updateCount(); renderAbout(); $('sAbout').focus(); }
+function closeAbout() { $('aboutEditor').hidden = true; renderAbout(); }
+function updateCount() { const n = $('sAbout').value.length; $('aboutCount').textContent = `${n} / 2000 字${$('sAbout').value.trim() !== (P().about || '').trim() ? ' · 有未保存的修改' : ''}`; }
+$('aboutEdit').addEventListener('click', () => $('aboutEditor').hidden ? openAbout() : closeAbout());
+$('sAbout').addEventListener('input', updateCount);
+$('aboutCancel').addEventListener('click', closeAbout);
+$('aboutSave').addEventListener('click', () => {
+  state.profile.about = $('sAbout').value.trim().slice(0, 2000);
+  state.profile.aboutAt = Date.now();
+  save(); aboutJustSaved = true; closeAbout();
+  const c = $('aboutCard'); c.classList.add('flash'); setTimeout(() => c.classList.remove('flash'), 2500);
+});
 
 /* ---------- labs ---------- */
 const LAB_NAMES = ['TSH', 'FT3', 'FT4', 'TgAb 抗甲状腺球蛋白抗体', 'TPOAb 抗甲状腺过氧化物酶抗体', '25-羟基维生素D', '镁', '铁蛋白', '血红蛋白', '空腹血糖', '空腹胰岛素', '低密度脂蛋白', '总蛋白', '睾酮', '皮质醇'];
