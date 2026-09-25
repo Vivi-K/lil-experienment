@@ -1,43 +1,42 @@
 <title>月相能量账本</title>
 <meta name="description" content="结合月经周期分析每日热量摄入与运动消耗">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 :root{
-  --bg:#FBF9FB; --surface:#FFFFFF; --sunk:#F2EEF3; --line:#E3DDE6;
-  --ink:#231C27; --ink2:#5E5563; --ink3:#8C8391;
-  --accent:#7A3B69; --accent-ink:#FFFFFF; --accent-soft:#F1E4EE;
-  --bar:#CFC5D3;
+  --bg:#F5F5F7; --surface:#FFFFFF; --sunk:#F5F5F7; --line:#D2D2D7;
+  --ink:#1D1D1F; --ink2:#6E6E73; --ink3:#86868B;
+  --accent:#0071E3; --accent-ink:#FFFFFF; --accent-soft:#E8F1FC;
+  --bar:#D2D2D7;
   --p-men:#B8304A; --p-fol:#1693A8; --p-ovu:#C98200; --p-lut:#6A4CC0;
   --good:#2E7D4F; --warn:#B26A00;
-  --display:"Bricolage Grotesque","PingFang SC","Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;
-  --body:system-ui,-apple-system,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;
-  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --display:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC","Helvetica Neue","Noto Sans SC","Microsoft YaHei",sans-serif;
+  --body:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue","Noto Sans SC","Microsoft YaHei",sans-serif;
+  --mono:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",sans-serif;
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
     color-scheme:dark;
-    --bg:#1A161D; --surface:#231E27; --sunk:#2B2530; --line:#3A3240;
-    --ink:#F1ECF3; --ink2:#BDB3C2; --ink3:#8F8595;
-    --accent:#D58BC0; --accent-ink:#1A161D; --accent-soft:#3A2836;
-    --bar:#4E4455;
+    --bg:#000000; --surface:#1C1C1E; --sunk:#2C2C2E; --line:#38383A;
+    --ink:#F5F5F7; --ink2:#A1A1A6; --ink3:#86868B;
+    --accent:#0A84FF; --accent-ink:#FFFFFF; --accent-soft:#0A2540;
+    --bar:#48484A;
     --p-men:#D9546A; --p-fol:#2298AC; --p-ovu:#BF841C; --p-lut:#8A6FDA;
     --good:#6CC08E; --warn:#E0A040;
   }
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
-  --bg:#1A161D; --surface:#231E27; --sunk:#2B2530; --line:#3A3240;
-  --ink:#F1ECF3; --ink2:#BDB3C2; --ink3:#8F8595;
-  --accent:#D58BC0; --accent-ink:#1A161D; --accent-soft:#3A2836;
-  --bar:#4E4455;
+  --bg:#000000; --surface:#1C1C1E; --sunk:#2C2C2E; --line:#38383A;
+  --ink:#F5F5F7; --ink2:#A1A1A6; --ink3:#86868B;
+  --accent:#0A84FF; --accent-ink:#FFFFFF; --accent-soft:#0A2540;
+  --bar:#48484A;
   --p-men:#D9546A; --p-fol:#2298AC; --p-ovu:#BF841C; --p-lut:#8A6FDA;
   --good:#6CC08E; --warn:#E0A040;
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;margin:0}
+.wrap{padding-inline:20px}
+@media (max-width:640px){.wrap{padding-inline:16px}}
 .wrap{max-width:1080px;margin:0 auto;padding-inline:20px;padding-block:20px 60px;display:grid;gap:28px}
 h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.2}
 h1{font-size:26px;font-weight:700;letter-spacing:-.01em}
@@ -315,6 +314,59 @@ details.paste textarea{width:100%;min-height:120px;border:1px solid var(--line);
 .body-tbl td.bad{color:var(--warn)}
 .confirm{display:inline-flex;gap:8px;align-items:center;font-size:14px}
 @media (prefers-reduced-motion:no-preference){.meter div,.hbar{transition:width .3s ease}}
+/* ===== Apple-style layer ===== */
+body{font-size:17px;line-height:1.47;letter-spacing:-.022em;-webkit-font-smoothing:antialiased}
+.num,.stat b,.cd-day,td.num,td.v{font-variant-numeric:tabular-nums}
+.wrap{max-width:1024px;gap:44px;padding-block:28px 80px}
+h1{font-size:40px;font-weight:600;letter-spacing:-.03em}
+h2{font-size:28px;font-weight:600;letter-spacing:-.02em}
+h3{font-size:17px;font-weight:600;letter-spacing:-.02em}
+.label{letter-spacing:0;font-size:13px;color:var(--ink2)}
+.small{font-size:14px}
+.panel,.part,.ci-wrap,.cd,.about-card{border:0;border-radius:18px;background:var(--surface)}
+.panel{padding:20px}
+.stats{border:0;background:transparent;gap:10px;border-radius:0}
+.stat{border-radius:18px;padding:16px 18px}
+.stat b{font-family:var(--display);font-size:28px;font-weight:600;letter-spacing:-.02em}
+.btn{border:0;border-radius:980px;background:var(--sunk);padding:8px 18px;font-size:15px;color:var(--ink);transition:background .2s}
+.btn:hover{background:color-mix(in srgb,var(--ink) 8%,var(--sunk))}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{background:color-mix(in srgb,var(--accent) 88%,#000)}
+.btn.ghost{background:transparent;color:var(--accent);padding:6px 10px}
+.btn.ghost:hover{text-decoration:underline;background:transparent}
+input,select,textarea{border-radius:12px!important;border:1px solid var(--line)!important}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)!important;box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent)}
+.chip{background:var(--sunk);font-weight:500}
+.meter{height:6px;border-radius:3px}
+.tabs{justify-content:center;border-bottom:0;background:color-mix(in srgb,var(--bg) 78%,transparent);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);padding-block:10px;margin-inline:-20px;padding-inline:20px}
+.tabs button{border-radius:980px;padding:7px 20px;font-size:15px}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.cd{padding:28px 28px 22px;text-align:left}
+.cd-day{font-family:var(--display);font-size:56px;font-weight:700;letter-spacing:-.035em}
+.cd-goal{font-size:19px;color:var(--ink);font-weight:500;letter-spacing:-.02em}
+.quote q{font-family:var(--display);font-size:21px;font-weight:600;letter-spacing:-.02em;line-height:1.35}
+.quote .q2{font-size:16px;font-weight:400;color:var(--ink2);letter-spacing:-.01em}
+.cd-grid i.done{background:var(--accent)}
+.hero{gap:36px}
+.msg{border-radius:16px;font-size:15px}
+.msg.ai{background:var(--sunk)}
+.msg.me{background:var(--accent);color:var(--accent-ink)}
+.suggest button,.quick button,.tags button{border:0;background:var(--sunk);color:var(--ink)}
+.moods button{border:0;background:var(--sunk);border-radius:14px}
+.moods button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.moods button[aria-pressed="true"] b{color:var(--accent-ink)}
+.ai-food{border:0;background:var(--sunk);border-radius:16px}
+.ai-food textarea{background:var(--surface)}
+table th{color:var(--ink2);font-size:12px;letter-spacing:0}
+th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
+.sample{border-radius:14px}
+.lock-bar h2,.sec-head h2{font-size:28px}
+.refs{margin-top:8px;padding-top:8px;border-top:1px solid color-mix(in srgb,var(--line) 60%,transparent);display:grid;gap:3px;font-size:12.5px;white-space:normal}
+.refs a{color:var(--accent);text-decoration:none}
+.refs a:hover{text-decoration:underline}
+.ev-list{margin:8px 0 0;padding-left:20px;display:grid;gap:6px;font-size:13px;color:var(--ink2)}
+.ev-list a{color:var(--accent);text-decoration:none}
+@media (max-width:640px){h1{font-size:30px}h2,.lock-bar h2,.sec-head h2{font-size:24px}.cd-day{font-size:44px}.quote q{font-size:18px}.tabs{margin-inline:-16px}}
 </style>
 
 <div class="wrap">
@@ -394,6 +446,7 @@ details.paste textarea{width:100%;min-height:120px;border:1px solid var(--line);
       </div>
       <div class="coach-bg" id="coachBg"></div>
       <div class="feed" id="feed" aria-live="polite"></div>
+      <details><summary class="small muted" style="cursor:pointer">AI 引用的 16 篇研究（均在 PubMed 核实）</summary><ol class="ev-list" id="evList"></ol></details>
       <div class="suggest" id="suggest">
         <button type="button">怎么练出翘臀？</button>
         <button type="button">肩膀怎么练宽？</button>
@@ -1510,6 +1563,36 @@ function moodCtx() {
   const a = alcoholStats();
   return `\n【心情与酒精】距离上次喝酒 ${a.since ?? '未知'} 天，本月没喝 ${a.monthFree}/${a.monthKnown} 天，最长连续 ${a.best} 天。${lines.length ? '\n' + lines.join('\n') : ''}`;
 }
+/* ---------- evidence library: every paper checked on PubMed; the AI may cite only these ---------- */
+const EVIDENCE = [
+  { id: 'E1', cite: 'Morton RW et al. Br J Sports Med 2018', doi: '10.1136/bjsports-2017-097608', claim: '49 项随机对照试验荟萃分析：力量训练期间补充蛋白质能增加肌肉和力量；总蛋白摄入超过约 1.6 g/kg/天后，去脂体重不再明显增加。' },
+  { id: 'E2', cite: 'Helms ER et al. Int J Sport Nutr Exerc Metab 2014', doi: '10.1123/ijsnem.2013-0054', claim: '系统综述：节食期间做力量训练的偏瘦人群，蛋白质需要约 2.3–3.1 g/kg 去脂体重，缺口越大、体脂越低需要越多。' },
+  { id: 'E3', cite: 'Jäger R et al. J Int Soc Sports Nutr 2017（ISSN 立场声明）', doi: '10.1186/s12970-017-0177-8', claim: '运动人群每日蛋白质 1.4–2.0 g/kg；每次约 20–40 g、每 3–4 小时一次；睡前 30–40 g 酪蛋白可提高夜间肌肉合成。' },
+  { id: 'E4', cite: 'McNulty KL et al. Sports Med 2020', doi: '10.1007/s40279-020-01319-3', claim: '荟萃分析：运动表现只在卵泡早期（经期那几天）略微下降，效应很小，证据质量低，建议按个人感受调整，而不是一刀切。' },
+  { id: 'E5', cite: 'Kissow J et al. Sports Med 2022', doi: '10.1007/s40279-022-01679-y', claim: '综述：以卵泡期为主的力量训练可能比以黄体期为主更有利于增加力量和肌肉，但研究还少，结论不确定。' },
+  { id: 'E6', cite: 'Tucker JAL et al. Nutr Rev 2025', doi: '10.1093/nutrit/nuae093', claim: '15 组数据、330 名女性的荟萃分析：黄体期能量摄入平均比卵泡期多约 168 kcal/天。' },
+  { id: 'E7', cite: 'Schoenfeld BJ et al. J Sports Sci 2017', doi: '10.1080/02640414.2016.1210197', claim: '荟萃分析：每周训练组数和肌肥大呈剂量关系，每块肌肉每周 10 组以上效果更好。' },
+  { id: 'E8', cite: 'Schoenfeld BJ et al. Sports Med 2016', doi: '10.1007/s40279-016-0543-8', claim: '荟萃分析：同样训练量下，每个肌群每周练 2 次比 1 次增肌更多。' },
+  { id: 'E9', cite: 'Roberts BM et al. J Strength Cond Res 2020', doi: '10.1519/JSC.0000000000003521', claim: '荟萃分析：女性和男性在力量训练中的相对肌肥大幅度相近，女性上肢相对力量增长更大。' },
+  { id: 'E10', cite: 'Plotkin DL et al. Front Physiol 2023', doi: '10.3389/fphys.2023.1279170', claim: '随机对照试验（MRI）：9 周臀推和深蹲带来的臀大肌增长相近；深蹲还会让大腿前侧和内收肌更粗。' },
+  { id: 'E11', cite: 'Vispute SS et al. J Strength Cond Res 2011', doi: '10.1519/JSC.0b013e3181fb4a46', claim: '随机试验：6 周只做腹部训练，腹部脂肪、腰围和体脂率都没有变化，只提高了腹肌耐力，局部减脂不成立。' },
+  { id: 'E12', cite: 'Garthe I et al. Int J Sport Nutr Exerc Metab 2011', doi: '10.1123/ijsnem.21.2.97', claim: '随机试验：每周减重约 0.7% 体重的慢速组，去脂体重增加 2.1%；快速组去脂体重没有增加。' },
+  { id: 'E13', cite: 'Nedeltcheva AV et al. Ann Intern Med 2010', doi: '10.7326/0003-4819-153-7-201010050-00006', claim: '随机交叉试验：同样节食，每晚睡 5.5 小时比 8.5 小时减掉的脂肪少 55%，流失的去脂体重多 60%，而且更饿。' },
+  { id: 'E14', cite: 'Parr EB et al. PLoS One 2014', doi: '10.1371/journal.pone.0088384', claim: '随机交叉试验：训练后大量饮酒，即使同时补充蛋白质，肌肉蛋白合成也下降 24–37%（受试者为男性、饮酒量大）。' },
+  { id: 'E15', cite: 'Mountjoy M et al. Br J Sports Med 2023（IOC 共识）', doi: '10.1136/bjsports-2023-106994', claim: '国际奥委会共识：长期能量摄入不足（低能量可用性）会损害月经、骨骼、代谢、情绪和运动表现，女性尤其要避免吃太少。' },
+  { id: 'E16', cite: 'Smith-Ryan AE et al. Nutrients 2021', doi: '10.3390/nu13030877', claim: '综述：肌酸对各年龄段女性的力量、肌肉和部分健康指标有益，常用剂量每天 3–5 g。' }
+];
+const EV_BY_ID = Object.fromEntries(EVIDENCE.map(e => [e.id, e]));
+const EVIDENCE_TEXT = EVIDENCE.map(e => `[${e.id}] ${e.cite}：${e.claim}`).join('\n');
+function renderRefs(bodyEl, text) {
+  const ids = [...new Set((text.match(/\[E\d{1,2}\]/g) || []).map(x => x.slice(1, -1)))].filter(id => EV_BY_ID[id]);
+  const old = bodyEl.parentElement.querySelector('.refs'); if (old) old.remove();
+  if (!ids.length) return;
+  const box = document.createElement('div'); box.className = 'refs';
+  box.innerHTML = '<b>参考研究</b>' + ids.map(id => { const e = EV_BY_ID[id]; return `<span>[${id}] ${esc(e.cite)} · <a href="https://doi.org/${e.doi}" target="_blank" rel="noopener">DOI</a></span>`; }).join('');
+  bodyEl.parentElement.append(box);
+}
+
 const RULES = `你是一位懂女性生理周期的营养与运动教练，用简体中文回答。语气温和、直接、具体，不说教，不制造焦虑，不鼓励极端节食。
 结合用户当前的周期阶段解释她的数据（例如黄体期代谢和食欲上升、经期精力偏低、卵泡期适合高强度训练）。给出可以马上执行的建议，数字要具体（kcal、克数、分钟数）。
 【最高目标】这个 app 的核心是帮她减脂增肌（身体重组），具体想要：瘦瘦的肚子、翘翘的屁股、宽宽的肩。所有饮食和训练建议都围绕这三点，并说明和目标的关系。
@@ -1519,6 +1602,8 @@ const RULES = `你是一位懂女性生理周期的营养与运动教练，用�
 有 WHOOP 数据时，用恢复分数、HRV、静息心率、睡眠来判断当天训练强度（例如恢复低于 34% 建议恢复性训练），并说明黄体期 HRV 下降、静息心率和体温升高是正常的周期现象。
 不建议用喝酒放松；她说喝了也不批评，只帮她照顾好第二天。每日摄入建议不低于用户设置的最低摄入。只有在她主动提到情绪时才谈心理话题，平时专注身材目标。
 如果用户流露出伤害自己或不想活的念头，温和而直接地回应，用户住在香港：请她立刻拨打「情绪通」18111 或撒玛利亚防止自杀会 2389 2222，紧急时打 999 或去最近医院急症室，并鼓励她联系身边信任的人。
+【引用研究】给饮食、训练、周期相关的建议时，要基于下面这份证据库（均已在 PubMed 核实）。在用到研究的句子末尾标注编号，例如 [E3]，并用一句话说明这个研究的发现，例如“研究发现睡眠不足会让减掉的脂肪少一半 [E13]”。只能引用这份清单里的编号，绝不编造论文、作者、期刊或数字；清单里没有合适研究时，写“（经验建议）”。
+${EVIDENCE_TEXT}
 不做医疗诊断；遇到异常出血、剧烈疼痛、周期严重紊乱等情况，建议就医。不要用 Markdown 标题或表格，可以用短段落和“·”开头的要点。`;
 
 async function run(label, prompt, { tier = 'default', live = false, chat = false } = {}) {
@@ -1533,7 +1618,7 @@ async function run(label, prompt, { tier = 'default', live = false, chat = false
     const opts = { signal: ctl.signal, modelTier: tier, onText: ({ text }) => { body.textContent = text; $('feed').scrollTop = $('feed').scrollHeight; } };
     if (chat) opts.cache = false;
     const { text } = await ask(input, opts);
-    body.textContent = text;
+    body.textContent = text; renderRefs(body, text);
     if (chat) AI.turns.push({ role: 'assistant', content: text });
   } catch (e) {
     if (chat) AI.turns.pop();
@@ -1548,7 +1633,7 @@ async function run(label, prompt, { tier = 'default', live = false, chat = false
   }
 }
 
-$('aiToday').addEventListener('click', () => run('点评今天', '点评我今天的饮食和运动：先一句话总结，再给 2–3 条结合当前周期阶段、围绕瘦肚子/翘臀/宽肩的具体建议，最后告诉我今天剩下的时间怎么吃/动。200 字以内。'));
+$('aiToday').addEventListener('click', () => run('点评今天', '点评我今天的饮食和运动：先一句话总结，再给 2–3 条结合当前周期阶段、围绕瘦肚子/翘臀/宽肩的具体建议，最后告诉我今天剩下的时间怎么吃/动。220 字以内，关键建议标注研究编号。'));
 $('aiWeek').addEventListener('click', () => run('周期分析', '分析最近 14 天和各阶段均值：找出我的饮食和运动在不同周期阶段的规律（例如黄体期是否吃得多、经期是否运动少），指出 1 个做得好的地方和 2 个最值得改的地方，并给出下一个周期每个阶段的安排。350 字以内。', { tier: 'complex' }));
 $('aiTrain').addEventListener('click', () => run('今天练什么', '根据今天的周期阶段、WHOOP 恢复和睡眠、本周各部位已经练了几次，安排今天的训练：练哪个部位（优先补本周落后的翘臀/宽肩/平腹），列 4–6 个动作，每个写组数×次数和休息时间，总时长控制在 60 分钟内。如果今天更适合休息或轻练，直接说并给替代方案。'));
 $('aiPlan').addEventListener('click', () => {
@@ -2376,6 +2461,7 @@ $('onbFile').addEventListener('change', e => { handleWhoop(e.target.files, $('on
 $('onbDone').addEventListener('click', () => { closeOnboarding(); window.scrollTo({ top: 0 }); });
 $('onbDemo').addEventListener('click', () => { if (!state.sample) { const ob = state.onboarded; state = makeSample(); state.onboarded = ob; } state.demoSeen = true; closeOnboarding(); commit(); renderSettings(); });
 
+$('evList').innerHTML = EVIDENCE.map(e => `<li><b>[${e.id}]</b> ${esc(e.cite)} · <a href="https://doi.org/${e.doi}" target="_blank" rel="noopener">DOI</a><br>${esc(e.claim)}</li>`).join('');
 renderSettings();
 renderLock();
 renderAll();
