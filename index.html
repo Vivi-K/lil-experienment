@@ -421,6 +421,9 @@ details.paste textarea{width:100%;min-height:120px;border:1px solid var(--line);
 .week div.today{background:var(--surface)}
 .week div i{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:13px;font-weight:700;background:color-mix(in srgb,var(--ink) 8%,transparent);color:var(--ink3)}
 .week div i.on{background:var(--good);color:#fff}
+.week div i.plan{background:transparent;border:1.5px dashed color-mix(in srgb,var(--ink) 25%,transparent);color:var(--ink2);font-size:12px}
+.week div i.miss{background:transparent;color:var(--ink3);font-size:12px;border:1.5px solid color-mix(in srgb,var(--ink) 10%,transparent)}
+.week .wk-lab{font-size:11px;color:var(--ink3);white-space:nowrap}
 .week div i.rest{background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent)}
 .cardio-row{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
 .cardio-row select{padding:6px 10px;font-size:15px;background:var(--surface);color:var(--ink);min-width:0;max-width:100%}
@@ -717,7 +720,7 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
     </div>
     <div class="panel">
       <details id="planWrap">
-        <summary style="cursor:pointer"><h3 style="display:inline">一周怎么排 · 组合练法</h3> <span class="small muted">每个部位每周至少练 2 次 [E8]，臀部每周 12–20 组 [E7]</span></summary>
+        <summary style="cursor:pointer"><h3 style="display:inline">一周课表</h3> <span class="small muted">每个部位每周至少练 2 次 [E8]，臀部每周 12–20 组 [E7]</span></summary>
         <div class="plan-tabs" id="planTabs" role="group" aria-label="每周训练天数"></div>
         <div class="tbl-wrap"><table class="plan"><tbody id="planBody"></tbody></table></div>
         <p class="note" id="planNote"></p>
@@ -2297,8 +2300,10 @@ function renderTraining() {
   }).join('');
   renderLifts();
   $('trOther').textContent = c.other ? `本周还有 ${c.other} 次没标部位的力量训练（比如 WHOOP 导入的），在记录里新加一条对应部位就能算进来。` : '';
-  $('planTabs').innerHTML = [3, 4, 5].map(n => `<button class="btn${n === planDays ? ' primary' : ''}" type="button" data-plan="${n}">每周 ${n} 天</button>`).join('');
-  $('planBody').innerHTML = WEEK_PLANS[planDays].map(([d, items]) => `<tr><td>${d}</td><td>${items.map(t => `<span class="tag">${t}</span>`).join('')}</td></tr>`).join('');
+  $('planTabs').innerHTML = [3, 4, 5].map(n => `<button class="btn${n === trainDays() ? ' primary' : ''}" type="button" data-plan="${n}">每周 ${n} 天力量</button>`).join('');
+  const core = { glute: '细腰 A', shoulder: '细腰 B', cardio: '细腰 C', off: '细腰 D（可选）' };
+  $('planBody').innerHTML = TEMPLATES[trainDays()].map((t, i) => { const [f, c] = t.split(':'); const sl = { f, c }; const p = PARTS.find(x => x.k === f), cb = p && p.combos.find(x => x.id === c);
+    return `<tr${i === (parse(TODAY).getDay() + 6) % 7 ? ' style="background:var(--sunk)"' : ''}><td>${WD[i]}</td><td><span class="tag">${slotLabel(sl)}${cb ? ' · ' + cb.name : ''}</span><span class="tag">${f === 'cardio' ? '有氧 30–40 分钟' : f === 'off' ? '休息，想动就散步 20 分钟' : core[f]}</span>${f !== 'off' && f !== 'cardio' ? '' : `<span class="tag">${core[f]}</span>`}</td></tr>`; }).join('');
   $('planNote').textContent = '按周期换组合：卵泡期、排卵期多用 A（力量日），黄体期用 B（增肌日），经前一周或恢复低于 34% 换成 D（轻量）。没去健身房就用 C（居家）。有氧不和力量放在同一天。';
 }
 $('parts').addEventListener('click', e => {
@@ -2311,7 +2316,7 @@ $('parts').addEventListener('click', e => {
   ensure(TODAY).ex.push({ type, met: p.log[1], min: cb.min }); commit(); offerUndo(`已记录：${type}`, snap);
   onLogged(`${type} ${cb.min} 分钟`);
 });
-$('planTabs').addEventListener('click', e => { const b = e.target.closest('[data-plan]'); if (!b) return; planDays = Number(b.dataset.plan); renderTraining(); });
+$('planTabs').addEventListener('click', e => { const b = e.target.closest('[data-plan]'); if (!b) return; const snap = JSON.stringify(state); state.profile.trainDays = Number(b.dataset.plan); const r = ensure(TODAY); if (r.session && !r.session.finished && !r.session.confirmed && !Object.values(r.session.sets || {}).some(v => v.d)) delete r.session; save(); offerUndo(`已改成每周 ${trainDays()} 天力量`, snap); renderWorkout(); renderMeals(); renderTraining(); });
 
 function progCells(k) {
   const x = liftLatest(k); if (!x) return '<td class="small muted" colspan="4">填了以后显示进度目标</td>';
@@ -2372,27 +2377,33 @@ function parseDose(d) {
   return { sets, reps, target, timed, perSide };
 }
 function trainedOn(d) { return day(d).ex.map(e => PARTS.find(p => p.k !== 'core' && p.re.test(e.type))).filter(Boolean).map(p => p.k); }
+// Fixed weekly schedule (Mon..Sun). 'cardio' = cardio day, 'off' = rest day. Strength and cardio never share a day.
+const TEMPLATES = {
+  3: ['glute:A', 'cardio', 'shoulder:A', 'off', 'glute:B', 'cardio', 'off'],
+  4: ['glute:A', 'shoulder:A', 'cardio', 'glute:B', 'shoulder:B', 'cardio', 'off'],
+  5: ['glute:A', 'shoulder:A', 'cardio', 'glute:B', 'shoulder:B', 'glute:C', 'cardio']
+};
+const WD = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+const trainDays = () => [3, 4, 5].includes(Number(P().trainDays)) ? Number(P().trainDays) : 4;
+function slotFor(d) { const i = (parse(d).getDay() + 6) % 7; const [f, c] = TEMPLATES[trainDays()][i].split(':'); return { f, c: c || null, i }; }
+function slotLabel(sl, short) {
+  if (sl.f === 'glute') return short ? '臀' : `练臀 ${sl.c}`;
+  if (sl.f === 'shoulder') return short ? '背' : `练肩背 ${sl.c}`;
+  if (sl.f === 'cardio') return short ? '氧' : '有氧日';
+  return short ? '休' : '休息日';
+}
 function planToday() {
-  const c = partCounts(), yest = trainedOn(addDays(TODAY, -1)), y2 = trainedOn(addDays(TODAY, -2)), y3 = trainedOn(addDays(TODAY, -3));
-  const ph = phaseOf(TODAY), w = wh(TODAY) || wh(addDays(TODAY, -1));
-  const why = [];
-  let focus;
-  if (yest.length && y2.length && y3.length) { focus = 'rest'; why.push('已经连续练了 3 天，今天轻松恢复'); }
-  else if (c.glute < 3 && !yest.includes('glute')) { focus = 'glute'; why.push(`本周臀部 ${c.glute}/3 次`); }
-  else if (c.shoulder < 2 && !yest.includes('shoulder')) { focus = 'shoulder'; why.push(`本周肩背 ${c.shoulder}/2 次`); }
-  else if (cardioDaysThisWeek() < 2) { focus = 'rest'; why.push(`有氧日：本周有氧 ${cardioDaysThisWeek()}/2 天，和力量分开练`); }
-  else if (c.glute < 3) { focus = 'rest'; why.push('昨天刚练过臀，今天轻松走一走让它恢复'); }
-  else { focus = 'rest'; why.push('本周目标已完成，轻松走一走'); }
-  let combo = recCombo(ph, w);
-  if (focus === 'glute' && combo !== 'D') {
-    // alternate strength and hypertrophy days within the week
-    const ws = weekStart(TODAY); let hadA = false;
-    for (let i = 0; i < 7; i++) { const d = addDays(ws, i); if (d >= TODAY) break; if (day(d).ex.some(e => /力量日/.test(e.type))) hadA = true; }
-    if (hadA) combo = 'B';
-  }
+  const ph = phaseOf(TODAY), w = wh(TODAY) || wh(addDays(TODAY, -1)), sl = slotFor(TODAY);
+  const why = [`每周 ${trainDays()} 天力量课表：今天${WD[sl.i]}是${slotLabel(sl)}`];
+  let focus, combo = sl.c || 'A', light = false;
+  if (sl.f === 'glute' || sl.f === 'shoulder') {
+    focus = sl.f;
+    // the schedule decides the day; the cycle and recovery only decide how hard
+    if (recCombo(ph, w) === 'D' || (day(TODAY).period && (day(TODAY).pain || 0) >= 2)) { combo = 'D'; why.push('经前一周、恢复低或痛经：换成轻量组合'); }
+  } else { focus = 'rest'; light = sl.f === 'off'; }
   why.push(PHASES[ph.key].name + (ph.cd ? ` 第 ${ph.cd} 天` : ''));
   if (w && w.recovery != null) why.push(`恢复 ${w.recovery}%`);
-  return { focus, combo, why };
+  return { focus, combo, why, light };
 }
 function estMinutes(moves, withWarm) {
   let sec = withWarm ? 8 * 60 : 0;
@@ -2406,7 +2417,9 @@ function estMinutes(moves, withWarm) {
 function sessionFor(dt) { const r = day(dt); return r.session || null; }
 function currentSession() {
   const r = ensure(TODAY);
-  if (!r.session) { const pl = planToday(); r.session = { focus: pl.focus, combo: pl.combo, sets: {}, why: pl.why }; }
+  const fresh = ss => !ss.finished && !ss.confirmed && !Object.values(ss.sets || {}).some(v => v.d) && !(ss.cardio && ss.cardio.d);
+  // re-plan sessions made before the weekly schedule existed, as long as nothing was done yet
+  if (!r.session || (!r.session.v2 && fresh(r.session))) { const pl = planToday(); r.session = { focus: pl.focus, combo: pl.combo, light: pl.light, sets: {}, why: pl.why, v2: true }; }
   return r.session;
 }
 // Cardio options. MET values are typical for the activity; notes keep legs slim (low resistance, no heavy pushing).
@@ -2427,8 +2440,8 @@ function defaultCardio(ss) {
   const ph = phaseOf(TODAY), light = ss.combo === 'D' || (ph.key === 'lut' && ph.cd && ph.cd >= CS.len - 6);
   const doy = diffDays(TODAY, TODAY.slice(0, 4) + '-01-01');
   const pool = light ? ['walk', 'elliptical', 'swim', 'incline'] : ss.focus === 'rest' ? ['incline', 'swim', 'hike', 'dance', 'jog', 'elliptical', 'rower'] : ['incline', 'elliptical', 'rower', 'stairs', 'bike', 'rope'];
-  const tired = (ss.why || []).some(w => /连续|恢复|完成/.test(w));
-  return { k: tired ? 'walk' : pool[doy % pool.length], min: tired ? 30 : light ? 30 : 40, d: false };
+  if (ss.light) return { k: 'walk', min: 20, d: false };
+  return { k: pool[doy % pool.length], min: light ? 30 : 40, d: false };
 }
 function cardioOf(ss) { if (!ss.cardio) ss.cardio = defaultCardio(ss); return ss.cardio; }
 function cardioKcal(c) { const o = CARDIO.find(x => x.k === c.k) || CARDIO[0]; return Math.round(o.met * P().weight * (Number(c.min) || 0) / 60); }
@@ -2456,17 +2469,17 @@ function renderWorkout() {
   const mins = estMinutes(blocks[0].moves, true) + estMinutes(blocks[1].moves, false) + (ss.focus === 'rest' ? Number(cardio.min) || 0 : 0);
   let total = 0, done = 0;
   const warm = WARMUPS[ss.focus] || WARMUPS.rest;
-  let html = `<div class="wk-top"><div style="display:grid;gap:6px"><span class="wk-title">${ss.focus === 'rest' ? '有氧日' : blocks[0].title}</span>
+  let html = `<div class="wk-top"><div style="display:grid;gap:6px"><span class="wk-title">${ss.focus === 'rest' ? (ss.light ? '休息日 · 想动就散散步' : '有氧日') : blocks[0].title}</span>
     <div class="wk-meta"><span>约 ${mins} 分钟</span>${(ss.why || []).map(t => `<span>${t}</span>`).join('')}</div></div>
     ${ss.finished ? '<span class="pill ok">✓ 今天已完成</span>' : ''}</div>
     <div class="confirm-row">${ss.confirmed ? `<span class="pill ok">✓ 已确认今天的安排 · ${hhmm(ss.confirmed)}</span>${ss.finished ? '' : '<button class="btn ghost" type="button" id="wkUnconfirm">修改安排</button>'}` : '<button class="btn primary" type="button" id="wkConfirm">确认今天的训练安排</button><span class="small muted">不合适可以先在下面换</span>'}</div>
-    <div class="wk-pick" role="group" aria-label="换一个安排" ${ss.confirmed ? 'hidden' : ''}>${[['glute', '练臀'], ['shoulder', '练肩背'], ['rest', '有氧日']].map(([k, n]) => `<button type="button" data-focus="${k}" aria-pressed="${ss.focus === k}">${n}</button>`).join('')}
+    <div class="wk-pick" role="group" aria-label="换一个安排" ${ss.confirmed ? 'hidden' : ''}>${[['glute', '练臀'], ['shoulder', '练肩背'], ['rest', '有氧日'], ['off', '休息日']].map(([k, n]) => `<button type="button" data-focus="${k}" aria-pressed="${k === 'off' ? ss.focus === 'rest' && !!ss.light : k === 'rest' ? ss.focus === 'rest' && !ss.light : ss.focus === k}">${n}</button>`).join('')}
       ${ss.focus !== 'rest' ? ['A', 'B', 'C', 'D'].map(id => { const cb = PARTS.find(x => x.k === ss.focus).combos.find(x => x.id === id); return `<button type="button" data-wcombo="${id}" aria-pressed="${ss.combo === id}">${id} ${cb.name}</button>`; }).join('') : ''}</div>
     <div class="dk" id="dk"></div>
     <div class="wk-prog"><div id="wkProg"></div></div>
     <div class="wk-block"><h4>热身 · 约 8 分钟</h4>${warm.map((t, i) => { const k = `w${i}`; const v = ss.sets[k]; total++; if (v && v.d) done++; return `<label class="chk"><input type="checkbox" data-set="${k}" ${v && v.d ? 'checked' : ''}><span>${t}</span></label>`; }).join('')}</div>`;
   const cardioHtml = () => { const c = cardio, o = CARDIO.find(x => x.k === c.k) || CARDIO[0]; total++; if (c.d) done++;
-    return `<div class="wk-block"><h4>有氧 · 今天的主角</h4><div class="wk-ex">
+    return `<div class="wk-block"><h4>${ss.light ? '可选：轻松散步' : '有氧 · 今天的主角'}</h4><div class="wk-ex">
       <div class="cardio-row"><select id="cdSel" aria-label="有氧方式">${CARDIO.map(x => `<option value="${x.k}" ${x.k === c.k ? 'selected' : ''}>${x.name}</option>`).join('')}</select>
       <span class="io"><input type="number" id="cdMin" min="5" max="180" step="5" value="${c.min}" aria-label="有氧分钟"> 分钟 · 约 ${cardioKcal(c)} kcal</span></div>
       <span class="wk-cue">${o.note}</span>
@@ -2569,11 +2582,12 @@ $('wk').addEventListener('change', e => {
 $('wk').addEventListener('click', e => {
   const ss = currentSession();
   const f = e.target.closest('[data-focus]');
-  if (f) { if (ss.started && !ss.finished && Object.values(ss.sets).some(v => v.d)) { $('wkMsg').textContent = '已经开始的训练先完成，或点「重新开始」再换。'; return; } ss.focus = f.dataset.focus; ss.combo = ss.combo || 'A'; ss.sets = {}; ss.cardio = null; ss.why = ['你手动选的']; save(); renderWorkout(); return; }
+  if (f) { if (ss.started && !ss.finished && Object.values(ss.sets).some(v => v.d)) { $('wkMsg').textContent = '已经开始的训练先完成，或点「重新开始」再换。'; return; } ss.light = f.dataset.focus === 'off'; ss.focus = ss.light ? 'rest' : f.dataset.focus; ss.combo = ss.combo || 'A'; ss.sets = {}; ss.cardio = null; ss.why = ['你手动选的']; save(); renderWorkout(); return; }
   const c = e.target.closest('[data-wcombo]');
   if (c) { if (Object.values(ss.sets).some(v => v.d)) { $('wkMsg').textContent = '已经开始的训练先完成，或点「重新开始」再换。'; return; } ss.combo = c.dataset.wcombo; ss.sets = {}; save(); renderWorkout(); return; }
   if (e.target.id === 'wkReset') { ss.sets = {}; ss.started = null; save(); renderWorkout(); return; }
   if (e.target.id === 'wkDone') finishWorkout();
+  if (e.target.id === 'goPlan') { $('planWrap').open = true; $('planWrap').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
   if (e.target.id === 'wkConfirm') { const snap = JSON.stringify(state); ss.confirmed = Date.now(); save(); renderWorkout(); offerUndo('已确认今天的训练安排', snap); return; }
   if (e.target.id === 'wkUnconfirm') { ss.confirmed = null; save(); renderWorkout(); return; }
   if (e.target.id === 'wkUndoDone') undoFinish();
@@ -2593,17 +2607,20 @@ function renderCheckinSummary(ss, blocks, done, total) {
   // this week's check-ins
   const ws = weekStart(TODAY), names = ['一', '二', '三', '四', '五', '六', '日'];
   const week = names.map((w, i) => {
-    const d = addDays(ws, i), parts = trainedOn(d), sess = day(d).session;
-    const mark = parts.includes('glute') ? '臀' : parts.includes('shoulder') ? '背' : sess && sess.finished && sess.focus === 'rest' ? '走' : '';
-    return `<div class="${d === TODAY ? 'today' : ''}"><span>${w}</span><i class="${mark === '走' ? 'rest' : mark ? 'on' : ''}">${mark || (d > TODAY ? '' : '·')}</i></div>`;
+    const d = addDays(ws, i), sl = slotFor(d), parts = trainedOn(d), sess = day(d).session;
+    const didCardio = day(d).ex.some(e => /有氧|快走|慢跑|游泳|骑行|椭圆|划船机|跳绳|行山|徒步/.test(e.type));
+    const done = parts.length || didCardio || (sess && sess.finished);
+    const lab = d === TODAY && sess ? slotLabel(sess.focus === 'rest' ? { f: sess.light ? 'off' : 'cardio' } : { f: sess.focus, c: sess.combo }, true) : slotLabel(sl, true);
+    const cls = done ? (sl.f === 'cardio' || didCardio && !parts.length ? 'rest' : 'on') : d < TODAY ? 'miss' : 'plan';
+    return `<div class="${d === TODAY ? 'today' : ''}" title="${WD[i]} ${slotLabel(sl)}"><span>${w}</span><i class="${cls}">${done ? '✓' : lab}</i><span class="wk-lab">${slotLabel(sl).replace('练', '')}</span></div>`;
   }).join('');
-  const nWeek = names.filter((_, i) => { const d = addDays(ws, i); return trainedOn(d).length || (day(d).session && day(d).session.finished); }).length;
+  const nWeek = names.filter((_, i) => { const d = addDays(ws, i); return trainedOn(d).length || day(d).ex.some(e => /有氧|快走|慢跑|游泳|骑行|椭圆|划船机|跳绳|行山|徒步/.test(e.type)) || (day(d).session && day(d).session.finished); }).length;
   $('dk').innerHTML = `<div class="dk-ring"><svg viewBox="0 0 104 104" aria-hidden="true"><circle cx="52" cy="52" r="44" fill="none" stroke="color-mix(in srgb, var(--ink) 10%, transparent)" stroke-width="10"/><circle cx="52" cy="52" r="44" fill="none" stroke="var(--good)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct / 100)}"/></svg><b>${ss.finished ? '✓' : pct + '%'}</b></div>
     <div style="display:grid;gap:8px"><b style="font-size:17px">${ss.finished ? '今日已打卡' : done ? '今日打卡进行中' : '今日打卡'}</b>
       <div class="dk-stats"><div><span class="label">完成组数</span><b>${sets}/${setsAll}</b></div><div><span class="label">总训练量</span><b>${fmt(vol)}</b><span class="small muted">kg</span></div><div><span class="label">用时</span><b>${mins}</b><span class="small muted">分钟</span></div></div></div>
     <div class="dk-moves">${rows.map(r => `<div class="dk-mv"><span><span>${esc(r.n)}</span><span class="muted">${r.dn}/${r.all}${r.top ? ` · ${r.top} kg` : ''}</span></span><i><em style="width:${r.all ? r.dn / r.all * 100 : 0}%"></em></i></div>`).join('')}</div>
     <div class="week" aria-label="本周打卡">${week}</div>
-    <span class="small muted" style="grid-column:1/-1">${ss.focus === 'rest' ? '' : `今天目标部位有效组 ${effSets} 组（每次 10–15 组左右就够，更多收益递减） · `}本周已打卡 ${nWeek} 天 · 臀：练臀日；背：肩背日；走：有氧日</span>`;
+    <span class="small muted" style="grid-column:1/-1">${ss.focus === 'rest' ? '' : `今天目标部位有效组 ${effSets} 组（每次 10–15 组左右就够，更多收益递减） · `}本周已打卡 ${nWeek} 天 · 臀：练臀；背：练肩背；氧：有氧日；休：休息日 · <button class="btn ghost" type="button" id="goPlan" style="padding:0;font-size:13px">改每周天数</button></span>`;
 }
 function finishWorkout() {
   const ss = currentSession(), blocks = sessionMoves(ss);
