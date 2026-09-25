@@ -344,6 +344,38 @@ details.paste textarea{width:100%;min-height:120px;border:1px solid var(--line);
 .gstr-marks{position:relative;height:16px;font-size:11px;color:var(--ink3)}
 .gstr-marks span{position:absolute;transform:translateX(-50%)}
 .mv-load{grid-column:2/4;font-size:14px;font-weight:600;color:var(--accent)}
+/* Today's workout */
+.wk{display:grid;gap:16px}
+.wk-top{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px 16px;align-items:flex-end}
+.wk-title{font-size:26px;font-weight:700;letter-spacing:-.02em}
+.wk-meta{display:flex;flex-wrap:wrap;gap:6px}
+.wk-meta span{font-size:13px;border-radius:980px;background:var(--sunk);padding:3px 10px;color:var(--ink2)}
+.wk-pick{display:flex;flex-wrap:wrap;gap:6px}
+.wk-pick button{border:0;border-radius:980px;padding:5px 12px;font-size:13px;background:var(--sunk);color:var(--ink)}
+.wk-pick button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.wk-prog{height:6px;border-radius:3px;background:var(--sunk);overflow:hidden}
+.wk-prog div{height:100%;background:var(--good);border-radius:3px}
+.wk-block{display:grid;gap:6px}
+.wk-block h4{margin:0;font-size:13px;color:var(--ink2);font-weight:600;letter-spacing:.02em}
+.wk-ex{border-radius:14px;background:var(--sunk);padding:12px 14px;display:grid;gap:8px}
+.wk-ex-head{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline}
+.wk-ex-head b{font-size:17px}
+.wk-cue{font-size:13px;color:var(--ink2)}
+.set{display:grid;grid-template-columns:30px 58px minmax(0,1fr) auto;gap:8px;align-items:center;font-size:15px}
+.set input[type=checkbox]{width:24px;height:24px;accent-color:var(--good);margin:0}
+.set .lbl{font-size:13px;color:var(--ink2)}
+.set .io{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+.set .io input{width:64px;padding:4px 6px;font-size:15px;text-align:right;background:var(--surface);color:var(--ink)}
+.set .rir{font-size:12px;color:var(--ink3);white-space:nowrap}
+.set.done .io,.set.done .lbl{opacity:.55}
+.set.warm .lbl{color:var(--ink3)}
+.set .io{flex-wrap:nowrap}
+@media (max-width:560px){.set{grid-template-columns:26px 46px minmax(0,1fr);gap:4px 8px}.set .rir{grid-column:3/-1;margin-top:-2px}.set .io input{width:62px;padding:4px 4px}}
+.chk{display:flex;gap:10px;align-items:flex-start;font-size:15px}
+.chk input{width:22px;height:22px;accent-color:var(--good);margin:2px 0 0;flex:none}
+.wk-foot{display:flex;flex-wrap:wrap;gap:8px 14px;justify-content:space-between;align-items:center}
+.rest-bar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px));background:color-mix(in srgb,var(--surface) 86%,transparent);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-top:1px solid var(--line)}
+.rest-bar b{font-size:28px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 .confirm{display:inline-flex;gap:8px;align-items:center;font-size:14px}
 @media (prefers-reduced-motion:no-preference){.meter div,.hbar{transition:width .3s ease}}
 /* ===== Apple-style layer ===== */
@@ -463,6 +495,19 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
       </div>
     </div>
   </section>
+
+  <!-- TODAY'S WORKOUT -->
+  <section class="block" aria-labelledby="wkH">
+    <div class="sec-head">
+      <h2 id="wkH">今日训练</h2>
+      <span class="small muted" id="wkWhy"></span>
+    </div>
+    <div class="panel wk" id="wk"></div>
+  </section>
+  <div class="rest-bar" id="restBar" hidden role="status" aria-live="polite">
+    <div><b id="restTime">0:00</b> <span id="restNext" class="small"></span></div>
+    <div style="display:flex;gap:8px"><button class="btn" type="button" id="restAdd">+30 秒</button><button class="btn primary" type="button" id="restSkip">开始下一组</button></div>
+  </div>
 
   <!-- AI COACH -->
   <section class="block" aria-labelledby="coachH">
@@ -1421,7 +1466,7 @@ function renderSettings() { for (const [id, k] of Object.entries(SETS)) $(id).va
 function renderAll() {
   CS = cycleStats();
   $('sampleBar').hidden = !state.sample;
-  renderCountdown(); renderHero(); renderTraining(); renderBody(); renderCheckin(); renderLogger(); renderChart(); renderWhoop(); renderPhases(); renderCalendar(); renderLabs();
+  renderCountdown(); renderHero(); renderWorkout(); renderTraining(); renderBody(); renderCheckin(); renderLogger(); renderChart(); renderWhoop(); renderPhases(); renderCalendar(); renderLabs();
 }
 function commit() { save(); renderAll(); }
 function setLogDate(d) { logDate = d > TODAY ? TODAY : d; calMonth = logDate.slice(0, 7); renderLogger(); renderCalendar(); }
@@ -1928,10 +1973,10 @@ const PARTS = [
     combos: [
       { id: 'A', name: '力量日', min: 55, when: '卵泡期、排卵期，恢复好的时候', moves: [
         ['杠铃臀推', '5 × 5', 180, '力量主项：顶端停 1 秒，下巴微收、肋骨下压；每周争取加 2.5 kg', 'hipthrust', 1],
-        ['罗马尼亚硬拉', '3 × 6–8', 150, '屁股往后推，杠贴腿走，腘绳肌拉伸到位就停，背保持平直', 'rdl', 1],
+        ['罗马尼亚硬拉', '4 × 6–8', 150, '屁股往后推，杠贴腿走，腘绳肌拉伸到位就停，背保持平直', 'rdl', 1],
         ['B 式臀推（单腿主导）', '3 × 8/腿', 90, '主力脚在前、另一只脚尖轻点地，用臀推约 45% 的重量', 'hipthrust', 0.45],
         ['坐姿髋外展机', '3 × 12–15', 60, '上身前倾趴在机器上，练臀中肌上部，让臀部侧面更圆', 'abductor', 1],
-        ['45° 臀向背伸', '2 × 12–15', 60, '脚尖外八、微微含胸，用臀把身体推起来', '', 1]
+        ['45° 臀向背伸', '3 × 12–15', 60, '脚尖外八、微微含胸，用臀把身体推起来', '', 1]
       ], alt: '没有杠铃：臀推机或史密斯臀推' },
       { id: 'B', name: '增肌日', min: 50, when: '黄体期前段，或想要泵感的时候', moves: [
         ['杠铃臀推', '4 × 10–12', 120, '比力量日轻，控制下放 2 秒，顶端停 1 秒', 'hipthrust', 1],
@@ -1958,7 +2003,7 @@ const PARTS = [
     note: '背要薄：中等重量、10–15 次、顶峰停 1 秒、下放 2–3 秒，练线条不堆厚度；不做耸肩和大重量杠铃划船，上斜方肌变大会让肩颈显得壮（经验建议）。侧平举让肩线更开，腰就显得更细。',
     combos: [
       { id: 'A', name: '背阔线条 + 肩', min: 45, when: '恢复好的时候', moves: [
-        ['中握高位下拉', '3 × 10–12', 90, '先沉肩再拉，拉到锁骨，下放 3 秒；练出背阔下部的线条', 'pulldown', 1],
+        ['中握高位下拉', '4 × 10–12', 90, '先沉肩再拉，拉到锁骨，下放 3 秒；练出背阔下部的线条', 'pulldown', 1],
         ['坐姿哑铃推举', '3 × 8–10', 120, '手肘在身体稍前方，不要后仰', 'dbpress', 1],
         ['哑铃侧平举', '4 × 12–20', 60, '小指一侧略高，耳朵远离肩膀，下放 2–3 秒', 'lateral', 1],
         ['俯身反向飞鸟', '3 × 15', 60, '练后束和上背，站姿更挺', 'lateral', 0.7],
@@ -2123,6 +2168,190 @@ $('liftSave').addEventListener('click', () => {
 function liftsCtx() {
   const have = LIFTS.map(l => { const x = liftLatest(l.k); return x ? `${l.name}${l.note ? '(' + l.note + ')' : ''} ${x.w}kg×${x.r}（估算1RM ${e1rm(x).toFixed(1)}kg）` : null; }).filter(Boolean);
   return have.length ? '\n【重量基础】' + have.join('；') : '\n【重量基础】还没填写';
+}
+
+/* ---------- today's workout: one focus area per day, loads from the strength base, checkable sets ---------- */
+const WARMUPS = {
+  glute: ['5 分钟椭圆机或快走，微微出汗', '臀桥 2 × 15', '弹力带侧向走 2 × 10 步/侧', '世界上最伟大的拉伸 5 次/侧'],
+  shoulder: ['5 分钟划船机或快走', '弹力带拉开 2 × 15', '弹力带肩绕环 10 次', '猫牛式 10 次'],
+  rest: ['5 分钟慢走热身']
+};
+const FINISHER = { glute: 'A', shoulder: 'B', rest: 'C' };
+function parseDose(d) {
+  const m = String(d).match(/^(\d+)\s*(?:轮)?\s*×\s*(.+)$/);
+  const sets = m ? Number(m[1]) : 1, reps = (m ? m[2] : String(d)).trim();
+  const nums = reps.match(/\d+/g) || [];
+  const timed = /秒|米|步/.test(reps), perSide = /\/(腿|侧)/.test(reps);
+  const target = timed || /\+/.test(reps) ? null : Number(nums[nums.length > 1 && /[–-]/.test(reps) ? 1 : 0] || 0) || null;
+  return { sets, reps, target, timed, perSide };
+}
+function trainedOn(d) { return day(d).ex.map(e => PARTS.find(p => p.k !== 'core' && p.re.test(e.type))).filter(Boolean).map(p => p.k); }
+function planToday() {
+  const c = partCounts(), yest = trainedOn(addDays(TODAY, -1)), y2 = trainedOn(addDays(TODAY, -2)), y3 = trainedOn(addDays(TODAY, -3));
+  const ph = phaseOf(TODAY), w = wh(TODAY) || wh(addDays(TODAY, -1));
+  const why = [];
+  let focus;
+  if (yest.length && y2.length && y3.length) { focus = 'rest'; why.push('已经连续练了 3 天，今天恢复'); }
+  else if (c.glute < 3 && !yest.includes('glute')) { focus = 'glute'; why.push(`本周臀部 ${c.glute}/3 次`); }
+  else if (c.shoulder < 2 && !yest.includes('shoulder')) { focus = 'shoulder'; why.push(`本周肩背 ${c.shoulder}/2 次`); }
+  else if (c.glute < 3) { focus = 'rest'; why.push('昨天刚练过臀，今天让它恢复'); }
+  else { focus = 'rest'; why.push('本周目标已完成'); }
+  let combo = recCombo(ph, w);
+  if (focus === 'glute' && combo !== 'D') {
+    // alternate strength and hypertrophy days within the week
+    const ws = weekStart(TODAY); let hadA = false;
+    for (let i = 0; i < 7; i++) { const d = addDays(ws, i); if (d >= TODAY) break; if (day(d).ex.some(e => /力量日/.test(e.type))) hadA = true; }
+    if (hadA) combo = 'B';
+  }
+  why.push(PHASES[ph.key].name + (ph.cd ? ` 第 ${ph.cd} 天` : ''));
+  if (w && w.recovery != null) why.push(`恢复 ${w.recovery}%`);
+  return { focus, combo, why };
+}
+function estMinutes(moves, withWarm) {
+  let sec = withWarm ? 8 * 60 : 0;
+  moves.forEach(([n, d, r, , lk], i) => {
+    const pd = parseDose(d); const per = pd.timed ? 40 : (pd.target || 12) * 4;
+    sec += pd.sets * per * (pd.perSide ? 2 : 1) + Math.max(0, pd.sets - 1) * r + 60;
+    if (i === 0 && lk) sec += 3 * 90;   // warm-up ramp on the main lift
+  });
+  return Math.round(sec / 60);
+}
+function sessionFor(dt) { const r = day(dt); return r.session || null; }
+function currentSession() {
+  const r = ensure(TODAY);
+  if (!r.session) { const pl = planToday(); r.session = { focus: pl.focus, combo: pl.combo, sets: {}, why: pl.why }; }
+  return r.session;
+}
+function sessionMoves(ss) {
+  const blocks = [];
+  if (ss.focus === 'rest') {
+    blocks.push({ key: 'x', title: '主动恢复', moves: [['快走或上坡走', '1 × 40 分钟', 0, '心率保持能说话的强度，帮助减脂又不会练粗腿', '', 1]] });
+  } else {
+    const p = PARTS.find(x => x.k === ss.focus), cb = p.combos.find(x => x.id === ss.combo) || p.combos[0];
+    blocks.push({ key: 'm', title: `${p.name} · ${cb.id} ${cb.name}`, moves: cb.moves, part: p, cb });
+  }
+  const core = PARTS.find(x => x.k === 'core'), fc = core.combos.find(x => x.id === (ss.combo === 'D' ? 'D' : FINISHER[ss.focus]));
+  blocks.push({ key: 'c', title: `腰腹收尾 · ${fc.id} ${fc.name}`, moves: fc.moves });
+  return blocks;
+}
+function rirText(i, sets, pd, main) {
+  if (pd.timed || !pd.target) return '';
+  if (main) return pd.target <= 6 ? '每组留 2 次力气' : '留 1–2 次';
+  return i === sets - 1 ? '最后一组接近力竭' : '留 1–2 次';
+}
+function renderWorkout() {
+  const ss = currentSession(), blocks = sessionMoves(ss);
+  const allMoves = blocks.flatMap(b => b.moves);
+  const mins = estMinutes(blocks[0].moves, true) + estMinutes(blocks[1].moves, false);
+  let total = 0, done = 0;
+  const warm = WARMUPS[ss.focus] || WARMUPS.rest;
+  let html = `<div class="wk-top"><div style="display:grid;gap:6px"><span class="wk-title">${ss.focus === 'rest' ? '主动恢复日' : blocks[0].title}</span>
+    <div class="wk-meta"><span>约 ${mins} 分钟</span>${(ss.why || []).map(t => `<span>${t}</span>`).join('')}</div></div>
+    ${ss.finished ? '<span class="pill ok">✓ 今天已完成</span>' : ''}</div>
+    <div class="wk-pick" role="group" aria-label="换一个安排">${[['glute', '练臀'], ['shoulder', '练肩背'], ['rest', '休息日']].map(([k, n]) => `<button type="button" data-focus="${k}" aria-pressed="${ss.focus === k}">${n}</button>`).join('')}
+      ${ss.focus !== 'rest' ? ['A', 'B', 'C', 'D'].map(id => { const cb = PARTS.find(x => x.k === ss.focus).combos.find(x => x.id === id); return `<button type="button" data-wcombo="${id}" aria-pressed="${ss.combo === id}">${id} ${cb.name}</button>`; }).join('') : ''}</div>
+    <div class="wk-prog"><div id="wkProg"></div></div>
+    <div class="wk-block"><h4>热身 · 约 8 分钟</h4>${warm.map((t, i) => { const k = `w${i}`; const v = ss.sets[k]; total++; if (v && v.d) done++; return `<label class="chk"><input type="checkbox" data-set="${k}" ${v && v.d ? 'checked' : ''}><span>${t}</span></label>`; }).join('')}</div>`;
+  blocks.forEach(b => {
+    html += `<div class="wk-block"><h4>${b.title}</h4>`;
+    b.moves.forEach(([n, d, r, cue, lk, f], mi) => {
+      const pd = parseDose(d), ld = lk ? loadFor(lk, d, f) : null, main = b.key === 'm' && mi === 0 && !!lk;
+      html += `<div class="wk-ex"><div class="wk-ex-head"><b>${n}</b><span class="small muted">${d}${r ? ` · 组间休息 ${restTxt(r)}` : ''}</span></div>${cue ? `<span class="wk-cue">${cue.replace(/ \[E\d+\]/g, '')}</span>` : ''}`;
+      if (main && ld) {
+        [[0.5, 8], [0.7, 5], [0.85, 3]].forEach(([pc, rp], wi) => {
+          const k = `${b.key}${mi}w${wi}`, v = ss.sets[k] || {}; const L = LIFTS.find(l => l.k === lk);
+          const kg = Math.max(L.step, Math.round(ld.kg * pc / L.step) * L.step);
+          html += `<div class="set warm${v.d ? ' done' : ''}"><input type="checkbox" data-set="${k}" data-rest="60" aria-label="热身组 ${wi + 1}" ${v.d ? 'checked' : ''}><span class="lbl">热身 ${wi + 1}</span><span class="io">${kg} kg × ${rp}</span><span class="rir">不计入</span></div>`;
+        });
+      }
+      for (let si = 0; si < pd.sets; si++) {
+        const k = `${b.key}${mi}s${si}`, v = ss.sets[k] || {}; total++; if (v.d) done++;
+        const wv = v.w ?? (ld ? ld.kg : ''), rv = v.r ?? (pd.target || '');
+        html += `<div class="set${v.d ? ' done' : ''}"><input type="checkbox" data-set="${k}" data-rest="${r}" aria-label="${n} 第 ${si + 1} 组" ${v.d ? 'checked' : ''}><span class="lbl">第 ${si + 1} 组</span>
+          <span class="io">${lk || ld ? `<input type="number" step="0.5" min="0" data-w="${k}" value="${wv}" aria-label="重量 kg">kg ×` : ''}${pd.target ? `<input type="number" step="1" min="0" data-r="${k}" value="${rv}" aria-label="次数"> 次${pd.perSide ? '/侧' : ''}` : `<span>${pd.reps}</span>`}${ld && ld.perHand ? '<span class="small muted">单手</span>' : ''}</span>
+          <span class="rir">${rirText(si, pd.sets, pd, main)}</span></div>`;
+      }
+      if (lk && !ld) html += `<span class="small muted">填了「我的重量基础」里的${LIFTS.find(l => l.k === lk).name}，这里会直接给出重量。</span>`;
+      html += `</div>`;
+    });
+    html += `</div>`;
+  });
+  html += `<div class="wk-foot"><span class="small muted" id="wkCount"></span>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${ss.started && !ss.finished ? '<button class="btn ghost" type="button" id="wkReset">重新开始</button>' : ''}<button class="btn primary" type="button" id="wkDone" ${ss.finished ? 'disabled' : ''}>${ss.finished ? '已完成' : '完成训练'}</button></div></div>
+    <span class="small" id="wkMsg" role="status"></span>`;
+  $('wk').innerHTML = html;
+  $('wkWhy').textContent = '按你的目标、本周进度、周期和恢复自动安排，可以手动换';
+  $('wkProg').style.width = (total ? done / total * 100 : 0) + '%';
+  $('wkCount').textContent = `已完成 ${done} / ${total} 项`;
+  $('wk').dataset.total = total;
+}
+let restT = null, restLeft = 0;
+function startRest(sec, next) {
+  clearInterval(restT); restLeft = sec; if (!sec) { $('restBar').hidden = true; return; }
+  $('restNext').textContent = next ? `下一组：${next}` : '';
+  $('restBar').hidden = false;
+  const tick = () => {
+    $('restTime').textContent = `${Math.floor(restLeft / 60)}:${pad(restLeft % 60)}`;
+    if (restLeft <= 0) { clearInterval(restT); $('restTime').textContent = '开始！'; try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (e) { /* ignore */ } setTimeout(() => { if (restLeft <= 0) $('restBar').hidden = true; }, 4000); return; }
+    restLeft--;
+  };
+  tick(); restT = setInterval(tick, 1000);
+}
+$('restSkip').addEventListener('click', () => { clearInterval(restT); restLeft = 0; $('restBar').hidden = true; });
+$('restAdd').addEventListener('click', () => { restLeft += 30; });
+$('wk').addEventListener('change', e => {
+  const t = e.target, ss = currentSession();
+  if (t.dataset.set) {
+    const k = t.dataset.set, v = ss.sets[k] || (ss.sets[k] = {});
+    v.d = t.checked; ss.started = ss.started || Date.now();
+    const row = t.closest('.set'); if (row) { const wi = row.querySelector('[data-w]'), ri = row.querySelector('[data-r]'); if (wi) v.w = Number(wi.value) || 0; if (ri) v.r = Number(ri.value) || 0; }
+    save();
+    if (t.checked && Number(t.dataset.rest)) {
+      const sets = [...$('wk').querySelectorAll('.set input[type=checkbox]')], nx = sets.slice(sets.indexOf(t) + 1).find(x => !x.checked);
+      const nr = nx && nx.closest('.set'), ex = nr && nr.closest('.wk-ex');
+      startRest(Number(t.dataset.rest), nr ? `${ex.querySelector('b').textContent} ${nr.querySelector('.lbl').textContent}${nr.querySelector('[data-w]') ? ' · ' + nr.querySelector('[data-w]').value + ' kg' : ''}` : '');
+    }
+    renderWorkout(); return;
+  }
+  if (t.dataset.w || t.dataset.r) { const k = t.dataset.w || t.dataset.r, v = ss.sets[k] || (ss.sets[k] = {}); if (t.dataset.w) v.w = Number(t.value) || 0; else v.r = Number(t.value) || 0; save(); }
+});
+$('wk').addEventListener('click', e => {
+  const ss = currentSession();
+  const f = e.target.closest('[data-focus]');
+  if (f) { if (ss.started && !ss.finished && Object.values(ss.sets).some(v => v.d)) { $('wkMsg').textContent = '已经开始的训练先完成，或点「重新开始」再换。'; return; } ss.focus = f.dataset.focus; ss.combo = ss.combo || 'A'; ss.sets = {}; ss.why = ['你手动选的']; save(); renderWorkout(); return; }
+  const c = e.target.closest('[data-wcombo]');
+  if (c) { if (Object.values(ss.sets).some(v => v.d)) { $('wkMsg').textContent = '已经开始的训练先完成，或点「重新开始」再换。'; return; } ss.combo = c.dataset.wcombo; ss.sets = {}; save(); renderWorkout(); return; }
+  if (e.target.id === 'wkReset') { ss.sets = {}; ss.started = null; save(); renderWorkout(); return; }
+  if (e.target.id === 'wkDone') finishWorkout();
+});
+function finishWorkout() {
+  const ss = currentSession(), blocks = sessionMoves(ss);
+  const doneSets = Object.entries(ss.sets).filter(([k, v]) => v.d && /s\d+$/.test(k));
+  if (!doneSets.length) { $('wkMsg').textContent = '还没有勾选任何一组。做完一组就勾一组。'; return; }
+  const elapsed = ss.started ? Math.round((Date.now() - ss.started) / 60000) : 0;
+  const est = estMinutes(blocks[0].moves, true) + estMinutes(blocks[1].moves, false);
+  const min = elapsed >= 15 && elapsed <= 180 ? elapsed : est;
+  const rec = ensure(TODAY), msgs = [];
+  if (ss.focus !== 'rest') {
+    const p = blocks[0].part, cb = blocks[0].cb;
+    rec.ex.push({ type: `${p.log[0]} · ${cb.id} ${cb.name}`, met: p.log[1], min: Math.max(15, min - 12) });
+    // raise the strength base when a working set beat the current estimate
+    state.lifts = state.lifts || {};
+    cb.moves.forEach(([n, d, r, cue, lk, f], mi) => {
+      if (!lk || f !== 1) return;
+      let best = null;
+      for (let si = 0; si < parseDose(d).sets; si++) { const v = ss.sets[`m${mi}s${si}`]; if (v && v.d && v.w > 0 && v.r > 0 && (!best || e1rm(v) > e1rm(best))) best = { w: v.w, r: v.r }; }
+      const cur = e1rm(liftLatest(lk));
+      if (best && (!cur || e1rm(best) > cur + 0.01)) { const h = state.lifts[lk] || (state.lifts[lk] = []); if (h.length && h[h.length - 1].date === TODAY) h.pop(); h.push({ date: TODAY, w: best.w, r: best.r }); msgs.push(`${LIFTS.find(l => l.k === lk).name} 新纪录：${best.w} kg × ${best.r}${cur ? `（估算 1RM +${(e1rm(best) - cur).toFixed(1)} kg）` : ''}`); }
+    });
+  }
+  const core = PARTS.find(x => x.k === 'core');
+  if (Object.entries(ss.sets).some(([k, v]) => v.d && k.startsWith('c'))) rec.ex.push({ type: `核心训练 · ${blocks[1].title.split('· ')[1]}`, met: core.log[1], min: 12 });
+  if (ss.focus === 'rest' && ss.sets['m0s0'] && ss.sets['m0s0'].d) rec.ex.push({ type: '快走', met: 4.3, min: 40 });
+  ss.finished = true; clearInterval(restT); $('restBar').hidden = true;
+  commit();
+  $('wkMsg').textContent = `已记录：${min} 分钟。` + (msgs.length ? ' ' + msgs.join('；') + '，下次建议重量已更新。' : ' 所有组都做到次数上限的话，记得在重量基础里加重。');
+  onLogged(`今日训练完成：${blocks[0].title}，${doneSets.length} 组${msgs.length ? '，' + msgs.join('；') : ''}`);
 }
 
 /* ---------- body progress ---------- */
