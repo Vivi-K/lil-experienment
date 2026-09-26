@@ -115,6 +115,13 @@ form.row .w{width:92px}
 ul.entries{list-style:none;margin:0;padding:0;display:grid}
 ul.entries li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
 ul.entries li:last-child{border-bottom:0}
+ul.entries li.meal-grp{display:block}
+.meal-grp summary{display:flex;justify-content:space-between;gap:8px;cursor:pointer;list-style:none}
+.meal-grp summary::-webkit-details-marker{display:none}
+.meal-grp summary>span:first-child::before{content:'›';display:inline-block;margin-right:8px;color:var(--ink2);transition:transform .2s}
+.meal-grp details[open] summary>span:first-child::before{transform:rotate(90deg)}
+ul.entries.sub{margin:6px 0 0 16px;font-size:14px}
+ul.entries.sub li{padding:6px 0}
 ul.entries .empty{color:var(--ink3);font-size:14px}
 .sum{display:flex;justify-content:space-between;font-weight:600;padding-top:4px}
 
@@ -648,7 +655,7 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
     <div class="panel meals" id="meals"></div>
     <div class="panel food-log">
       <div class="food-log-head">
-        <div><h3 id="logH">其他吃的 · 全部记录</h3><span class="small muted">三餐点「吃了」会自动记在这里；零食、饮料、奶茶在这里补记</span></div>
+        <div><h3 id="logH">其他吃的 · 全部记录</h3><span class="small muted">三餐在上面的餐卡记录，这里按餐合并显示（点开看明细）；零食、饮料在这里补记</span></div>
         <div class="daybar">
         <button class="btn ghost" id="prevDay" type="button" aria-label="前一天">←</button>
         <input type="date" id="logDate" aria-label="记录日期">
@@ -1493,10 +1500,19 @@ function renderLogger() {
   const rec = day(logDate);
   const t = $('periodToggle'); t.setAttribute('aria-pressed', rec.period ? 'true' : 'false');
   const fe = $('foodEntries');
-  fe.innerHTML = rec.food.length ? rec.food.map((f, i) =>
-    `<li><span>${esc(f.name)}${f.prot ? ` <span class="muted small num">${f.prot}g 蛋白${f.carb ? ` · ${f.carb}g 碳水 · ${f.fat}g 脂肪` : ''}</span>` : ''}${f.ai ? '<span class="src">AI</span>' : ''}</span><span style="display:flex;gap:6px;align-items:center"><span class="num">${fmt(f.kcal)}</span><button class="btn ghost" data-del-food="${i}" aria-label="删除 ${esc(f.name)}">×</button></span></li>`).join('')
-    + `<li class="sum"><span>合计</span><span class="num">${fmt(intake(logDate))} kcal · ${fmt(protein(logDate))} g 蛋白</span></li>`
-    : `<li class="empty">${fmtMD(logDate)} 还没有饮食记录</li>`;
+  if (rec.food.length) {
+    const groups = {}, loose = [];
+    rec.food.forEach((f, i) => f.meal != null ? (groups[f.meal] || (groups[f.meal] = [])).push([f, i]) : loose.push([f, i]));
+    const order = Object.keys(groups).sort((a, b) => (SLOTS.indexOf(a) + 9) % 9 - (SLOTS.indexOf(b) + 9) % 9);
+    const item = ([f, i], strip) => `<li><span>${esc(strip ? f.name.replace(/^[^：]{1,6}：/, '') : f.name)}${f.prot ? ` <span class="muted small num">${f.prot}g 蛋白</span>` : ''}${f.ai ? '<span class="src">AI</span>' : ''}</span><span style="display:flex;gap:6px;align-items:center"><span class="num">${fmt(f.kcal)}</span><button class="btn ghost" data-del-food="${i}" aria-label="删除 ${esc(f.name)}">×</button></span></li>`;
+    fe.innerHTML = order.map(k => {
+      const g = groups[k], nm = MEALS[k] ? MEALS[k].name : `第 ${Number(k) + 1} 餐`, sk = (rec.mealSkipped || {})[k];
+      const kc = g.reduce((a, [f]) => a + f.kcal, 0), pr = g.reduce((a, [f]) => a + (f.prot || 0), 0);
+      if (sk) return `<li><span>${nm} · 没吃</span><span class="num">0 kcal</span></li>`;
+      return `<li class="meal-grp"><details><summary><span>${nm}${sk ? ' · 没吃' : ` · ${g.length} 项`}</span><span class="num">${fmt(kc)} kcal${pr ? ` · ${pr} g` : ''}</span></summary>${sk ? '' : `<ul class="entries sub">${g.map(x => item(x, true)).join('')}</ul>`}</details></li>`;
+    }).join('') + loose.map(x => item(x, false)).join('')
+      + `<li class="sum"><span>合计</span><span class="num">${fmt(intake(logDate))} kcal · ${fmt(protein(logDate))} g 蛋白</span></li>`;
+  } else fe.innerHTML = `<li class="empty">${fmtMD(logDate)} 还没有饮食记录</li>`;
   const ee = $('exEntries');
   ee.innerHTML = rec.ex.length ? rec.ex.map((e, i) =>
     `<li><span>${esc(e.type)} <span class="muted small num">${e.min} 分钟${e.strain != null ? ' · Strain ' + e.strain : ''}</span>${e.src === 'whoop' ? '<span class="src">WHOOP</span>' : e.ai ? '<span class="src">AI</span>' : ''}</span><span style="display:flex;gap:6px;align-items:center"><span class="num">${fmt(exKcal(e))}</span><button class="btn ghost" data-del-ex="${i}" aria-label="删除 ${esc(e.type)}">×</button></span></li>`).join('')
@@ -1705,7 +1721,9 @@ document.addEventListener('click', e => {
   if (f) {
     const snap = JSON.stringify(state), r = day(logDate), [gone] = r.food.splice(Number(f.dataset.delFood), 1);
     // last entry of a meal removed -> that meal card goes back to "not logged"
-    if (gone && gone.meal && !r.food.some(x => x.meal === gone.meal)) ['mealLogged', 'mealActual', 'mealSkipped'].forEach(k => { if (r[k]) delete r[k][gone.meal]; });
+    const rest = gone && gone.meal != null ? r.food.filter(x => x.meal === gone.meal) : [];
+    if (gone && gone.meal != null && !rest.length) ['mealLogged', 'mealActual', 'mealSkipped'].forEach(k => { if (r[k]) delete r[k][gone.meal]; });
+    else if (rest.length) (r.mealActual || (r.mealActual = {}))[gone.meal] = rest.map(x => ({ name: x.name.replace(/^[^：]{1,6}：/, ''), kcal: x.kcal, prot: x.prot || 0 }));
     commit(); offerUndo(`已删除：${gone ? gone.name : ''}`, snap); return;
   }
   const x = e.target.closest('[data-del-ex]'); if (x) { day(logDate).ex.splice(Number(x.dataset.delEx), 1); commit(); }
@@ -2857,6 +2875,17 @@ $('wk').addEventListener('click', e => {
   if (e.target.id === 'wkUnconfirm') { ss.confirmed = null; save(); renderWorkout(); return; }
   if (e.target.id === 'wkUndoDone') undoFinish();
 });
+// minutes of work actually done: completed sets (pro-rated per move) + cardio if ticked
+function doneMinutes(ss, blocks, only) {
+  let m = 0;
+  blocks.forEach(b => { if (only && b.key !== only) return; b.moves.forEach((mv, mi) => {
+    if (mv.removed) return; const n = parseDose(mv[1]).sets; let dn = 0;
+    for (let si = 0; si < n; si++) { const v = ss.sets[`${b.key}${mi}s${si}`]; if (v && v.d) dn++; }
+    if (dn) m += estMinutes([mv]) * dn / n;
+  }); });
+  if (!only && ss.focus === 'rest' && ss.cardio && ss.cardio.d) m += Number(ss.cardio.min) || 0;
+  return Math.round(m);
+}
 function clearMoveSets(ss, key) { Object.keys(ss.sets).forEach(k => { if (k.startsWith(key + 's') || k.startsWith(key + 'w')) delete ss.sets[k]; }); }
 const hhmm = t => { const d = new Date(t); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 function renderCheckinSummary(ss, blocks, done, total) {
@@ -2870,7 +2899,7 @@ function renderCheckinSummary(ss, blocks, done, total) {
   }));
   if (ss.focus === 'rest') { const c = cardioOf(ss), o = CARDIO.find(x => x.k === c.k) || CARDIO[0]; rows.push({ n: `有氧 · ${o.name} ${c.min} 分钟`, dn: c.d ? 1 : 0, all: 1, top: 0 }); }
   const pct = total ? Math.round(done / total * 100) : 0, C = 2 * Math.PI * 44;
-  const mins = ss.started ? Math.max(0, Math.round(((ss.finishedAt || Date.now()) - ss.started) / 60000)) : 0;
+  const mins = ss.finished && ss.logMin ? ss.logMin : doneMinutes(ss, blocks);
   // this week's check-ins
   const ws = weekStart(TODAY), names = ['一', '二', '三', '四', '五', '六', '日'];
   const week = names.map((w, i) => {
@@ -2884,7 +2913,7 @@ function renderCheckinSummary(ss, blocks, done, total) {
   const nWeek = names.filter((_, i) => { const d = addDays(ws, i); return trainedOn(d).length || day(d).ex.some(e => /有氧|快走|慢跑|游泳|骑行|椭圆|划船机|跳绳|行山|徒步/.test(e.type)) || (day(d).session && day(d).session.finished); }).length;
   $('dk').innerHTML = `<div class="dk-ring"><svg viewBox="0 0 104 104" aria-hidden="true"><circle cx="52" cy="52" r="44" fill="none" stroke="color-mix(in srgb, var(--ink) 10%, transparent)" stroke-width="10"/><circle cx="52" cy="52" r="44" fill="none" stroke="var(--good)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct / 100)}"/></svg><b>${ss.finished ? '✓' : pct + '%'}</b></div>
     <div style="display:grid;gap:8px"><b style="font-size:17px">${ss.finished ? '今日已打卡' : done ? '今日打卡进行中' : '今日打卡'}</b>
-      <div class="dk-stats"><div><span class="label">完成组数</span><b>${sets}/${setsAll}</b></div><div><span class="label">总训练量</span><b>${fmt(vol)}</b><span class="small muted">kg</span></div><div><span class="label">用时</span><b>${mins}</b><span class="small muted">分钟</span></div></div></div>
+      <div class="dk-stats">${ss.focus === 'rest' ? `<div><span class="label">有氧</span><b>${cardioOf(ss).d ? cardioOf(ss).min : 0}</b><span class="small muted">分钟</span></div><div><span class="label">腰腹</span><b>${sets}/${setsAll}</b><span class="small muted">组</span></div>` : `<div><span class="label">完成组数</span><b>${sets}/${setsAll}</b></div><div><span class="label">总训练量</span><b>${fmt(vol)}</b><span class="small muted">kg</span></div>`}<div><span class="label">用时（按完成量）</span><b>${mins}</b><span class="small muted">分钟</span></div></div></div>
     <div class="dk-moves">${rows.map(r => `<div class="dk-mv"><span><span>${esc(r.n)}</span><span class="muted">${r.dn}/${r.all}${r.top ? ` · ${r.top} kg` : ''}</span></span><i><em style="width:${r.all ? r.dn / r.all * 100 : 0}%"></em></i></div>`).join('')}</div>
     <div class="week" aria-label="本周打卡">${week}</div>
     <span class="small muted" style="grid-column:1/-1">${ss.focus === 'rest' ? '' : `今天目标部位有效组 ${effSets} 组（每次 10–15 组左右就够，更多收益递减） · `}本周已打卡 ${nWeek} 天 · 臀：练臀；上：练上肢；氧：有氧日；休：休息日 · <button class="btn ghost" type="button" id="goPlan" style="padding:0;font-size:13px">改每周天数</button></span>`;
@@ -2893,15 +2922,16 @@ function finishWorkout() {
   const ss = currentSession(), blocks = sessionMoves(ss);
   const doneSets = Object.entries(ss.sets).filter(([k, v]) => v.d && /s\d+$/.test(k));
   if (!doneSets.length && !(ss.focus === 'rest' && cardioOf(ss).d)) { $('wkMsg').textContent = '还没有勾选任何一组或有氧。做完一项就勾一项。'; return; }
+  // the clock starts at the first tick, so it undercounts (cardio is usually ticked after it's done); never go below the work actually logged
   const elapsed = ss.started ? Math.round((Date.now() - ss.started) / 60000) : 0;
-  const est = estMinutes(blocks[0].moves) + estMinutes(blocks[1].moves) + (ss.focus === 'rest' ? Number(cardioOf(ss).min) || 0 : 0);
-  const min = elapsed >= 15 && elapsed <= 180 ? elapsed : est;
+  const doneMin = doneMinutes(ss, blocks), coreMin = doneMinutes(ss, blocks, 'c');
+  const min = Math.max(doneMin, elapsed <= 180 ? elapsed : 0);
   const snap = JSON.stringify(state);
   const rec = ensure(TODAY), msgs = [];
   ss.undoFinish = { exLen: rec.ex.length, lifts: JSON.stringify(state.lifts || {}) };
   if (ss.focus !== 'rest') {
     const p = blocks[0].part, cb = blocks[0].cb;
-    rec.ex.push({ type: `${p.log[0]} · ${cb.id} ${cb.name}`, met: p.log[1], min: Math.max(15, min - 12) });
+    rec.ex.push({ type: `${p.log[0]} · ${cb.id} ${cb.name}`, met: p.log[1], min: Math.max(5, min - coreMin) });
     // raise the strength base when a working set beat the current estimate
     state.lifts = state.lifts || {};
     blocks[0].moves.forEach((mv, mi) => {
@@ -2914,9 +2944,9 @@ function finishWorkout() {
     });
   }
   const core = PARTS.find(x => x.k === 'core');
-  if (Object.entries(ss.sets).some(([k, v]) => v.d && k.startsWith('c'))) rec.ex.push({ type: `核心训练 · ${blocks[1].title.split('· ')[1]}`, met: core.log[1], min: 12 });
+  if (Object.entries(ss.sets).some(([k, v]) => v.d && k.startsWith('c'))) rec.ex.push({ type: `核心训练 · ${blocks[1].title.split('· ')[1]}`, met: core.log[1], min: Math.max(3, coreMin) });
   const cd = cardioOf(ss); if (ss.focus === 'rest' && cd.d) { const o = CARDIO.find(x => x.k === cd.k) || CARDIO[0]; rec.ex.push({ type: `有氧 · ${o.name}`, met: o.met, min: Number(cd.min) || 20 }); }
-  ss.finished = true; ss.finishedAt = Date.now(); clearInterval(restT); $('restBar').hidden = true;
+  ss.finished = true; ss.finishedAt = Date.now(); ss.logMin = min; clearInterval(restT); $('restBar').hidden = true;
   commit();
   $('wkMsg').textContent = `已记录：${min} 分钟。` + (msgs.length ? ' ' + msgs.join('；') + '，下次建议重量已更新。' : ss.focus === 'rest' ? ' 有氧日完成，辛苦了！' : ' 所有组都做到次数上限的话，记得在重量基础里加重。');
   offerUndo('今日训练已打卡', snap);
