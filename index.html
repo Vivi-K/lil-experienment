@@ -395,6 +395,12 @@ details.paste textarea{width:100%;min-height:120px;border:1px solid var(--line);
 .set .rir{font-size:12px;color:var(--ink3);white-space:nowrap}
 .set.done .io,.set.done .lbl{opacity:.55}
 .set.warm .lbl{color:var(--ink3)}
+.mv-act{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-top:2px}
+.mv-act .btn{padding:6px 14px;font-size:14px}
+.mv-swap{position:relative;display:inline-flex;align-items:center;border-radius:980px;background:var(--surface);border:1px solid var(--line);padding:6px 14px;font-size:14px;color:var(--accent);cursor:pointer}
+.mv-swap select{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.wk-ex.all-done{outline:2px solid color-mix(in srgb,var(--good) 45%,transparent)}
+.wk-ex.removed{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 14px;color:var(--ink2);font-size:14px;opacity:.8}
 .set .io{flex-wrap:nowrap;min-width:0}
 .set .io .small{white-space:normal}
 @media (max-width:560px){.set .io{flex-wrap:wrap;gap:4px}.set .io input{width:58px!important}.wk-ex{padding:12px 10px}}
@@ -2269,9 +2275,9 @@ const PARTS = [
         ['燃烧组：臀桥 → 弹力带外展', '1 轮 × 20 + 20', 60, '臀桥 20 次，不休息立刻坐姿弹力带外展 20 次', '', 1]
       ], alt: '器械被占：分腿蹲换后撤步，也保持上身前倾' },
       { id: 'C', name: '居家哑铃', min: 40, when: '没去健身房的日子', moves: [
-        ['哑铃臀推（背靠沙发）', '3 × 12–15', 75, '重量不够就做慢：下放 3 秒、顶端停 2 秒，最后一组做到力竭', '', 1],
+        ['哑铃臀推（背靠沙发）', '4 × 12–15', 75, '重量不够就做慢：下放 3 秒、顶端停 2 秒，最后一组做到力竭', '', 1],
         ['哑铃罗马尼亚硬拉', '3 × 12', 75, '想更难就换单腿 3 × 8/腿', '', 1],
-        ['臀向分腿蹲（椅子）', '2 × 10/腿', 75, '上身前倾，下放 3 秒', 'bss', 0.8],
+        ['臀向分腿蹲（椅子）', '3 × 10/腿', 75, '上身前倾，下放 3 秒', 'bss', 0.8],
         ['弹力带蚌式 + 侧卧抬腿', '2 × 20/侧', 30, '两个动作连着做，练臀侧', '', 1],
         ['单腿臀桥', '2 × 15/腿', 45, '支撑脚跟发力', '', 1],
         ['弹力带跪姿后踢', '2 × 15/腿', 30, '顶端停 1 秒，腰不要塌', '', 1],
@@ -2291,19 +2297,19 @@ const PARTS = [
     note: '重点练背，肩、手臂、胸只做少量：中等重量、10–15 次、顶峰停 1 秒、下放 2–3 秒，练线条不堆厚度；不做耸肩和大重量杠铃划船（经验建议）。侧平举让肩线打开，腰会显得更细。',
     combos: [
       { id: 'A', name: '背阔 + 肩 + 手臂', min: 60, when: '恢复好的时候', moves: [
-        ['中握高位下拉', '3 × 8–12', 90, '先沉肩再拉，拉到锁骨，下放 3 秒；练出背阔下部的线条', 'pulldown', 1],
+        ['中握高位下拉', '4 × 8–12', 90, '先沉肩再拉，拉到锁骨，下放 3 秒；练出背阔下部的线条', 'pulldown', 1],
         ['单臂哑铃划船', '3 × 10–12/侧', 60, '往髋部方向拉、顶峰停 1 秒；中等重量练线条', 'row', 1],
-        ['坐姿哑铃推举', '2 × 8–10', 90, '手肘在身体稍前方，不要后仰', 'dbpress', 1],
-        ['哑铃侧平举', '2 × 12–20', 45, '小指一侧略高，耳朵远离肩膀，下放 2–3 秒', 'lateral', 1],
+        ['坐姿哑铃推举', '3 × 8–10', 90, '手肘在身体稍前方，不要后仰', 'dbpress', 1],
+        ['哑铃侧平举', '3 × 12–20', 45, '小指一侧略高，耳朵远离肩膀，下放 2–3 秒', 'lateral', 1],
         ['直臂下压', '2 × 12–15', 45, '手臂微弯固定，用背阔把绳子压到大腿，背部轮廓更清楚', '', 1],
         ['绳索面拉', '2 × 15', 45, '拉向额头并外旋，改善圆肩', '', 1],
         ['绳索下压（三头）', '2 × 12–15', 45, '大臂贴身体不动，练手臂后侧，告别“拜拜肉”', '', 1],
         ['哑铃弯举', '2 × 10–12', 45, '不甩身体，下放慢', '', 1]
       ], alt: '没有器械：下拉换弹力带下拉，下压换弹力带臂屈伸' },
       { id: 'B', name: '背部轮廓 + 胸 + 手臂', min: 60, when: '想让背部更有型', moves: [
-        ['辅助引体或反手下拉', '3 × 6–10', 90, '做不了引体就用辅助机，慢慢减辅助', 'pulldown', 1],
+        ['辅助引体或反手下拉', '4 × 6–10', 90, '做不了引体就用辅助机，慢慢减辅助', 'pulldown', 1],
         ['窄握坐姿绳索划船', '3 × 10–12', 75, '挺胸、肩胛往后下方收，顶峰停 1 秒', '', 1],
-        ['上斜哑铃卧推', '2 × 8–10', 90, '凳子调 30°，练上胸让上半身更挺', '', 1],
+        ['上斜哑铃卧推', '3 × 8–10', 90, '凳子调 30°，练上胸让上半身更挺', '', 1],
         ['绳索单侧侧平举', '3 × 15/侧', 30, '绳索从身体前方交叉，全程有张力', '', 1],
         ['俯身反向飞鸟', '2 × 15', 45, '练后束和上背，站姿更挺', 'lateral', 0.7],
         ['俯身 Y 字举', '2 × 12', 30, '练下斜方肌，把肩胛往下收，脖子显得更长', '', 1],
@@ -2311,11 +2317,11 @@ const PARTS = [
         ['锤式弯举', '2 × 10–12', 45, '拳眼朝上，手臂线条更顺', '', 1]
       ], alt: '家里：门上固定弹力带做下拉和划船' },
       { id: 'C', name: '居家', min: 60, when: '没去健身房的日子', moves: [
-        ['单臂哑铃划船（扶椅子）', '3 × 12/侧', 60, '背部平直，顶峰停 1 秒', 'row', 0.8],
+        ['单臂哑铃划船（扶椅子）', '4 × 12/侧', 60, '背部平直，顶峰停 1 秒', 'row', 0.8],
         ['弹力带下拉', '3 × 15', 45, '门上固定，跪姿做', '', 1],
         ['哑铃站姿推举', '3 × 10', 75, '臀和腹部收紧，别往后仰', 'dbpress', 0.9],
-        ['哑铃侧平举', '2 × 15–20', 45, '轻重量也能练，靠次数和慢速', 'lateral', 0.8],
-        ['俯卧撑（跪姿也可以）', '2 × 8–12', 60, '身体成一直线，胸口贴近地面', '', 1],
+        ['哑铃侧平举', '3 × 15–20', 45, '轻重量也能练，靠次数和慢速', 'lateral', 0.8],
+        ['俯卧撑（跪姿也可以）', '3 × 8–12', 60, '身体成一直线，胸口贴近地面', '', 1],
         ['弹力带拉开', '2 × 20', 30, '手臂伸直往两侧拉开，练后束和上背', '', 1],
         ['哑铃弯举', '2 × 12', 45, '', '', 1],
         ['椅子臂屈伸', '2 × 10', 45, '手撑椅子边，肘往后弯', '', 1]
@@ -2486,7 +2492,7 @@ function renderTraining() {
         <div class="pips" title="本周 ${c[p.k]} / ${p.goal} 次">${Array.from({ length: p.goal }, (_, i) => `<i class="${i < c[p.k] ? 'on' : ''}"></i>`).join('')}<span class="cnt" style="margin-left:6px">本周 ${c[p.k]}/${p.goal}</span></div>
       </div>
       <div class="combos" role="group" aria-label="${p.name}训练组合">${p.combos.map(x => `<button type="button" data-combo="${p.k}:${x.id}" aria-pressed="${x.id === cb.id}">${x.id} ${x.name}${x.id === recId ? '<span class="rec">今天推荐</span>' : ''}</button>`).join('')}</div>
-      <span class="combo-meta">约 ${cb.min} 分钟（含热身和腰腹收尾）· 适合：${cb.when}</span>
+      <span class="combo-meta">约 ${cb.min} 分钟（含腰腹收尾）· 适合：${cb.when}</span>
       <ol class="moves">${cb.moves.map(([n, d, r, cue, lk, f]) => { const ld = moveLoad(n, d, lk, f); return `<li><span class="mv-name">${n}</span><span class="mv-dose">${d}${r ? `<span class="small muted"> · 休 ${restTxt(r)}</span>` : ''}</span>${ld ? `<span class="mv-load">${ld.bw ? '' : '建议 '}${loadText(ld)}</span>` : ''}${cue ? `<span class="mv-cue">${cue.replace(/ \[E\d+\]/g, '')}</span>` : ''}</li>`; }).join('')}</ol>
       ${cb.alt ? `<span class="small mv-alt">替换：${cb.alt}</span>` : ''}
       <div class="part-foot">
@@ -2558,11 +2564,6 @@ function liftsCtx() {
 }
 
 /* ---------- today's workout: one focus area per day, loads from the strength base, checkable sets ---------- */
-const WARMUPS = {
-  glute: ['5 分钟椭圆机或快走，微微出汗', '臀桥 2 × 15', '弹力带侧向走 2 × 10 步/侧', '世界上最伟大的拉伸 5 次/侧'],
-  shoulder: ['5 分钟划船机或快走', '弹力带拉开 2 × 15', '弹力带肩绕环 10 次', '猫牛式 10 次'],
-  rest: ['5 分钟慢走热身']
-};
 const FINISHER = { glute: 'A', shoulder: 'B', rest: 'C' };
 PARTS.forEach(p => { if (p.k === 'glute' || p.k === 'shoulder') p.combos.forEach(cb => { cb.min = comboMinutes(p.k, cb.id); }); });
 const cardioDaysThisWeek = () => { const ws = weekStart(TODAY); let n = 0; for (let i = 0; i < 7; i++) { const d = addDays(ws, i); if (d > TODAY) break; if (day(d).ex.some(e => /有氧|快走|慢跑|游泳|骑行|椭圆|划船机|跳绳|行山|徒步/.test(e.type))) n++; } return n; };
@@ -2603,12 +2604,11 @@ function planToday() {
   if (w && w.recovery != null) why.push(`恢复 ${w.recovery}%`);
   return { focus, combo, why, light };
 }
-function estMinutes(moves, withWarm) {
-  let sec = withWarm ? 8 * 60 : 0;
-  moves.forEach(([n, d, r, , lk], i) => {
+function estMinutes(moves) {
+  let sec = 0;
+  moves.filter(m => !m.removed).forEach(([n, d, r]) => {
     const pd = parseDose(d); const per = pd.timed ? 40 : (pd.target || 12) * 4;
     sec += pd.sets * per * (pd.perSide ? 2 : 1) + Math.max(0, pd.sets - 1) * r + 60;
-    if (i === 0 && lk) sec += 3 * 90;   // warm-up ramp on the main lift
   });
   return Math.round(sec / 60);
 }
@@ -2640,21 +2640,38 @@ function defaultCardio(ss) {
   const doy = diffDays(TODAY, TODAY.slice(0, 4) + '-01-01');
   const pool = light ? ['walk', 'elliptical', 'swim', 'incline'] : ss.focus === 'rest' ? ['incline', 'swim', 'hike', 'dance', 'jog', 'elliptical', 'rower'] : ['incline', 'elliptical', 'rower', 'stairs', 'bike', 'rope'];
   if (ss.light) return { k: 'walk', min: 20, d: false };
-  return { k: pool[doy % pool.length], min: 30, d: false };
+  return { k: pool[doy % pool.length], min: 35, d: false };
 }
 function cardioOf(ss) { if (!ss.cardio) ss.cardio = defaultCardio(ss); return ss.cardio; }
 function cardioKcal(c) { const o = CARDIO.find(x => x.k === c.k) || CARDIO[0]; return Math.round(o.met * P().weight * (Number(c.min) || 0) / 60); }
-function comboMinutes(focus, id) { const bl = sessionMoves({ focus, combo: id }); return estMinutes(bl[0].moves, true) + estMinutes(bl[1].moves, false); }
+function comboMinutes(focus, id) { const bl = sessionMoves({ focus, combo: id }); return estMinutes(bl[0].moves) + estMinutes(bl[1].moves); }
+/* ---------- per-move swap / remove: ss.swap[key] = replacement move name, ss.removed[key] = true ---------- */
+const ALL_MOVES = {};
+PARTS.forEach(p => p.combos.forEach(cb => cb.moves.forEach(m => { if (!ALL_MOVES[m[0]]) ALL_MOVES[m[0]] = { mv: m, part: p.k }; })));
+const MV_CAT = [['tri', /三头|臂屈伸/], ['bi', /弯举/], ['thrust', /臀推|臀桥/], ['hinge', /硬拉|背伸/], ['lunge', /分腿|箭步|后撤|登阶|深蹲/], ['abd', /外展|蚌式|侧向走|侧卧/], ['kick', /后踢/], ['vpull', /下拉|引体|直臂/], ['hpull', /划船/], ['press', /推举|卧推|俯卧撑/], ['lat', /侧平举/], ['rear', /面拉|反向飞鸟|Y 字|拉开/], ['antiext', /平板|死虫|鸟狗|滚轮/], ['flex', /卷腹|举膝|抬腿/], ['rot', /Pallof|旋|农夫/], ['breath', /呼吸|真空|猫牛/]];
+const mvCat = n => (MV_CAT.find(([, re]) => re.test(n)) || [''])[0];
+function tweakMoves(ss, key, moves) {
+  return moves.map((m, mi) => {
+    const k = key + mi, alt = ss.swap && ss.swap[k] && ALL_MOVES[ss.swap[k]];
+    const mv = (alt ? alt.mv : m).slice(); mv.orig = m[0]; mv.removed = !!(ss.removed && ss.removed[k]); return mv;
+  });
+}
+function swapOptions(block, mv) {
+  const used = new Set(block.moves.map(x => x[0])), cat = mvCat(mv.orig), pk = block.part ? block.part.k : '';
+  const pool = Object.entries(ALL_MOVES).filter(([n, x]) => !used.has(n) && n !== mv.orig && (x.part === pk || (cat && mvCat(n) === cat)));
+  pool.sort((a, b) => (mvCat(b[0]) === cat) - (mvCat(a[0]) === cat));
+  return pool.slice(0, 8).map(([n]) => n);
+}
 function sessionMoves(ss) {
   const blocks = [];
   if (ss.focus === 'rest') {
     blocks.push({ key: 'x', title: '有氧日', moves: [] });
   } else {
     const p = PARTS.find(x => x.k === ss.focus), cb = p.combos.find(x => x.id === ss.combo) || p.combos[0];
-    blocks.push({ key: 'm', title: `${p.name} · ${cb.id} ${cb.name}`, moves: cb.moves, part: p, cb });
+    blocks.push({ key: 'm', title: `${p.name} · ${cb.id} ${cb.name}`, moves: tweakMoves(ss, 'm', cb.moves), part: p, cb });
   }
   const core = PARTS.find(x => x.k === 'core'), fc = core.combos.find(x => x.id === (ss.combo === 'D' ? 'D' : FINISHER[ss.focus]));
-  blocks.push({ key: 'c', title: `腰腹收尾 · ${fc.id} ${fc.name}`, moves: fc.moves });
+  blocks.push({ key: 'c', title: `腰腹收尾 · ${fc.id} ${fc.name}`, moves: tweakMoves(ss, 'c', fc.moves), part: core });
   return blocks;
 }
 function rirText(i, sets, pd, main) {
@@ -2666,9 +2683,8 @@ function renderWorkout() {
   const ss = currentSession(), blocks = sessionMoves(ss);
   const allMoves = blocks.flatMap(b => b.moves);
   const cardio = cardioOf(ss);
-  const mins = estMinutes(blocks[0].moves, true) + estMinutes(blocks[1].moves, false) + (ss.focus === 'rest' ? Number(cardio.min) || 0 : 0);
+  const mins = estMinutes(blocks[0].moves) + estMinutes(blocks[1].moves) + (ss.focus === 'rest' ? Number(cardio.min) || 0 : 0);
   let total = 0, done = 0;
-  const warm = WARMUPS[ss.focus] || WARMUPS.rest;
   let html = `<div class="wk-top"><div style="display:grid;gap:6px"><span class="wk-title">${ss.focus === 'rest' ? (ss.light ? '休息日 · 想动就散散步' : '有氧日') : blocks[0].title}</span>
     <div class="wk-meta"><span>约 ${mins} 分钟</span>${(ss.why || []).map(t => `<span>${t}</span>`).join('')}</div></div>
     ${ss.finished ? '<span class="pill ok">✓ 今天已完成</span>' : ''}</div>
@@ -2678,10 +2694,9 @@ function renderWorkout() {
       ${ss.focus !== 'rest' ? `<div class="pick-row"><span class="label">选一个组合</span><div class="combo-pick">${['A', 'B', 'C', 'D'].map(id => { const cb = PARTS.find(x => x.k === ss.focus).combos.find(x => x.id === id); return `<button type="button" data-wcombo="${id}" aria-pressed="${ss.combo === id}"><b>${id}</b><span>${cb.name}</span><small>约 ${comboMinutes(ss.focus, id)} 分钟</small></button>`; }).join('')}</div></div>` : ''}
     </div>
     <div class="dk" id="dk"></div>
-    <div class="wk-prog"><div id="wkProg"></div></div>
-    <div class="wk-block"><h4>热身 · 约 8 分钟</h4>${warm.map((t, i) => { const k = `w${i}`; const v = ss.sets[k]; total++; if (v && v.d) done++; return `<label class="chk"><input type="checkbox" data-set="${k}" ${v && v.d ? 'checked' : ''}><span>${t}</span></label>`; }).join('')}</div>`;
+    <div class="wk-prog"><div id="wkProg"></div></div>`;
   const cardioHtml = () => { const c = cardio, o = CARDIO.find(x => x.k === c.k) || CARDIO[0]; total++; if (c.d) done++;
-    return `<div class="wk-block"><h4>${ss.light ? '可选：轻松散步' : '有氧 · 今天的主角（30 分钟 + 热身 + 腰腹 ≈ 45 分钟）'}</h4><div class="wk-ex">
+    return `<div class="wk-block"><h4>${ss.light ? '可选：轻松散步' : '有氧 · 今天的主角（35 分钟 + 腰腹 ≈ 45 分钟）'}</h4><div class="wk-ex">
       ${ss.light ? '' : `<div class="cd-groups">${CARDIO_GROUPS.map(([g, ks]) => `<div><span class="label">${g}</span><div class="cd-opts">${ks.map(k => { const o2 = CARDIO.find(x => x.k === k); return `<button type="button" data-cd="${k}" aria-pressed="${k === c.k}">${o2.name}</button>`; }).join('')}</div></div>`).join('')}</div>`}
       <div class="cardio-row"><select id="cdSel" aria-label="有氧方式" ${ss.light ? '' : 'hidden'}>${CARDIO.map(x => `<option value="${x.k}" ${x.k === c.k ? 'selected' : ''}>${x.name}</option>`).join('')}</select>
       <b>${o.name}</b><span class="io"><input type="number" id="cdMin" min="5" max="180" step="5" value="${c.min}" aria-label="有氧分钟"> 分钟 · 约 ${cardioKcal(c)} kcal</span></div>
@@ -2691,16 +2706,14 @@ function renderWorkout() {
     if (b.key === 'c' && ss.focus === 'rest') html += cardioHtml();
     if (!b.moves.length) return;
     html += `<div class="wk-block"><h4>${b.title}</h4>`;
-    b.moves.forEach(([n, d, r, cue, lk, f], mi) => {
+    b.moves.forEach((mv, mi) => {
+      const [n, d, r, cue, lk, f] = mv, key = b.key + mi;
+      if (mv.removed) { html += `<div class="wk-ex removed"><span>已删除：${esc(n)}</span><button class="btn ghost" type="button" data-mv-restore="${key}">恢复</button></div>`; return; }
       const pd = parseDose(d), ld = moveLoad(n, d, lk, f), main = b.key === 'm' && mi === 0 && !!lk;
-      html += `<div class="wk-ex"><div class="wk-ex-head"><b>${n}</b><span class="small muted">${d}${r ? ` · 组间休息 ${restTxt(r)}` : ''}</span></div>${ld ? `<span class="mv-load">${ld.bw ? '' : '建议 '}${loadText(ld)}</span>` : ''}${cue ? `<span class="wk-cue">${cue.replace(/ \[E\d+\]/g, '')}</span>` : ''}`;
-      if (main && ld && !ld.bw) {
-        [[0.5, 8], [0.7, 5], [0.85, 3]].forEach(([pc, rp], wi) => {
-          const k = `${b.key}${mi}w${wi}`, v = ss.sets[k] || {}; const L = LIFTS.find(l => l.k === lk);
-          const kg = Math.max(L.step, Math.round(ld.kg * pc / L.step) * L.step);
-          html += `<div class="set warm${v.d ? ' done' : ''}"><input type="checkbox" data-set="${k}" data-rest="60" aria-label="热身组 ${wi + 1}" ${v.d ? 'checked' : ''}><span class="lbl">热身 ${wi + 1}</span><span class="io">${kg} kg × ${rp}</span><span class="rir">不计入</span></div>`;
-        });
-      }
+      const allDone = Array.from({ length: pd.sets }, (_, si) => ss.sets[`${key}s${si}`]).every(v => v && v.d);
+      const opts = swapOptions(b, mv);
+      html += `<div class="wk-ex${allDone ? ' all-done' : ''}" data-mv="${key}"><div class="wk-ex-head"><b>${n}</b><span class="small muted">${d}${r ? ` · 组间休息 ${restTxt(r)}` : ''}</span></div>${n !== mv.orig ? `<span class="small muted">已替换原动作：${esc(mv.orig)}</span>` : ''}${ld ? `<span class="mv-load">${ld.bw ? '' : '建议 '}${loadText(ld)}</span>` : ''}${cue ? `<span class="wk-cue">${cue.replace(/ \[E\d+\]/g, '')}</span>` : ''}
+        ${ss.finished ? '' : `<div class="mv-act"><button class="btn ${allDone ? 'ghost' : 'primary'}" type="button" data-mv-all="${key}" data-mv-n="${pd.sets}">${allDone ? '取消全部' : '✓ 全部做完'}</button><label class="mv-swap"><span>换动作</span><select data-mv-swap="${key}" aria-label="把 ${esc(n)} 换成"><option value="">${n !== mv.orig ? '换回原动作' : '选一个替换…'}</option>${opts.map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join('')}</select></label><button class="btn ghost" type="button" data-mv-del="${key}">删除</button></div>`}`;
       for (let si = 0; si < pd.sets; si++) {
         const k = `${b.key}${mi}s${si}`, v = ss.sets[k] || {}; total++; if (v.d) done++;
         const wv = v.w ?? (ld && !ld.bw ? ld.kg : ''), rv = v.r ?? (pd.target || '');
@@ -2779,15 +2792,38 @@ $('wk').addEventListener('change', e => {
     offerUndo(t.checked ? `已完成：${label}` : `已取消：${label}`, snap);
     renderWorkout(); return;
   }
+  if (t.dataset.mvSwap) {
+    const key = t.dataset.mvSwap, snap = JSON.stringify(state), cur = sessionMoves(ss).flatMap(b => b.moves.map((m, mi) => [b.key + mi, m])).find(x => x[0] === key);
+    ss.swap = ss.swap || {};
+    if (t.value && cur && t.value !== cur[1].orig) ss.swap[key] = t.value; else delete ss.swap[key];
+    clearMoveSets(ss, key); save(); renderWorkout();
+    offerUndo(t.value ? `已换成：${t.value}` : `已换回：${cur ? cur[1].orig : ''}`, snap); return;
+  }
   if (t.dataset.w || t.dataset.r) { const k = t.dataset.w || t.dataset.r, v = ss.sets[k] || (ss.sets[k] = {}); if (t.dataset.w) v.w = Number(t.value) || 0; else v.r = Number(t.value) || 0; save(); }
 });
 $('wk').addEventListener('click', e => {
   const ss = currentSession();
   const f = e.target.closest('[data-focus]');
-  if (f) { if (ss.started && !ss.finished && Object.values(ss.sets).some(v => v.d)) { $('wkMsg').textContent = '已经开始的训练先完成，或点「重新开始」再换。'; return; } ss.light = f.dataset.focus === 'off'; ss.focus = ss.light ? 'rest' : f.dataset.focus; ss.combo = ss.combo || 'A'; ss.sets = {}; ss.cardio = null; ss.why = ['你手动选的']; save(); renderWorkout(); return; }
+  if (f) { if (ss.started && !ss.finished && Object.values(ss.sets).some(v => v.d)) { $('wkMsg').textContent = '已经开始的训练先完成，或点「重新开始」再换。'; return; } ss.light = f.dataset.focus === 'off'; ss.focus = ss.light ? 'rest' : f.dataset.focus; ss.combo = ss.combo || 'A'; ss.sets = {}; ss.swap = {}; ss.removed = {}; ss.cardio = null; ss.why = ['你手动选的']; save(); renderWorkout(); return; }
   const c = e.target.closest('[data-wcombo]');
-  if (c) { if (Object.values(ss.sets).some(v => v.d)) { $('wkMsg').textContent = '已经开始的训练先完成，或点「重新开始」再换。'; return; } ss.combo = c.dataset.wcombo; ss.sets = {}; save(); renderWorkout(); return; }
-  if (e.target.id === 'wkReset') { ss.sets = {}; ss.started = null; save(); renderWorkout(); return; }
+  if (c) { if (Object.values(ss.sets).some(v => v.d)) { $('wkMsg').textContent = '已经开始的训练先完成，或点「重新开始」再换。'; return; } ss.combo = c.dataset.wcombo; ss.sets = {}; ss.swap = {}; ss.removed = {}; save(); renderWorkout(); return; }
+  const all = e.target.closest('[data-mv-all]');
+  if (all) {
+    const key = all.dataset.mvAll, n = Number(all.dataset.mvN), snap = JSON.stringify(state), ex = all.closest('.wk-ex');
+    const on = !Array.from({ length: n }, (_, si) => ss.sets[`${key}s${si}`]).every(v => v && v.d);
+    for (let si = 0; si < n; si++) {
+      const k = `${key}s${si}`, v = ss.sets[k] || (ss.sets[k] = {}); v.d = on;
+      const wi = ex.querySelector(`[data-w="${k}"]`), ri = ex.querySelector(`[data-r="${k}"]`);
+      if (wi) v.w = Number(wi.value) || 0; if (ri) v.r = Number(ri.value) || 0;
+    }
+    if (on) { ss.started = ss.started || Date.now(); ss.confirmed = ss.confirmed || Date.now(); }
+    save(); renderWorkout(); offerUndo(`${on ? '已全部完成' : '已取消'}：${ex.querySelector('b').textContent}`, snap); return;
+  }
+  const del = e.target.closest('[data-mv-del]');
+  if (del) { const key = del.dataset.mvDel, snap = JSON.stringify(state), nm = del.closest('.wk-ex').querySelector('b').textContent; (ss.removed || (ss.removed = {}))[key] = true; clearMoveSets(ss, key); save(); renderWorkout(); offerUndo(`已删除：${nm}`, snap); return; }
+  const rs = e.target.closest('[data-mv-restore]');
+  if (rs) { if (ss.removed) delete ss.removed[rs.dataset.mvRestore]; save(); renderWorkout(); return; }
+  if (e.target.id === 'wkReset') { ss.sets = {}; ss.started = null; ss.swap = {}; ss.removed = {}; save(); renderWorkout(); return; }
   if (e.target.id === 'wkDone') finishWorkout();
   const cdb = e.target.closest('[data-cd]');
   if (cdb) { const c = cardioOf(ss); c.k = cdb.dataset.cd; save(); renderWorkout(); return; }
@@ -2796,11 +2832,13 @@ $('wk').addEventListener('click', e => {
   if (e.target.id === 'wkUnconfirm') { ss.confirmed = null; save(); renderWorkout(); return; }
   if (e.target.id === 'wkUndoDone') undoFinish();
 });
+function clearMoveSets(ss, key) { Object.keys(ss.sets).forEach(k => { if (k.startsWith(key + 's') || k.startsWith(key + 'w')) delete ss.sets[k]; }); }
 const hhmm = t => { const d = new Date(t); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 function renderCheckinSummary(ss, blocks, done, total) {
   let vol = 0, sets = 0, setsAll = 0, effSets = 0;
   const rows = [];
-  blocks.forEach(b => b.moves.forEach(([n, d, r, cue, lk], mi) => {
+  blocks.forEach(b => b.moves.forEach((mv, mi) => {
+    const [n, d, r, cue, lk] = mv; if (mv.removed) return;
     const pd = parseDose(d); let dn = 0, top = 0;
     for (let si = 0; si < pd.sets; si++) { const v = ss.sets[`${b.key}${mi}s${si}`]; setsAll++; if (v && v.d) { dn++; sets++; if (b.key === 'm') effSets++; if (v.w > 0 && v.r > 0) { vol += v.w * v.r * (pd.perSide ? 2 : 1) * (lk && LIFTS.find(l => l.k === lk && /单手/.test(l.note)) ? 2 : 1); top = Math.max(top, v.w); } } }
     rows.push({ n, dn, all: pd.sets, top });
@@ -2831,7 +2869,7 @@ function finishWorkout() {
   const doneSets = Object.entries(ss.sets).filter(([k, v]) => v.d && /s\d+$/.test(k));
   if (!doneSets.length && !(ss.focus === 'rest' && cardioOf(ss).d)) { $('wkMsg').textContent = '还没有勾选任何一组或有氧。做完一项就勾一项。'; return; }
   const elapsed = ss.started ? Math.round((Date.now() - ss.started) / 60000) : 0;
-  const est = estMinutes(blocks[0].moves, true) + estMinutes(blocks[1].moves, false) + (ss.focus === 'rest' ? Number(cardioOf(ss).min) || 0 : 0);
+  const est = estMinutes(blocks[0].moves) + estMinutes(blocks[1].moves) + (ss.focus === 'rest' ? Number(cardioOf(ss).min) || 0 : 0);
   const min = elapsed >= 15 && elapsed <= 180 ? elapsed : est;
   const snap = JSON.stringify(state);
   const rec = ensure(TODAY), msgs = [];
@@ -2841,8 +2879,9 @@ function finishWorkout() {
     rec.ex.push({ type: `${p.log[0]} · ${cb.id} ${cb.name}`, met: p.log[1], min: Math.max(15, min - 12) });
     // raise the strength base when a working set beat the current estimate
     state.lifts = state.lifts || {};
-    cb.moves.forEach(([n, d, r, cue, lk, f], mi) => {
-      if (!lk || f !== 1) return;
+    blocks[0].moves.forEach((mv, mi) => {
+      const [n, d, r, cue, lk, f] = mv;
+      if (!lk || f !== 1 || mv.removed) return;
       let best = null;
       for (let si = 0; si < parseDose(d).sets; si++) { const v = ss.sets[`m${mi}s${si}`]; if (v && v.d && v.w > 0 && v.r > 0 && (!best || e1rm(v) > e1rm(best))) best = { w: v.w, r: v.r }; }
       const cur = e1rm(liftLatest(lk));
