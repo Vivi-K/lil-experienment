@@ -395,6 +395,10 @@ details.paste textarea{width:100%;min-height:120px;border:1px solid var(--line);
 .set .rir{font-size:12px;color:var(--ink3);white-space:nowrap}
 .set.done .io,.set.done .lbl{opacity:.55}
 .set.warm .lbl{color:var(--ink3)}
+.blk-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px}
+.blk-head h4{margin:0}
+.blk-act{display:flex;flex-wrap:wrap;gap:8px}
+.blk-act .btn{padding:6px 14px;font-size:14px}
 .mv-act{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-top:2px}
 .mv-act .btn{padding:6px 14px;font-size:14px}
 .mv-swap{position:relative;display:inline-flex;align-items:center;border-radius:980px;background:var(--surface);border:1px solid var(--line);padding:6px 14px;font-size:14px;color:var(--accent);cursor:pointer}
@@ -2705,7 +2709,10 @@ function renderWorkout() {
   blocks.forEach(b => {
     if (b.key === 'c' && ss.focus === 'rest') html += cardioHtml();
     if (!b.moves.length) return;
-    html += `<div class="wk-block"><h4>${b.title}</h4>`;
+    const live = b.moves.map((mv, mi) => [mv, mi]).filter(([mv]) => !mv.removed);
+    if (!live.length) { html += `<div class="wk-block"><div class="wk-ex removed"><span>${b.title} · 今天跳过</span><button class="btn ghost" type="button" data-blk-restore="${b.key}" data-blk-n="${b.moves.length}">恢复</button></div></div>`; return; }
+    const blkDone = live.every(([mv, mi]) => { const n = parseDose(mv[1]).sets; return Array.from({ length: n }, (_, si) => ss.sets[`${b.key}${mi}s${si}`]).every(v => v && v.d); });
+    html += `<div class="wk-block" data-blk="${b.key}"><div class="blk-head"><h4>${b.title}${b.key === 'c' ? '<span class="small muted" style="font-weight:400"> · 可选，没时间可以跳过</span>' : ''}</h4>${ss.finished ? '' : `<div class="blk-act"><button class="btn ${blkDone ? 'ghost' : ''}" type="button" data-blk-all="${b.key}">${blkDone ? '取消这部分' : '✓ 这部分全部做完'}</button><button class="btn ghost" type="button" data-blk-skip="${b.key}" data-blk-n="${b.moves.length}">今天跳过</button></div>`}</div>`;
     b.moves.forEach((mv, mi) => {
       const [n, d, r, cue, lk, f] = mv, key = b.key + mi;
       if (mv.removed) { html += `<div class="wk-ex removed"><span>已删除：${esc(n)}</span><button class="btn ghost" type="button" data-mv-restore="${key}">恢复</button></div>`; return; }
@@ -2819,6 +2826,24 @@ $('wk').addEventListener('click', e => {
     if (on) { ss.started = ss.started || Date.now(); ss.confirmed = ss.confirmed || Date.now(); }
     save(); renderWorkout(); offerUndo(`${on ? '已全部完成' : '已取消'}：${ex.querySelector('b').textContent}`, snap); return;
   }
+  const ba = e.target.closest('[data-blk-all]');
+  if (ba) {
+    const bk = ba.dataset.blkAll, blk = sessionMoves(ss).find(x => x.key === bk), el = ba.closest('.wk-block'), snap = JSON.stringify(state);
+    const live = blk.moves.map((mv, mi) => [mv, mi]).filter(([mv]) => !mv.removed);
+    const keys = live.flatMap(([mv, mi]) => Array.from({ length: parseDose(mv[1]).sets }, (_, si) => `${bk}${mi}s${si}`));
+    const on = !keys.every(k => ss.sets[k] && ss.sets[k].d);
+    keys.forEach(k => { const v = ss.sets[k] || (ss.sets[k] = {}); v.d = on; const wi = el.querySelector(`[data-w="${k}"]`), ri = el.querySelector(`[data-r="${k}"]`); if (wi) v.w = Number(wi.value) || 0; if (ri) v.r = Number(ri.value) || 0; });
+    if (on) { ss.started = ss.started || Date.now(); ss.confirmed = ss.confirmed || Date.now(); }
+    save(); renderWorkout(); offerUndo(`${on ? '已全部完成' : '已取消'}：${blk.title}`, snap); return;
+  }
+  const bs = e.target.closest('[data-blk-skip]');
+  if (bs) {
+    const bk = bs.dataset.blkSkip, n = Number(bs.dataset.blkN), snap = JSON.stringify(state), rm = ss.removed || (ss.removed = {});
+    for (let i = 0; i < n; i++) { rm[bk + i] = true; clearMoveSets(ss, bk + i); }
+    save(); renderWorkout(); offerUndo(`已跳过：${bk === 'c' ? '腰腹收尾' : '这部分'}`, snap); return;
+  }
+  const br = e.target.closest('[data-blk-restore]');
+  if (br) { const bk = br.dataset.blkRestore, n = Number(br.dataset.blkN); if (ss.removed) for (let i = 0; i < n; i++) delete ss.removed[bk + i]; save(); renderWorkout(); return; }
   const del = e.target.closest('[data-mv-del]');
   if (del) { const key = del.dataset.mvDel, snap = JSON.stringify(state), nm = del.closest('.wk-ex').querySelector('b').textContent; (ss.removed || (ss.removed = {}))[key] = true; clearMoveSets(ss, key); save(); renderWorkout(); offerUndo(`已删除：${nm}`, snap); return; }
   const rs = e.target.closest('[data-mv-restore]');
@@ -2893,7 +2918,7 @@ function finishWorkout() {
   const cd = cardioOf(ss); if (ss.focus === 'rest' && cd.d) { const o = CARDIO.find(x => x.k === cd.k) || CARDIO[0]; rec.ex.push({ type: `有氧 · ${o.name}`, met: o.met, min: Number(cd.min) || 20 }); }
   ss.finished = true; ss.finishedAt = Date.now(); clearInterval(restT); $('restBar').hidden = true;
   commit();
-  $('wkMsg').textContent = `已记录：${min} 分钟。` + (msgs.length ? ' ' + msgs.join('；') + '，下次建议重量已更新。' : ' 所有组都做到次数上限的话，记得在重量基础里加重。');
+  $('wkMsg').textContent = `已记录：${min} 分钟。` + (msgs.length ? ' ' + msgs.join('；') + '，下次建议重量已更新。' : ss.focus === 'rest' ? ' 有氧日完成，辛苦了！' : ' 所有组都做到次数上限的话，记得在重量基础里加重。');
   offerUndo('今日训练已打卡', snap);
   onLogged(`今日训练完成：${ss.focus === 'rest' ? '主动恢复' : blocks[0].title}，${doneSets.length} 组${ss.focus === 'rest' && cardioOf(ss).d ? '，有氧 ' + cardioOf(ss).min + ' 分钟' : ''}${msgs.length ? '，' + msgs.join('；') : ''}`);
 }
