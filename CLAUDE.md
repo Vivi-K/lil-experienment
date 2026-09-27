@@ -1,0 +1,47 @@
+# 仓库说明
+
+这个仓库里有两个互不相关的项目：
+
+- `index.html` + `README.md`：月相能量账本（单文件网页 app）。
+- `job-search/`：求职工作流（精投）。用户使用说明见 `job-search/README.md`。
+
+## 求职工作流
+
+凡是和找工作有关的对话（岗位、简历、求职信、薪资、投递、招聘方邮件、面试准备、面试复盘），都按下面的规则来。每一步有对应的技能（`.claude/skills/`），用户说的话对上了就直接用，不用等用户打斜杠命令。
+
+| 步骤 | 技能 | 用户可能这样说 |
+|---|---|---|
+| 1 制定 / 更新筛选标准 | `job-criteria` | 「一起定标准」「这个不合适，因为…」 |
+| 2 检索并打分 | `find-jobs` | 「找工作」「有什么新岗位」 |
+| 3 求职信 | `cover-letter` | 「帮我写求职信」 |
+| 4 薪资期望 | `salary-research` | 「期望薪资填多少」 |
+| 5 投递归档 | `job-applied` | 「已投递 XX」 |
+| 6 进程更新 | `job-status` | 贴来一封招聘方邮件 |
+| 7 面试准备 | `interview-prep` | 「帮我准备面试」 |
+| 8 面试复盘 | `interview-debrief` | 「刚面完，…」 |
+
+### 文件
+
+个人资料都放在 `job-search/private/`。这个目录不存在时，从 `job-search/templates/` 复制 `criteria.md` 和 `tracker.md` 过去，并建好 `profile/`、`searches/`、`applications/`。
+
+- `private/profile/` — 简历原件 + `cv.md` 文字版。**写任何材料时唯一的事实来源。**
+- `private/criteria.md` — 筛选标准。**每次检索、打分、写材料之前先读。**
+- `private/tracker.md` — 追踪表，去重和状态的唯一来源。只追加和改状态，不删行。
+- `private/searches/YYYY-MM-DD.md` — 每次检索的结果和打分。
+- `private/applications/YYYY-MM-DD_公司_职位/` — 每个投递一个文件夹：`JD.md`、`cover-letter.md`、`salary.md`、`timeline.md`、`interview-prep-<轮次>.md`、`debrief-<轮次>.md`。
+- `private/question-bank.md` — 面试中被问过的问题，跨公司积累。
+
+### 通用规则
+
+1. 不编造。经历、数字、技能、头衔、日期只能来自简历或用户在对话里明确说过的话。公司、面试官、薪资信息都要附来源链接；推测要标明「推测」。
+2. 用户的每条反馈（不投某个岗位的原因、新的偏好、新的限制）都写回 `criteria.md`，并在「变更记录」里记一笔。标准要越用越准。
+3. 日期写成 `YYYY-MM-DD`；时间按香港时间（UTC+8），邮件里写了别的时区就换算并注明。
+4. 和用户交流用中文；求职信、面试回答要点默认用英文，岗位或面试用别的语言就跟着换。
+5. 投递、发邮件、联系任何人等对外动作由用户自己做，这里只准备材料和草稿。
+
+### 隐私和保存
+
+这个仓库目前是**公开的**。`job-search/private/` 写在 `.gitignore` 里，不会被提交。
+
+- `.gitignore` 里还有 `job-search/private/` 这一行时：不要提交或推送这个目录里的任何东西，也不要把个人信息写进会被提交的文件（包括这个文件、技能文件、提交信息）。在云端会话里，这些文件只存在于当前容器，会话回收后就没了——每个会话里提醒用户一次。
+- 用户说仓库已经改成私有后，先核实（云端会话里用 `list_repos` 看 `visibility`），确认是 `private` 再从 `.gitignore` 删掉那一行，提交并推送。之后每次改了 `private/` 里的文件都提交并推送。
