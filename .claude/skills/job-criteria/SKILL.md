@@ -10,7 +10,7 @@ description: 求职第 1 步：和用户一起制定或更新求职筛选标准�
 ## 第一次制定
 
 1. 准备
-   - `job-search/private/` 不存在时，从 `job-search/templates/` 复制 `criteria.md` 和 `tracker.md` 过去，建好 `profile/`、`searches/`、`applications/`。
+   - `job-search/private/` 不存在时，从 `job-search/templates/` 复制 `criteria.md` 过去，建好 `profile/`、`searches/`、`applications/`。
    - 读简历（`private/profile/`）。只有 PDF 或图片就先转成 `cv.md` 文字版，请用户核对。还没有简历就先请用户发过来。
 2. 先给判断，再提问。读完简历后告诉用户：
    - 你认为最有竞争力的 3 点，每点附简历里的证据；
@@ -38,4 +38,5 @@ description: 求职第 1 步：和用户一起制定或更新求职筛选标准�
 2. 规则要能直接用在下一次检索上：「不看 X 行业」比「这个不太好」有用。反馈含糊时追问一句为什么。
 3. 新反馈和已有规则冲突时，先问用户以哪个为准。
 4. 在「变更记录」里记一笔（日期、改了什么、原因），然后用一两句话告诉用户改了什么。
-5. 反馈是针对「候选」里某个岗位说不投的，同时在 `tracker.md` 里把它移到「看过但不投」，写上原因。
+5. 反馈是针对看板上某个候选岗位说不投的，同时把看板上这条改成 `skipped`、写 `skipReason`，`timeline` 追加「已写入标准」。用户在看板上写的不投原因也按这条处理。
+6. 定位、硬性条件、目标方向、排除清单有变化时，同步更新看板的 `meta/profile` 摘要（格式见 `job-search/board.md`）。

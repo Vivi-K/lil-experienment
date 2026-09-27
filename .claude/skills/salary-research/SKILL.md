@@ -17,7 +17,7 @@ description: 求职第 4 步：调研某个公司 / 行业 / 职位在当地的�
 
 ## 输出
 
-保存到 `private/applications/<文件夹>/salary.md`，在对话里给：
+写进看板这个岗位的 `docs/salary`（`{title: "薪资调研", markdown, updated}`），并把建议数字写到岗位的 `salary` 字段；本地在 `private/applications/<文件夹>/salary.md` 存一份。在对话里给：
 
 1. 市场范围表：
 

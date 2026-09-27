@@ -7,7 +7,7 @@ description: 求职第 3 步：为用户决定要投的岗位写求职信（cove
 
 ## 材料
 
-1. JD：优先用 `private/applications/<文件夹>/JD.md`。还没存档就从链接读或请用户贴，并顺手按 `job-applied` 里的格式存下来，免得岗位下线。
+1. JD：优先用看板上这个岗位的 `docs/jd`。还没存档就从链接读或请用户贴，并顺手按 `job-applied` 里的格式存下来，免得岗位下线。
 2. 简历（`private/profile/cv.md`）——唯一的事实来源。
 3. `criteria.md` 里的定位、核心竞争力、能力缺口和应对方式。
 4. 公司：查 2–3 条能核实的信息（最近的项目、战略重点、在本地区的业务），只用有来源的。
@@ -31,6 +31,6 @@ description: 求职第 3 步：为用户决定要投的岗位写求职信（cove
 
 ## 输出
 
-1. 保存到 `private/applications/<YYYY-MM-DD_公司_职位>/cover-letter.md`（文件夹还没有就用今天的日期新建），文末列出参考的公司信息来源。
+1. 写进看板这个岗位的 `docs/cover-letter`（`{title: "求职信", markdown, updated}`），本地在 `private/applications/<YYYY-MM-DD_公司_职位>/cover-letter.md` 存一份。文末列出参考的公司信息来源。
 2. 在对话里给全文，并说明对应了 JD 的哪几条要求、缺口是怎么处理的。
 3. 用户要改就改，改完覆盖保存。需要 Word 或 PDF 就导出。

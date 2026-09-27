@@ -7,7 +7,7 @@ description: 求职第 2 步：按 criteria.md 检索新岗位，先过硬性条
 
 ## 开始前
 
-1. 读 `job-search/private/criteria.md` 全文（包括「从反馈中学到的」）和 `tracker.md`。
+1. 读 `job-search/private/criteria.md` 全文（包括「从反馈中学到的」），再按 `job-search/board.md` 读一遍看板的 `jobs`（先处理用户在看板上留下的不投原因和自己添加的岗位）。
 2. 没有 `criteria.md`，或者硬性条件还空着，先用 `job-criteria` 把标准定好。
 
 ## 检索
@@ -18,7 +18,7 @@ description: 求职第 2 步：按 criteria.md 检索新岗位，先过硬性条
    - 招聘平台：`site:jobsdb.com`、`site:myworkdayjobs.com`、`site:boards.greenhouse.io`、`site:jobs.lever.co`、`site:jobs.ashbyhq.com`；新加坡加 `site:mycareersfuture.gov.sg`
    - 目标公司：`<公司> careers <城市> <关键词>`
 3. 用 WebFetch 打开岗位页面读完整 JD。打不开（被网络策略拦截、要登录）时，用搜索结果里的信息做初筛并标明「JD 未读全」，在输出里说明哪些域名被拦（用户可以在云端环境设置里放行），或者请用户把 JD 贴过来。
-4. 去重：和 `tracker.md` 里所有表格比对链接和「公司 + 职位」。同一个岗位挂在不同网站或不同招聘方下只算一个。「看过但不投」里的不要再推荐。
+4. 去重：和看板 `jobs` 里的所有记录（包括自动投递系统投过、跳过的）比对链接、岗位编号和「公司 + 职位」。同一个岗位挂在不同网站或不同招聘方下只算一个。`skipped` 的不要再推荐。
 5. 只推荐能确认还在招的岗位。有发布日期就看日期，超过「检索设置」里的天数就跳过；没有日期的标出来。
 6. 绝不编造岗位、链接或 JD 内容。找不到就说找不到。
 
@@ -29,6 +29,7 @@ description: 求职第 2 步：按 criteria.md 检索新岗位，先过硬性条
    - **内容匹配度 1–5**：JD 的主要职责对照「喜欢 / 不喜欢做的」；JD 的要求对照简历，看能满足多少。
    - **前景 1–5**：查一下公司最近 6–12 个月的新闻（裁员、重组、融资、财报、在香港 / 新加坡的扩张或收缩）和行业走势，一句话写依据，附链接。
 3. 按推荐门槛分成「必投」「可投」，其余不推荐。宁缺毋滥：够格的少就只给少的，说明原因，不凑数。
+4. 标准还在校准的前几轮（`criteria.md`「从反馈中学到的」少于 5 条时），差一点达标的可以标「边缘」，写清差在哪，请用户表态，用来校准标准。
 
 ## 输出
 
@@ -39,8 +40,8 @@ description: 求职第 2 步：按 criteria.md 检索新岗位，先过硬性条
 
    表下写：用了哪些查询、看了多少个岗位、多少个因为什么被淘汰、有没有打不开的网站。
 2. 保存到 `private/searches/YYYY-MM-DD.md`（同一天第二次就加 `-2`）：上面的表、每个岗位的打分理由、淘汰统计。
-3. 推荐的岗位加进 `tracker.md` 的「候选」。
+3. 推荐的岗位写进看板 `jobs`（字段和 id 规则见 `job-search/board.md`）：`status: candidate`，填 `verdict` `fit` `outlook` `why` `outlookNote` `concerns` `salary` `jdStatus` `sources`，`timeline` 记一条「第 N 次检索发现」。多个一起写用 `batch`。
 4. 请用户逐个给反馈：投 / 不投 / 犹豫。
-   - 不投：一定问原因，用 `job-criteria` 更新标准，并把岗位移到「看过但不投」。
+   - 不投：一定问原因，用 `job-criteria` 更新标准，看板上改成 `skipped` 并写 `skipReason`。用户也可以直接在看板上点「不投」写原因。
    - 犹豫：帮用户分析利弊，给出明确建议。
    - 投：提示下一步可以写求职信（`cover-letter`）、查薪资（`salary-research`），投完告诉你（`job-applied`）。

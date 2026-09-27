@@ -20,15 +20,22 @@
 | 7 面试准备 | `interview-prep` | 「帮我准备面试」 |
 | 8 面试复盘 | `interview-debrief` | 「刚面完，…」 |
 
-### 文件
+### 追踪表：精投看板
 
-个人资料都放在 `job-search/private/`。这个目录不存在时，从 `job-search/templates/` 复制 `criteria.md` 和 `tracker.md` 过去，并建好 `profile/`、`searches/`、`applications/`。
+追踪表是一个实时看板（私有 artifact），数据结构、读写方法、id 规则都在 `job-search/board.md`。**去重和状态的唯一来源。**
+
+- 岗位、状态、打分、下一步、时间线都写在看板的 `jobs` 里；JD 全文、求职信、薪资、邮件原文、面试准备、复盘写在 `jobs/<id>/docs/`。
+- 用户会在看板上直接改状态、写不投原因、自己添加岗位、导入自动投递系统的 `tracker.csv`。每次开始和求职有关的工作时，先按 `board.md` 的「读回用户在看板上的操作」过一遍。
+- 用户在 Mac 上还有一个自动投递系统，它的记录也会进看板（`origin: 自动投递`），检索时一起去重。
+
+### 本地文件
+
+`job-search/private/`（不提交）。不存在时从 `job-search/templates/` 复制 `criteria.md`，并建好 `profile/`、`searches/`、`applications/`。
 
 - `private/profile/` — 简历原件 + `cv.md` 文字版。**写任何材料时唯一的事实来源。**
-- `private/criteria.md` — 筛选标准。**每次检索、打分、写材料之前先读。**
-- `private/tracker.md` — 追踪表，去重和状态的唯一来源。只追加和改状态，不删行。
-- `private/searches/YYYY-MM-DD.md` — 每次检索的结果和打分。
-- `private/applications/YYYY-MM-DD_公司_职位/` — 每个投递一个文件夹：`JD.md`、`cover-letter.md`、`salary.md`、`timeline.md`、`interview-prep-<轮次>.md`、`debrief-<轮次>.md`。
+- `private/criteria.md` — 筛选标准。**每次检索、打分、写材料之前先读。** 改完同步看板的 `meta/profile` 摘要。
+- `private/searches/YYYY-MM-DD.md` — 每次检索的完整记录（包括被淘汰的数量和原因）。
+- `private/applications/YYYY-MM-DD_公司_职位/` — 材料的本地副本。
 - `private/question-bank.md` — 面试中被问过的问题，跨公司积累。
 
 ### 通用规则
@@ -41,7 +48,8 @@
 
 ### 隐私和保存
 
-这个仓库目前是**公开的**。`job-search/private/` 写在 `.gitignore` 里，不会被提交。
+这个仓库目前是**公开的**。`job-search/private/` 写在 `.gitignore` 里，不会被提交。看板是私有的，岗位记录存在那里不受仓库影响。
 
 - `.gitignore` 里还有 `job-search/private/` 这一行时：不要提交或推送这个目录里的任何东西，也不要把个人信息写进会被提交的文件（包括这个文件、技能文件、提交信息）。在云端会话里，这些文件只存在于当前容器，会话回收后就没了——每个会话里提醒用户一次。
+- 简历和完整的筛选标准只有在用户明确同意后才能存进看板。
 - 用户说仓库已经改成私有后，先核实（云端会话里用 `list_repos` 看 `visibility`），确认是 `private` 再从 `.gitignore` 删掉那一行，提交并推送。之后每次改了 `private/` 里的文件都提交并推送。

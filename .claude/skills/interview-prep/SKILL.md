@@ -7,7 +7,7 @@ description: 求职第 7 步：为即将到来的面试做深度准备——查�
 
 ## 材料
 
-读：岗位文件夹里的 `JD.md`、`timeline.md`（面试官、轮次、形式、邮件原文）、之前轮次的 `debrief-*.md`、`cover-letter.md`；`criteria.md`（定位、竞争力、缺口）；简历；`private/question-bank.md`。
+读：看板上这个岗位的记录（`timeline`、`next`）和 `docs/`（`jd`、`emails` 里的面试官和轮次、之前轮次的 `debrief-*`、`cover-letter`）；`criteria.md`（定位、竞争力、缺口）；简历；`private/question-bank.md`。
 
 缺关键信息（面试官是谁、第几轮、什么形式）就先问用户。
 
@@ -56,7 +56,7 @@ description: 求职第 7 步：为即将到来的面试做深度准备——查�
 
 ## 输出
 
-保存到 `private/applications/<文件夹>/interview-prep-<轮次>.md`（例如 `interview-prep-1.md`）：
+写进看板这个岗位的 `docs/interview-prep-<轮次>`（例如 `interview-prep-1`），本地在 `private/applications/<文件夹>/` 存一份：
 
 1. 一页速览：时间和形式、每位面试官一句话画像、这个岗位最需要的 3 件事、用户最该强调的 3 点、最要准备的 3 个风险问题
 2. 面试官画像
