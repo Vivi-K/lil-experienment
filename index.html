@@ -1118,6 +1118,9 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
           <span class="small muted" id="backupMsg" role="status"></span>
         </div>
         <textarea id="backupText" aria-label="备份文本" placeholder="备份内容会出现在这里；恢复时把备份粘贴进来"></textarea>
+        <h3 style="margin-top:8px">自动备份</h3>
+        <p class="note">每天第一次打开时自动存一份，保留最近 7 天。某天的记录不见了，可以在这里恢复到那天打开时的样子（恢复后可以撤销）。</p>
+        <ul class="entries" id="autoBk"></ul>
       </div>
     </div>
   </section>
@@ -1262,20 +1265,63 @@ const PH_ORDER = ['men', 'fol', 'ovu', 'lut'];
 
 /* ---------- state ---------- */
 const DEFAULT_PROFILE = { height: 163, weight: 55, age: 28, act: 1.2, goal: -300, cycle: 33, period: 5, floor: 1450, about: '', aboutAt: 0 };
+let baseRev = 0;
+const BK = 'moon-energy-bk-';
 let state = load();
+dailyBackup();
 let logDate = TODAY;
 let range = 30;
 let calMonth = TODAY.slice(0, 7);
 
 function blank() { return { profile: { ...DEFAULT_PROFILE }, days: {}, whoop: {}, journal: {}, labs: [], reasons: [], body: [], lifts: {}, sample: false, onboarded: false }; }
+function normalizeState(s) {
+  if (!(s && s.days && s.profile)) return null;
+  s.profile = { ...DEFAULT_PROFILE, ...s.profile }; s.whoop = s.whoop || {}; s.journal = s.journal || {}; s.labs = s.labs || []; s.reasons = s.reasons || []; s.body = s.body || []; s.lifts = s.lifts || {};
+  return s;
+}
 function load() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) { const s = JSON.parse(raw); if (s && s.days && s.profile) { s.profile = { ...DEFAULT_PROFILE, ...s.profile }; s.whoop = s.whoop || {}; s.journal = s.journal || {}; s.labs = s.labs || []; s.reasons = s.reasons || []; s.body = s.body || []; s.lifts = s.lifts || {}; return s; } }
+    if (raw) { const s = normalizeState(JSON.parse(raw)); if (s) { baseRev = s.rev || 0; return s; } }
   } catch (e) { /* storage unavailable */ }
   return makeSample();
 }
-function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ignore */ } }
+/* Every save bumps state.rev. A tab whose copy is older than what's stored (another tab or window saved since)
+   must not overwrite it: it reloads the newer data instead, so a forgotten old tab can never wipe newer records. */
+function storedState() { try { const raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : null; } catch (e) { return null; } }
+function save() {
+  try {
+    const cur = storedState();
+    if (cur && cur.days && !cur.sample && (cur.rev || 0) > baseRev) { adoptStored(cur, true); return; }
+    state.rev = Math.max(baseRev, (cur && cur.rev) || 0) + 1; baseRev = state.rev;
+    localStorage.setItem(KEY, JSON.stringify(state));
+  } catch (e) { /* ignore */ }
+}
+function adoptStored(cur, fromSave) {
+  const s = normalizeState(cur); if (!s) return;
+  state = s; baseRev = s.rev || 0;
+  if (typeof renderAll === 'function') { try { renderAll(); } catch (e) { /* ignore */ } }
+  if (fromSave && typeof offerUndo === 'function') { $('toastMsg').textContent = '这个页面的数据不是最新的（别的窗口改过），已载入最新记录。刚才这一步请再做一次。'; $('toast').hidden = false; $('toastUndo').hidden = true; clearTimeout(toastT); toastT = setTimeout(() => { $('toast').hidden = true; $('toastUndo').hidden = false; }, 6000); }
+}
+// keep open tabs in sync, and pick up a new day after midnight
+window.addEventListener('storage', e => { if (e.key === KEY && e.newValue) { const cur = storedState(); if (cur && (cur.rev || 0) > baseRev) adoptStored(cur, false); } });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  if (iso(new Date()) !== TODAY) { location.reload(); return; }
+  const cur = storedState(); if (cur && (cur.rev || 0) > baseRev) adoptStored(cur, false);
+});
+/* One automatic backup per day (the state as it was when first opened that day); keeps the last 7 */
+function backupKeys() { const out = []; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith(BK)) out.push(k); } } catch (e) { /* ignore */ } return out.sort(); }
+function dailyBackup() {
+  if (state.sample) return;
+  try {
+    const k = BK + TODAY; if (localStorage.getItem(k)) return;
+    const raw = localStorage.getItem(KEY); if (!raw) return;
+    const keys = backupKeys();
+    while (keys.length >= 7) localStorage.removeItem(keys.shift());
+    for (;;) { try { localStorage.setItem(k, raw); break; } catch (e) { if (!keys.length) break; localStorage.removeItem(keys.shift()); } }
+  } catch (e) { /* ignore */ }
+}
 function day(d) { return state.days[d] || { food: [], ex: [], period: false }; }
 function ensure(d) { if (!state.days[d]) state.days[d] = { food: [], ex: [], period: false }; return state.days[d]; }
 
@@ -1701,7 +1747,22 @@ $('profSave').addEventListener('click', () => {
   for (const [id, k] of Object.entries(SETS)) { const v = Number($(id).value); if (Number.isFinite(v) && (v > 0 || k === 'goal')) state.profile[k] = v; }
   state.profile.savedAt = Date.now(); commit(); renderSettings(); offerUndo('资料已保存', snap);
 });
-function renderSettings() { for (const [id, k] of Object.entries(SETS)) $(id).value = P()[k]; $('profSaved').textContent = P().savedAt ? `✓ 已保存 · ${hhmm(P().savedAt)}` : '改完点保存'; renderAbout(); }
+function renderAutoBackups() {
+  const keys = backupKeys().reverse();
+  $('autoBk').innerHTML = keys.length ? keys.map(k => { let n = 0, f = 0; try { const s = JSON.parse(localStorage.getItem(k)); n = Object.keys(s.days || {}).filter(d => (s.days[d].food || []).length || (s.days[d].ex || []).length).length; f = Object.values(s.days || {}).reduce((a, r) => a + (r.food || []).length, 0); } catch (e) { /* ignore */ }
+    const d = k.slice(BK.length); return `<li><span>${fmtMD(d)} 打开时 <span class="muted small">${n} 天有记录 · ${f} 条饮食</span></span><button class="btn" type="button" data-bk="${k}">恢复到这份</button></li>`; }).join('')
+    : '<li class="empty">还没有自动备份，明天打开时会开始保存。</li>';
+}
+$('autoBk').addEventListener('click', e => {
+  const b = e.target.closest('[data-bk]'); if (!b) return;
+  let s = null; try { s = normalizeState(JSON.parse(localStorage.getItem(b.dataset.bk))); } catch (err) { /* ignore */ }
+  if (!s) { $('backupMsg').textContent = '这份备份读不出来。'; return; }
+  const snap = JSON.stringify(state), rev = baseRev;
+  state = s; baseRev = rev; commit(); renderSettings();
+  offerUndo(`已恢复到 ${fmtMD(b.dataset.bk.slice(BK.length))} 的备份`, snap);
+});
+function renderSettings() {
+  renderAutoBackups(); for (const [id, k] of Object.entries(SETS)) $(id).value = P()[k]; $('profSaved').textContent = P().savedAt ? `✓ 已保存 · ${hhmm(P().savedAt)}` : '改完点保存'; renderAbout(); }
 
 function renderAll() {
   CS = cycleStats();
@@ -2802,7 +2863,7 @@ function renderWorkout() {
 /* ---------- undo: snapshot before a change, offer to restore for 8 seconds ---------- */
 let undoSnap = null, toastT = null;
 function offerUndo(msg, snap) {
-  undoSnap = snap; $('toastMsg').textContent = msg; $('toast').hidden = false;
+  undoSnap = snap; $('toastMsg').textContent = msg; $('toast').hidden = false; $('toastUndo').hidden = false;
   clearTimeout(toastT); toastT = setTimeout(() => { $('toast').hidden = true; undoSnap = null; }, 8000);
 }
 $('toastUndo').addEventListener('click', () => {
