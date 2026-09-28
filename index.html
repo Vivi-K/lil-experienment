@@ -100,6 +100,9 @@ section.block{display:grid;gap:14px}
 .ex-log summary::after{content:'›';font-size:20px;transition:transform .2s;color:var(--ink2)}
 .ex-log[open] summary::after{transform:rotate(90deg)}
 .day-pick-panel{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding:14px 18px}
+.cloud-pill{flex-basis:100%;font-size:12px;color:var(--ink2)}
+.cloud-pill.ok{color:var(--good)}
+.cloud-pill.error{color:var(--p-men)}
 .day-pick-panel b{font-size:19px;letter-spacing:-.02em}
 .day-pick.past .day-pick-panel{background:color-mix(in srgb,var(--warn) 10%,var(--surface));outline:2px solid color-mix(in srgb,var(--warn) 45%,transparent)}
 .daybar{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
@@ -660,6 +663,7 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
         <button class="toggle" id="periodToggle" type="button" aria-pressed="false"><span class="dot"></span>这天是经期</button>
       </div>
       <button class="btn primary" type="button" id="backToday" hidden>回到今天</button>
+      <span class="cloud-pill off" id="cloudPill" role="status">☁︎ 正在连接云端…</span>
     </div>
   </section>
 
@@ -1108,7 +1112,7 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
       <p class="note">基础代谢用 Mifflin-St Jeor 公式估算；黄体期静息代谢通常会上升约 2.5–10%，这里按 +6% 计入当天目标。数字是估算，不是医疗建议。周期明显不规律、经期异常疼痛或出血过多，请咨询医生。</p>
       <div class="backup">
         <h3>备份与恢复</h3>
-        <p class="note">数据只保存在这个浏览器里。换设备或清除浏览器数据前，先复制备份存好。</p>
+        <p class="note">记录会自动同步到你的 Claude 账号云端（只有你本人能看到），换手机、电脑或 App 打开同一个链接都能看到。这台设备上也有一份副本，没网时照常记录，联网后自动补传。下面的备份是额外的保险。</p>
         <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
           <button class="btn" id="copyBackup" type="button">复制备份</button>
           <button class="btn" id="importBtn" type="button">从下方文本恢复</button>
@@ -1267,6 +1271,7 @@ const PH_ORDER = ['men', 'fol', 'ovu', 'lut'];
 const DEFAULT_PROFILE = { height: 163, weight: 55, age: 28, act: 1.2, goal: -300, cycle: 33, period: 5, floor: 1450, about: '', aboutAt: 0 };
 let baseRev = 0;
 const BK = 'moon-energy-bk-';
+const CLOUD = { db: null, col: null, ready: false, status: 'off', at: 0, sent: {}, timer: null, busy: false, again: false, msg: '' };
 let state = load();
 dailyBackup();
 let logDate = TODAY;
@@ -1296,6 +1301,7 @@ function save() {
     state.rev = Math.max(baseRev, (cur && cur.rev) || 0) + 1; baseRev = state.rev;
     localStorage.setItem(KEY, JSON.stringify(state));
   } catch (e) { /* ignore */ }
+  if (typeof scheduleCloudSync === 'function') scheduleCloudSync();
 }
 function adoptStored(cur, fromSave) {
   const s = normalizeState(cur); if (!s) return;
@@ -3974,5 +3980,131 @@ renderAll();
 setAIEnabled(false);
 AI.ready = initAI();
 if (!state.onboarded && !state.demoSeen) openOnboarding();
+
+/* ---------- cloud sync: the `db` capability, in this viewer's private data/users/<id>/ subtree ----------
+   localStorage stays the working copy (instant, offline). Each change is also written to the cloud as
+   small documents: 'meta' (profile, settings, lifts, labs…), 'd-YYYY-MM-DD' (one per day),
+   'm-YYYY-MM' (WHOOP + journal for a month). Each cloud doc is {k: id, t: changed-at ms, body}.
+   state.cloudT[id] remembers when this device last changed/synced a doc; the newer t wins. */
+const EMPTY_DAY = () => ({ food: [], ex: [], period: false });
+const dayHasData = r => r && ((r.food || []).length || (r.ex || []).length || r.period || r.session || r.mood || r.mealLogged || r.flow || r.pain != null);
+function cloudDocs(st) {
+  const out = {};
+  const { days, whoop, journal, rev, cloudT, sample, ...meta } = st;
+  out.meta = meta;
+  for (const [d, r] of Object.entries(days || {})) if (dayHasData(r) || CLOUD.sent['d-' + d]) out['d-' + d] = r;
+  const month = (src, key) => { for (const [d, v] of Object.entries(src || {})) { const id = 'm-' + d.slice(0, 7); (out[id] || (out[id] = { whoop: {}, journal: {} }))[key][d] = v; } };
+  month(whoop, 'whoop'); month(journal, 'journal');
+  // docs that existed in the cloud but were emptied here are sent as empty, so deletions travel too
+  for (const id of Object.keys(CLOUD.sent)) if (!out[id]) out[id] = id.startsWith('d-') ? EMPTY_DAY() : id.startsWith('m-') ? { whoop: {}, journal: {} } : out[id];
+  return out;
+}
+function applyDoc(id, body) {
+  if (id === 'meta') { const keep = { days: state.days, whoop: state.whoop, journal: state.journal, rev: state.rev, cloudT: state.cloudT }; state = normalizeState({ ...body, ...keep }) || state; state.sample = false; return; }
+  if (id.startsWith('d-')) { const d = id.slice(2); if (dayHasData(body)) state.days[d] = body; else delete state.days[d]; return; }
+  if (id.startsWith('m-')) {
+    const m = id.slice(2);
+    for (const key of ['whoop', 'journal']) { const tgt = state[key] || (state[key] = {}); Object.keys(tgt).filter(d => d.startsWith(m)).forEach(d => delete tgt[d]); Object.assign(tgt, (body && body[key]) || {}); }
+  }
+}
+// same day edited on two devices before they ever synced: keep both sides' entries instead of dropping one
+function unionDay(a, b) {
+  const key = x => JSON.stringify(x);
+  const merge = (x, y) => { const seen = new Set((x || []).map(key)); return (x || []).concat((y || []).filter(i => !seen.has(key(i)))); };
+  return { ...a, ...b, food: merge(b.food, a.food), ex: merge(b.ex, a.ex), period: !!(a.period || b.period) };
+}
+function setCloudStatus(status, msg) {
+  CLOUD.status = status; if (msg != null) CLOUD.msg = msg; if (status === 'ok') CLOUD.at = Date.now();
+  const el = $('cloudPill'); if (!el) return;
+  const txt = { off: '☁︎ 未连接云端 · 只存在这台设备', loading: '☁︎ 正在从云端读取…', syncing: '☁︎ 正在同步…', ok: `☁︎ 已同步到云端 · ${CLOUD.at ? hhmm(CLOUD.at) : ''}`, error: `⚠︎ 云端同步失败，已先存在本机${CLOUD.msg ? '：' + CLOUD.msg : ''}` }[status];
+  el.textContent = txt; el.className = 'cloud-pill ' + status;
+}
+async function cloudInit() {
+  setCloudStatus('loading');
+  const cl = window.claude;
+  if (!cl || typeof cl.use !== 'function') { setCloudStatus('off'); return; }
+  const [db, user] = await Promise.all([cl.use('db'), cl.use('user')]).catch(() => [null, null]);
+  const uid = user ? await user.id() : null;
+  if (!db || !uid) { setCloudStatus('off'); return; }
+  CLOUD.db = db; CLOUD.col = db.collection('data/users/' + uid);
+  const remote = [];
+  try {
+    let last = '';
+    for (;;) {
+      const snap = await CLOUD.col.where('k', '>', last).orderBy('k').limit(500).get();
+      snap.docs.forEach(d => { const v = d.data(); if (v && v.k) remote.push(v); });
+      if (snap.size < 500) break; last = snap.docs[snap.size - 1].data().k;
+    }
+  } catch (e) { setCloudStatus('error', '读取失败'); return; }
+  const lt = state.cloudT || (state.cloudT = {});
+  let changed = false;
+  if (state.sample && remote.length) {
+    // a fresh device (or one showing the demo): the cloud is the truth
+    const ob = state.demoSeen; state = blank(); state.onboarded = true; state.demoSeen = ob; state.cloudT = {};
+    remote.forEach(r => { applyDoc(r.k, r.body); CLOUD.sent[r.k] = JSON.stringify(r.body); state.cloudT[r.k] = r.t; });
+    changed = true;
+    closeOnboarding();
+  } else {
+    const local = cloudDocs(state);
+    for (const r of remote) {
+      const id = r.k, rb = JSON.stringify(r.body), lb = local[id] ? JSON.stringify(local[id]) : null;
+      CLOUD.sent[id] = rb;
+      if (lb === rb) { lt[id] = Math.max(lt[id] || 0, r.t); continue; }
+      if (lb == null) { applyDoc(id, r.body); lt[id] = r.t; changed = true; continue; }
+      if (lt[id] == null && id.startsWith('d-')) { applyDoc(id, unionDay(local[id], r.body)); changed = true; continue; }  // pushed below if it differs
+      if ((lt[id] || 0) < r.t) { applyDoc(id, r.body); lt[id] = r.t; changed = true; }
+    }
+  }
+  CLOUD.ready = true;
+  if (changed) { localStorage.setItem(KEY, JSON.stringify(state)); baseRev = state.rev || 0; renderAll(); if (typeof renderSettings === 'function') renderSettings(); }
+  await cloudSync();
+  // live: pick up edits from other devices while this page is open
+  const since = Date.now() - 5000;
+  CLOUD.col.where('t', '>', since).onSnapshot(snap => {
+    let got = false;
+    snap.docChanges().forEach(ch => {
+      if (ch.type === 'removed') return;
+      const v = ch.doc.data(); if (!v || !v.k) return;
+      const rb = JSON.stringify(v.body); if (rb === CLOUD.sent[v.k]) return;
+      if ((state.cloudT[v.k] || 0) >= v.t) return;
+      applyDoc(v.k, v.body); CLOUD.sent[v.k] = rb; state.cloudT[v.k] = v.t; got = true;
+    });
+    if (got) { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ignore */ } baseRev = state.rev || 0; renderAll(); setCloudStatus('ok'); }
+  }, () => { /* terminal listener error: page keeps working locally; next load resubscribes */ });
+}
+function scheduleCloudSync() {
+  if (!CLOUD.ready || state.sample) return;
+  clearTimeout(CLOUD.timer); CLOUD.timer = setTimeout(cloudSync, 1200);
+}
+async function cloudSync() {
+  if (!CLOUD.ready || state.sample) return;
+  if (CLOUD.busy) { CLOUD.again = true; return; }
+  CLOUD.busy = true;
+  const lt = state.cloudT || (state.cloudT = {});
+  try {
+    const docs = cloudDocs(state), todo = Object.entries(docs).filter(([id, b]) => JSON.stringify(b) !== CLOUD.sent[id]);
+    if (todo.length) setCloudStatus('syncing');
+    for (const [id, body] of todo) {
+      const t = Date.now(), js = JSON.stringify(body);
+      if (js.length > 250000) { setCloudStatus('error', `${id} 太大`); continue; }
+      let tries = 0;
+      for (;;) {
+        try { await CLOUD.col.doc(id).set({ k: id, t, body }); break; }
+        catch (e) { if (e && e.code === 'unavailable' && tries++ < 1) { await new Promise(r => setTimeout(r, 800 + Math.random() * 800)); continue; } throw e; }
+      }
+      CLOUD.sent[id] = js; lt[id] = t;
+      if (todo.length > 20) await new Promise(r => setTimeout(r, 60));   // first upload of many days: pace it
+    }
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+    setCloudStatus('ok');
+  } catch (e) {
+    setCloudStatus('error', e && e.code === 'quota_exceeded' ? '云端空间已满' : e && e.code === 'resource_exhausted' ? '上传较多，30 秒后继续' : '网络问题，稍后会自动重试');
+    clearTimeout(CLOUD.timer); CLOUD.timer = setTimeout(cloudSync, 30000);
+  } finally {
+    CLOUD.busy = false;
+    if (CLOUD.again) { CLOUD.again = false; scheduleCloudSync(); }
+  }
+}
+cloudInit().catch(() => setCloudStatus('off'));
 })();
 </script>
