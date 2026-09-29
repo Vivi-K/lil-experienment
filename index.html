@@ -100,7 +100,9 @@ section.block{display:grid;gap:14px}
 .ex-log summary::after{content:'›';font-size:20px;transition:transform .2s;color:var(--ink2)}
 .ex-log[open] summary::after{transform:rotate(90deg)}
 .day-pick-panel{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding:14px 18px}
-.cloud-pill{flex-basis:100%;font-size:12px;color:var(--ink2)}
+.cloud-row{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
+.cloud-row .btn{padding:2px 0;font-size:13px}
+.cloud-pill{font-size:12px;color:var(--ink2)}
 .cloud-pill.ok{color:var(--good)}
 .cloud-pill.error{color:var(--p-men)}
 .day-pick-panel b{font-size:19px;letter-spacing:-.02em}
@@ -663,7 +665,7 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
         <button class="toggle" id="periodToggle" type="button" aria-pressed="false"><span class="dot"></span>这天是经期</button>
       </div>
       <button class="btn primary" type="button" id="backToday" hidden>回到今天</button>
-      <span class="cloud-pill off" id="cloudPill" role="status">☁︎ 正在连接云端…</span>
+      <div class="cloud-row"><span class="cloud-pill off" id="cloudPill" role="status">☁︎ 正在连接云端…</span><button class="btn ghost" type="button" id="cloudNow">立即同步</button></div>
     </div>
   </section>
 
@@ -1271,7 +1273,8 @@ const PH_ORDER = ['men', 'fol', 'ovu', 'lut'];
 const DEFAULT_PROFILE = { height: 163, weight: 55, age: 28, act: 1.2, goal: -300, cycle: 33, period: 5, floor: 1450, about: '', aboutAt: 0 };
 let baseRev = 0;
 const BK = 'moon-energy-bk-';
-const CLOUD = { db: null, col: null, ready: false, status: 'off', at: 0, sent: {}, timer: null, busy: false, again: false, msg: '' };
+const APP_VER = 'v34';
+const CLOUD = { db: null, col: null, ready: false, status: 'off', at: 0, sent: {}, timer: null, busy: false, again: false, msg: '', pulledAt: 0, count: null, starting: null };
 let state = load();
 dailyBackup();
 let logDate = TODAY;
@@ -4016,16 +4019,19 @@ function unionDay(a, b) {
 function setCloudStatus(status, msg) {
   CLOUD.status = status; if (msg != null) CLOUD.msg = msg; if (status === 'ok') CLOUD.at = Date.now();
   const el = $('cloudPill'); if (!el) return;
-  const txt = { off: '☁︎ 未连接云端 · 只存在这台设备', loading: '☁︎ 正在从云端读取…', syncing: '☁︎ 正在同步…', ok: `☁︎ 已同步到云端 · ${CLOUD.at ? hhmm(CLOUD.at) : ''}`, error: `⚠︎ 云端同步失败，已先存在本机${CLOUD.msg ? '：' + CLOUD.msg : ''}` }[status];
-  el.textContent = txt; el.className = 'cloud-pill ' + status;
+  const cnt = CLOUD.count != null ? ` · 云端 ${CLOUD.count} 条` : '';
+  const txt = { off: `☁︎ 未连接云端，只存在这台设备${CLOUD.msg ? '（' + CLOUD.msg + '）' : ''}`, loading: '☁︎ 正在从云端读取…', syncing: '☁︎ 正在同步…', ok: `☁︎ 已同步 · ${CLOUD.at ? hhmm(CLOUD.at) : ''}${cnt}`, error: `⚠︎ 同步失败，已先存在本机${CLOUD.msg ? '：' + CLOUD.msg : ''}` }[status];
+  el.textContent = `${txt} · ${APP_VER}`; el.className = 'cloud-pill ' + status;
+  const bt = $('cloudNow'); if (bt) bt.disabled = status === 'loading' || status === 'syncing';
 }
 async function cloudInit() {
   setCloudStatus('loading');
   const cl = window.claude;
-  if (!cl || typeof cl.use !== 'function') { setCloudStatus('off'); return; }
+  if (!cl || typeof cl.use !== 'function') { setCloudStatus('off', '不是在 claude.ai 里打开的'); return; }
   const [db, user] = await Promise.all([cl.use('db'), cl.use('user')]).catch(() => [null, null]);
-  const uid = user ? await user.id() : null;
-  if (!db || !uid) { setCloudStatus('off'); return; }
+  const uid = user ? await user.id().catch(() => null) : null;
+  if (!db) { setCloudStatus('off', '这个 App / 浏览器没有开放云端存储'); return; }
+  if (!uid) { setCloudStatus('off', '没有读到登录的 Claude 账号'); return; }
   CLOUD.db = db; CLOUD.col = db.collection('data/users/' + uid);
   const remote = [];
   try {
@@ -4035,7 +4041,8 @@ async function cloudInit() {
       snap.docs.forEach(d => { const v = d.data(); if (v && v.k) remote.push(v); });
       if (snap.size < 500) break; last = snap.docs[snap.size - 1].data().k;
     }
-  } catch (e) { setCloudStatus('error', '读取失败'); return; }
+  } catch (e) { setCloudStatus('error', '读取失败 ' + ((e && e.code) || '')); return; }
+  CLOUD.count = remote.length; CLOUD.pulledAt = Date.now();
   const lt = state.cloudT || (state.cloudT = {});
   let changed = false;
   if (state.sample && remote.length) {
@@ -4061,16 +4068,43 @@ async function cloudInit() {
   // live: pick up edits from other devices while this page is open
   const since = Date.now() - 5000;
   CLOUD.col.where('t', '>', since).onSnapshot(snap => {
-    let got = false;
-    snap.docChanges().forEach(ch => {
-      if (ch.type === 'removed') return;
-      const v = ch.doc.data(); if (!v || !v.k) return;
-      const rb = JSON.stringify(v.body); if (rb === CLOUD.sent[v.k]) return;
-      if ((state.cloudT[v.k] || 0) >= v.t) return;
-      applyDoc(v.k, v.body); CLOUD.sent[v.k] = rb; state.cloudT[v.k] = v.t; got = true;
-    });
-    if (got) { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ignore */ } baseRev = state.rev || 0; renderAll(); setCloudStatus('ok'); }
-  }, () => { /* terminal listener error: page keeps working locally; next load resubscribes */ });
+    applyRemote(snap.docChanges().filter(ch => ch.type !== 'removed').map(ch => ch.doc.data()));
+  }, () => { /* terminal listener error: the periodic pull below still picks up other devices' changes */ });
+  // fallback in case live delivery is slow or unavailable in this viewer
+  setInterval(() => { if (document.visibilityState === 'visible') cloudPull(); }, 60000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') cloudPull(); });
+}
+function applyRemote(list) {
+  let got = false;
+  (list || []).forEach(v => {
+    if (!v || !v.k) return;
+    const rb = JSON.stringify(v.body); if (rb === CLOUD.sent[v.k]) return;
+    if ((state.cloudT[v.k] || 0) >= v.t) return;
+    applyDoc(v.k, v.body); CLOUD.sent[v.k] = rb; state.cloudT[v.k] = v.t; got = true;
+  });
+  if (got) { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ignore */ } baseRev = state.rev || 0; renderAll(); setCloudStatus('ok'); }
+  return got;
+}
+async function cloudPull() {
+  if (!CLOUD.ready || CLOUD.busy) return;
+  const from = Math.max(0, CLOUD.pulledAt - 120000);
+  try {
+    const snap = await CLOUD.col.where('t', '>', from).limit(1000).get();
+    CLOUD.pulledAt = Date.now();
+    applyRemote(snap.docs.map(d => d.data()));
+  } catch (e) { /* try again next time */ }
+}
+// the 「立即同步」 button: connect if needed, then pull everything newer and push local changes
+async function cloudNow() {
+  if (!CLOUD.ready) { await cloudInit(); return; }
+  setCloudStatus('syncing');
+  try {
+    const all = []; let last = '';
+    for (;;) { const snap = await CLOUD.col.where('k', '>', last).orderBy('k').limit(500).get(); snap.docs.forEach(d => all.push(d.data())); if (snap.size < 500) break; last = snap.docs[snap.size - 1].data().k; }
+    CLOUD.count = all.length; CLOUD.pulledAt = Date.now();
+    applyRemote(all);
+  } catch (e) { setCloudStatus('error', '读取失败 ' + ((e && e.code) || '')); return; }
+  await cloudSync();
 }
 function scheduleCloudSync() {
   if (!CLOUD.ready || state.sample) return;
@@ -4092,6 +4126,7 @@ async function cloudSync() {
         try { await CLOUD.col.doc(id).set({ k: id, t, body }); break; }
         catch (e) { if (e && e.code === 'unavailable' && tries++ < 1) { await new Promise(r => setTimeout(r, 800 + Math.random() * 800)); continue; } throw e; }
       }
+      if (CLOUD.count != null && !(id in CLOUD.sent)) CLOUD.count++;
       CLOUD.sent[id] = js; lt[id] = t;
       if (todo.length > 20) await new Promise(r => setTimeout(r, 60));   // first upload of many days: pace it
     }
@@ -4105,6 +4140,7 @@ async function cloudSync() {
     if (CLOUD.again) { CLOUD.again = false; scheduleCloudSync(); }
   }
 }
-cloudInit().catch(() => setCloudStatus('off'));
+$('cloudNow').addEventListener('click', () => cloudNow().catch(() => setCloudStatus('error', '请稍后再试')));
+cloudInit().catch(e => setCloudStatus('error', '连接出错 ' + ((e && (e.code || e.message)) || '')));
 })();
 </script>
