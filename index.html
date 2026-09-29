@@ -113,6 +113,20 @@ section.block{display:grid;gap:14px}
 .sum-ai{display:grid;gap:8px}
 .sum-text{background:var(--accent-soft);border-radius:14px;padding:14px 16px;line-height:1.65;font-size:15px}
 .sum-actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;margin-inline:-20px;padding-inline:20px;background:color-mix(in srgb,var(--bg) 82%,transparent);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
+@media (max-width:640px){.topbar{margin-inline:-16px;padding-inline:16px}}
+.topbar .tabs{margin-inline:0;padding-inline:0;background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none}
+.datebar{display:flex;align-items:center;justify-content:center;gap:6px;padding:0 0 10px;flex-wrap:wrap}
+.datebar input[type=date]{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:980px;padding:6px 12px;font-size:15px;font-weight:600;font-family:inherit}
+.db-arrow{font-size:22px;line-height:1;padding:2px 10px}
+.db-label{font-size:13px;color:var(--ink2);min-width:3.5em}
+.db-today{padding:5px 12px;font-size:13px}
+.cloud-dot{border:0;background:transparent;font-size:17px;padding:2px 6px;cursor:pointer;color:var(--ink3)}
+.cloud-dot.ok{color:var(--good)}.cloud-dot.syncing,.cloud-dot.loading{color:var(--accent)}.cloud-dot.error{color:var(--p-men)}
+.datebar{flex-wrap:nowrap}
+@media (max-width:480px){.datebar.past .db-label{display:none}.datebar input[type=date]{font-size:14px;padding:5px 10px}.db-arrow{padding:2px 6px}}
+.db-sub{text-align:center;font-size:12px;padding:0 0 8px;color:var(--warn)}
+.day-pick.past input[type=date]{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 12%,var(--surface))}
 .day-pick-panel{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding:14px 18px}
 .cloud-row{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
 .cloud-row .btn{padding:2px 0;font-size:13px}
@@ -327,7 +341,7 @@ td.bar-cell{width:34%;min-width:110px}
 .cd-edit{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .cd-edit input{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 10px;color:var(--ink)}
 /* Tabs */
-.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;display:flex;gap:4px;background:var(--bg);padding-block:6px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs{position:static;z-index:20;display:flex;gap:4px;background:var(--bg);padding-block:6px;border-bottom:1px solid var(--line);overflow-x:auto}
 .tabs button{border:0;background:transparent;padding:8px 14px;border-radius:8px;font-size:15px;color:var(--ink2);white-space:nowrap}
 .tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
 .tab-panel{display:grid;gap:28px}
@@ -636,11 +650,23 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
     </div>
   </section>
 
+  <div class="topbar">
   <nav class="tabs" role="tablist" aria-label="页面">
     <button type="button" role="tab" data-tab="today" aria-selected="true">今天</button>
     <button type="button" role="tab" data-tab="insight" aria-selected="false">分析</button>
     <button type="button" role="tab" data-tab="me" aria-selected="false">我的</button>
   </nav>
+  <!-- THE date: every section on every tab follows this one control -->
+  <div class="datebar day-pick" id="dateBar" aria-label="日期">
+    <button class="btn ghost db-arrow" id="prevDay" type="button" aria-label="前一天">‹</button>
+    <input type="date" id="logDate" aria-label="日期">
+    <span class="db-label" id="dayPickTitle">今天</span>
+    <button class="btn ghost db-arrow" id="nextDay" type="button" aria-label="后一天">›</button>
+    <button class="btn primary db-today" type="button" id="backToday" hidden>回今天</button>
+    <button class="cloud-dot off" type="button" id="cloudNow" aria-label="云端同步状态，点一下立即同步" title="云端同步">☁︎</button>
+  </div>
+  <div class="db-sub" id="dayPickSub" hidden></div>
+  </div>
 
   <div class="sample" id="sampleBar" hidden>
     <span>现在显示的是<b>示例数据</b>（虚构的约 3 个月记录，含 WHOOP 数据），用来演示分析效果。</span>
@@ -653,28 +679,12 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
     <div class="panel pc" id="pc">
       <div class="pc-head"><span class="pc-dot"></span><div style="display:grid;gap:2px;min-width:0"><b id="pcTitle"></b><span class="small muted" id="pcSub"></span></div></div>
       <div class="pc-row">
-        <input type="date" id="pcDate" aria-label="记录日期">
         <button class="btn primary" type="button" id="pcToggle"></button>
         <select id="pcFlow" aria-label="流量"><option value="">流量</option><option value="1">少</option><option value="2">中</option><option value="3">多</option></select>
         <select id="pcPain" aria-label="疼痛"><option value="">疼痛</option><option value="0">不痛</option><option value="1">轻微</option><option value="2">明显</option><option value="3">很痛</option></select>
         <button class="btn" type="button" id="pcSave">保存</button>
         <span class="small muted" id="pcSaved" role="status"></span>
       </div>
-    </div>
-  </section>
-
-  <!-- RECORD DATE: meals, food list, workout and exercise all follow this date -->
-  <section class="block day-pick" aria-label="记录日期">
-    <div class="panel day-pick-panel">
-      <div style="display:grid;gap:2px;min-width:0"><b id="dayPickTitle">今天</b><span class="small muted" id="dayPickSub">下面的饮食和训练记录都是这一天的；要补记或修改以前的日子，换个日期就行</span></div>
-      <div class="daybar">
-        <button class="btn ghost" id="prevDay" type="button" aria-label="前一天">←</button>
-        <input type="date" id="logDate" aria-label="记录日期">
-        <button class="btn ghost" id="nextDay" type="button" aria-label="后一天">→</button>
-        <button class="toggle" id="periodToggle" type="button" aria-pressed="false"><span class="dot"></span>这天是经期</button>
-      </div>
-      <button class="btn primary" type="button" id="backToday" hidden>回到今天</button>
-      <div class="cloud-row"><span class="cloud-pill off" id="cloudPill" role="status">☁︎ 正在连接云端…</span><button class="btn ghost" type="button" id="cloudNow">立即同步</button></div>
     </div>
   </section>
 
@@ -885,17 +895,11 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
   <section class="block" aria-labelledby="sumH">
     <div class="sec-head">
       <h2 id="sumH">总结</h2>
-      <span class="small muted">任意一天、每周、每月；本周和本月会随时间自动更替，往回翻可以看以前的</span>
+      <span class="small muted">按最上面的日期：那一天、那一周、那个月；本周和本月会随时间自动更替</span>
     </div>
     <div class="panel sumbox">
+      <div class="sum-nav"><b id="sumTitle"></b></div>
       <div class="wk-seg sum-seg" id="sumSeg" role="group" aria-label="总结范围"><button type="button" data-sm="day">某一天</button><button type="button" data-sm="week">每周</button><button type="button" data-sm="month">每月</button></div>
-      <div class="sum-nav">
-        <button class="btn ghost" type="button" id="sumPrev" aria-label="往前">←</button>
-        <b id="sumTitle"></b>
-        <button class="btn ghost" type="button" id="sumNext" aria-label="往后">→</button>
-        <input type="date" id="sumDate" aria-label="选日期">
-        <button class="btn ghost" type="button" id="sumNow" hidden>回到现在</button>
-      </div>
       <div class="sum-grid" id="sumStats"></div>
       <div class="sum-ai" id="sumAI"></div>
     </div>
@@ -916,8 +920,8 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
       </div>
       <div class="panel" style="display:grid;gap:10px;align-content:start">
         <h3>记一次（每周同一天早上空腹量）</h3>
+        <span class="small muted" id="bodyDateNote"></span>
         <form class="row" id="bodyForm">
-          <input type="date" id="bDate" required aria-label="测量日期" style="border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 10px">
           <input class="w num" id="bWeight" type="number" step="0.1" placeholder="体重 kg" aria-label="体重 kg">
           <input class="w num" id="bWaist" type="number" step="0.1" placeholder="腰围 cm" aria-label="腰围 cm（肚脐一圈）">
           <input class="w num" id="bHip" type="number" step="0.1" placeholder="臀围 cm" aria-label="臀围 cm（最翘处一圈）">
@@ -1014,9 +1018,7 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
     <div class="sec-head">
       <h2 id="calH">周期日历</h2>
       <div class="cal-head">
-        <button class="btn ghost" id="calPrev" type="button" aria-label="上个月">←</button>
         <span class="num" id="calTitle"></span>
-        <button class="btn ghost" id="calNext" type="button" aria-label="下个月">→</button>
       </div>
     </div>
     <div class="grid2">
@@ -1048,12 +1050,12 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
       </div>
       <div class="panel" style="display:grid;gap:10px;align-content:start">
         <h3>手动添加</h3>
+        <span class="small muted" id="labDateNote"></span>
         <form class="row" id="labForm">
           <input class="grow" id="labName" list="labList" placeholder="项目，如 TgAb" required aria-label="化验项目">
           <input class="w num" id="labVal" type="number" step="any" placeholder="结果" required aria-label="结果">
           <input class="w" id="labUnit" placeholder="单位" aria-label="单位">
           <input class="w" id="labRef" placeholder="范围 如 <4" aria-label="参考范围">
-          <input type="date" id="labDate" required aria-label="采样日期" style="border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 10px">
           <button class="btn primary" type="submit">添加</button>
         </form>
         <datalist id="labList"></datalist>
@@ -1143,7 +1145,9 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
       </div>
       <p class="note">基础代谢用 Mifflin-St Jeor 公式估算；黄体期静息代谢通常会上升约 2.5–10%，这里按 +6% 计入当天目标。数字是估算，不是医疗建议。周期明显不规律、经期异常疼痛或出血过多，请咨询医生。</p>
       <div class="backup">
-        <h3>下载全部数据</h3>
+        <h3>云端同步</h3>
+        <div class="cloud-row"><span class="cloud-pill off" id="cloudPill" role="status">☁︎ 正在连接云端…</span><button class="btn ghost" type="button" id="cloudNow2">立即同步</button></div>
+        <h3 style="margin-top:8px">下载全部数据</h3>
         <p class="note">表格版每天一行（饮食、训练、WHOOP、周期、热量差），可以用 Excel / Numbers 打开；完整备份是全部原始数据，以后可以用「从下方文本恢复」导回来。</p>
         <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
           <button class="btn primary" type="button" id="exportCsv">下载表格（CSV，每天一行）</button>
@@ -1312,9 +1316,9 @@ const PH_ORDER = ['men', 'fol', 'ovu', 'lut'];
 /* ---------- state ---------- */
 const DEFAULT_PROFILE = { height: 163, weight: 55, age: 28, act: 1.2, goal: -300, cycle: 33, period: 5, floor: 1450, about: '', aboutAt: 0 };
 let baseRev = 0;
-let sumMode = 'week', sumAnchor = TODAY;   // analysis → 总结 view
+let sumMode = 'week';   // analysis → 总结 view (the date is the global logDate)
 const BK = 'moon-energy-bk-';
-const APP_VER = 'v36';
+const APP_VER = 'v37';
 const CLOUD = { db: null, col: null, ready: false, status: 'off', at: 0, sent: {}, timer: null, busy: false, again: false, msg: '', pulledAt: 0, count: null, uid: null, backups: [] };
 let state = load();
 dailyBackup();
@@ -1614,7 +1618,6 @@ function renderLogger() {
   $('logDate').max = TODAY;
   $('nextDay').disabled = logDate >= TODAY;
   const rec = day(logDate);
-  const t = $('periodToggle'); t.setAttribute('aria-pressed', rec.period ? 'true' : 'false');
   const fe = $('foodEntries');
   if (rec.food.length) {
     const groups = {}, loose = [];
@@ -1826,9 +1829,10 @@ function setLogDate(d) {
 }
 function renderDayPick() {
   const past = logDate !== TODAY, wd = '日一二三四五六'[parse(logDate).getDay()];
-  $('dayPickTitle').textContent = past ? `正在补记：${fmtMD(logDate)}（周${wd}）` : `今天 · ${fmtMD(TODAY)}（周${wd}）`;
-  $('dayPickSub').textContent = past ? '饮食、训练和运动都会记到这一天，改完点「回到今天」' : '下面的饮食和训练记录都是这一天的；要补记或修改以前的日子，换个日期就行';
-  $('backToday').hidden = !past; document.querySelector('.day-pick').classList.toggle('past', past);
+  $('dayPickTitle').textContent = past ? `周${wd}` : `今天 · 周${wd}`;
+  $('dayPickSub').textContent = past ? `正在看 / 补记 ${fmtMD(logDate)}（周${wd}）：所有记录和分析都按这一天` : '';
+  $('dayPickSub').hidden = !past;
+  $('backToday').hidden = !past; $('dateBar').classList.toggle('past', past); $('nextDay').disabled = logDate >= TODAY;
   $('mealH').textContent = past ? `${fmtMD(logDate)} 饮食 · 推荐与记录` : '今日饮食 · 推荐与记录';
   $('wkH').textContent = past ? `${fmtMD(logDate)} 训练与 WHOOP` : '今日训练与 WHOOP';
 }
@@ -1871,7 +1875,6 @@ document.addEventListener('click', e => {
   }
   const x = e.target.closest('[data-del-ex]'); if (x) { day(logDate).ex.splice(Number(x.dataset.delEx), 1); commit(); }
 });
-$('periodToggle').addEventListener('click', () => { const r = ensure(logDate); r.period = !r.period; commit(); });
 $('logDate').addEventListener('change', e => { if (e.target.value) setLogDate(e.target.value); });
 $('prevDay').addEventListener('click', () => setLogDate(addDays(logDate, -1)));
 $('nextDay').addEventListener('click', () => setLogDate(addDays(logDate, 1)));
@@ -1883,11 +1886,10 @@ $('rangeSeg').addEventListener('click', e => {
 });
 $('cal').addEventListener('click', e => {
   const b = e.target.closest('[data-date]'); if (!b || b.dataset.future) return;
-  setLogDate(b.dataset.date);
-  goTab('today'); document.getElementById('logH').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // picking a day moves the one global date; the summary above switches to that day
+  sumMode = 'day'; setLogDate(b.dataset.date);
+  document.getElementById('sumH').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
-$('calPrev').addEventListener('click', () => { const [y, m] = calMonth.split('-').map(Number); calMonth = iso(new Date(y, m - 2, 1)).slice(0, 7); renderCalendar(); });
-$('calNext').addEventListener('click', () => { const [y, m] = calMonth.split('-').map(Number); calMonth = iso(new Date(y, m, 1)).slice(0, 7); renderCalendar(); });
 for (const [id, k] of Object.entries(SETS)) {
   $(id).addEventListener('change', e => { const v = Number(e.target.value); if (Number.isFinite(v) && v > 0 || k === 'goal') { state.profile[k] = v; commit(); } });
 }
@@ -3270,11 +3272,9 @@ ${P().about ? '用户背景：' + P().about.slice(0, 900) : ''}
 });
 
 /* ---------- period log (top of Today) ---------- */
-let pcDate = TODAY;
 function periodRun(d) { if (!day(d).period) return 0; let n = 1, x = addDays(d, -1); while (day(x).period && n < 15) { n++; x = addDays(x, -1); } return n; }
 function renderPeriod() {
-  const d = pcDate, rec = day(d), on = !!rec.period, ph = phaseOf(TODAY), np = nextPeriod();
-  $('pcDate').value = d; $('pcDate').max = TODAY;
+  const d = logDate, rec = day(d), on = !!rec.period, ph = phaseOf(TODAY), np = nextPeriod();
   $('pc').classList.toggle('on', !!day(TODAY).period);
   if (day(TODAY).period) { $('pcTitle').textContent = `经期第 ${periodRun(TODAY)} 天`; $('pcSub').textContent = '多补铁和蛋白质，训练按感觉来；结束那天点「经期结束了」或者不再标记就行'; }
   else { $('pcTitle').textContent = np ? `预计 ${fmtMD(np)} 来月经（${diffDays(np, TODAY) >= 0 ? diffDays(np, TODAY) + ' 天后' : '已推迟 ' + -diffDays(np, TODAY) + ' 天'}）` : '记录经期'; $('pcSub').textContent = ph.cd ? `现在是周期第 ${ph.cd} 天 · ${PHASES[ph.key].name}，平均周期 ${CS.len} 天` : '标记一次经期后，app 会推算周期和阶段'; }
@@ -3285,11 +3285,10 @@ function renderPeriod() {
   $('pcFlow').disabled = $('pcPain').disabled = $('pcSave').disabled = !on;
   $('pcSaved').textContent = on && rec.periodSavedAt ? `✓ 已保存 · ${hhmm(rec.periodSavedAt)}` : on ? '可以补充流量和疼痛程度' : '';
 }
-$('pcDate').addEventListener('change', e => { if (e.target.value && e.target.value <= TODAY) { pcDate = e.target.value; renderPeriod(); } });
 $('pcToggle').addEventListener('click', () => {
-  const snap = JSON.stringify(state), r = ensure(pcDate); r.period = !r.period;
+  const snap = JSON.stringify(state), r = ensure(logDate); r.period = !r.period;
   if (!r.period) { delete r.flow; delete r.pain; delete r.periodSavedAt; }
-  commit(); offerUndo(r.period ? `已标记 ${fmtMD(pcDate)} 是经期` : `已取消 ${fmtMD(pcDate)} 的经期标记`, snap);
+  commit(); offerUndo(r.period ? `已标记 ${fmtMD(logDate)} 是经期` : `已取消 ${fmtMD(logDate)} 的经期标记`, snap);
 });
 /* ---------- WHOOP numbers for the record date (top of the training section): that morning's
    recovery / HRV / resting HR / sleep, and that day's full-day strain / burn. On today it also offers
@@ -3364,7 +3363,7 @@ $('wq').addEventListener('click', e => {
   offerUndo(`已保存${isToday ? '今天' : fmtMD(D)}的 WHOOP${rec != null ? ` · 恢复 ${rec}%` : ''}${fresh && rec != null && rec < 34 ? '，训练已换成轻量' : ''}`, snap);
 });
 $('pcSave').addEventListener('click', () => {
-  const snap = JSON.stringify(state), r = ensure(pcDate);
+  const snap = JSON.stringify(state), r = ensure(logDate);
   r.flow = $('pcFlow').value === '' ? null : Number($('pcFlow').value); r.pain = $('pcPain').value === '' ? null : Number($('pcPain').value); r.periodSavedAt = Date.now();
   commit(); offerUndo('经期记录已保存', snap);
 });
@@ -3387,12 +3386,12 @@ function renderBody() {
     const cls = hist.length < 2 || !m.want || Math.abs(d) < 1e-9 ? '' : d * m.want > 0 ? 'good' : 'bad';
     return `<tr><td style="text-align:left">${m.name}${m.unit ? ` <span class="small muted">${m.unit}</span>` : ''}</td><td class="num">${a.toFixed(dp)}<br><span class="small muted">${f.date.slice(5).replace('-', '/')}</span></td><td class="num">${z.toFixed(dp)}<br><span class="small muted">${l.date.slice(5).replace('-', '/')}</span></td><td class="num ${cls}">${hist.length < 2 ? '—' : (d > 0 ? '+' : '') + d.toFixed(dp)}</td><td class="small" style="white-space:normal;text-align:left">${m.want > 0 ? '↑ 越大越好' : m.want < 0 ? '↓ 越小越好' : ''}${m.note ? `<br><span class="muted">${m.note}</span>` : ''}</td></tr>`;
   }).join('') : `<tr><td colspan="5" style="text-align:left;white-space:normal" class="muted">还没有记录。先量一次腰围、臀围、肩围作为起点，之后每周量一次。</td></tr>`;
-  if (!$('bDate').value) $('bDate').value = TODAY;
+  $('bodyDateNote').textContent = `记到 ${fmtMD(logDate)}${logDate === TODAY ? '（今天）' : ''}，换日期用最上面的日期栏`;
 }
 $('bodyForm').addEventListener('submit', e => {
   e.preventDefault();
   const n = id => { const v = Number($(id).value); return $(id).value !== '' && v > 0 ? v : null; };
-  const r = { date: $('bDate').value, weight: n('bWeight'), waist: n('bWaist'), hip: n('bHip'), shoulder: n('bShoulder') };
+  const r = { date: logDate, weight: n('bWeight'), waist: n('bWaist'), hip: n('bHip'), shoulder: n('bShoulder') };
   if (!r.date || [r.weight, r.waist, r.hip, r.shoulder].every(v => v == null)) { $('bodyMsg').textContent = '至少填一项。'; return; }
   state.body = (state.body || []).filter(x => x.date !== r.date).concat(r);
   const newest = state.body.filter(x => x.weight).sort((a, b) => b.date.localeCompare(a.date))[0];
@@ -3667,7 +3666,7 @@ function renderLabs() {
     return `<tr><td class="name">${esc(n)}</td>${cells}<td class="small num">${delta}</td><td class="num">${esc(last.ref || '—')}</td><td class="small">${esc(last.unit || '')}</td></tr>`;
   }).join('') : `<tr><td colspan="${dates.length + 4}" style="text-align:left;white-space:normal" class="muted">还没有化验记录。在右边手动添加，或者一次粘贴多项。</td></tr>`;
   $('labList').innerHTML = LAB_NAMES.map(n => `<option value="${n}">`).join('');
-  if (!$('labDate').value) $('labDate').value = TODAY;
+  $('labDateNote').textContent = `单项添加会记到 ${fmtMD(logDate)}（采样日期），换日期用最上面的日期栏；批量粘贴按每行自己的日期`;
 }
 function parseLabLines(text) {
   const out = [];
@@ -3695,7 +3694,7 @@ $('labPasteGo').addEventListener('click', () => {
 });
 $('labForm').addEventListener('submit', e => {
   e.preventDefault();
-  const x = { name: $('labName').value.trim(), value: Number($('labVal').value), unit: $('labUnit').value.trim(), ref: $('labRef').value.trim(), date: $('labDate').value };
+  const x = { name: $('labName').value.trim(), value: Number($('labVal').value), unit: $('labUnit').value.trim(), ref: $('labRef').value.trim(), date: logDate };
   if (!x.name || !Number.isFinite(x.value) || !x.date) return;
   state.labs.push(x); save(); renderLabs(); ['labName', 'labVal', 'labUnit', 'labRef'].forEach(id => $(id).value = ''); $('labMsg').textContent = `已添加 ${x.name}`;
 });
@@ -4049,9 +4048,9 @@ if (!state.onboarded && !state.demoSeen) openOnboarding();
 function monthStart(d) { return d.slice(0, 8) + '01'; }
 function monthEnd(d) { const x = parse(monthStart(d)); return iso(new Date(x.getFullYear(), x.getMonth() + 1, 0)); }
 function sumRange() {
-  if (sumMode === 'day') return [sumAnchor, sumAnchor];
-  if (sumMode === 'week') { const a = weekStart(sumAnchor); return [a, addDays(a, 6)]; }
-  return [monthStart(sumAnchor), monthEnd(sumAnchor)];
+  if (sumMode === 'day') return [logDate, logDate];
+  if (sumMode === 'week') { const a = weekStart(logDate); return [a, addDays(a, 6)]; }
+  return [monthStart(logDate), monthEnd(logDate)];
 }
 function sumKey() { const [a] = sumRange(); return (sumMode === 'day' ? 'd-' : sumMode === 'week' ? 'w-' : 'm-') + a; }
 function daysIn(a, b) { const out = []; for (let d = a; d <= b && d <= TODAY; d = addDays(d, 1)) out.push(d); return out; }
@@ -4087,7 +4086,6 @@ function renderSummary() {
   $('sumSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x.dataset.sm === sumMode));
   $('sumTitle').textContent = sumMode === 'day' ? `${fmtMD(a)}（周${wd(a)}）${a === TODAY ? ' · 今天' : ''}`
     : sumMode === 'week' ? `${fmtMD(a)} – ${fmtMD(b)}${ongoing ? ' · 本周进行中' : ''}` : `${Number(a.slice(0, 4))}年${Number(a.slice(5, 7))}月${ongoing ? ' · 本月进行中' : ''}`;
-  $('sumNext').disabled = b >= TODAY; $('sumNow').hidden = ongoing; $('sumDate').value = sumAnchor; $('sumDate').max = TODAY;
   let html = '';
   if (a > TODAY) { $('sumStats').innerHTML = '<p class="muted">还没到这一天。</p>'; $('sumAI').innerHTML = ''; return; }
   if (sumMode === 'day') {
@@ -4099,7 +4097,7 @@ function renderSummary() {
       + tile('恢复', w.recovery != null ? w.recovery + '%' : '—', [w.hrv != null ? `HRV ${w.hrv}` : '', w.sleepMin != null ? `睡眠 ${(w.sleepMin / 60).toFixed(1)} h` : '', w.strain != null ? `Strain ${w.strain}` : ''].filter(Boolean).join(' · '))
       + tile('周期', PHASES[ph.key].name, `${ph.cd ? '第 ' + ph.cd + ' 天' : ''}${r.period ? ' · 经期' : ''}`)
       + tile('饮酒', drank(a) === true ? '喝了' : drank(a) === false ? '没喝' : '—', '');
-    html += `<div class="sum-actions"><button class="btn ghost" type="button" id="sumGoDay">打开这一天的记录</button></div>`;
+    html += `<div class="sum-actions"><button class="btn ghost" type="button" id="sumGoDay">去「今天」页看 / 改这一天的记录</button></div>`;
   } else {
     const st = periodStats(a, b), fatG = Math.round(st.deficitSum / 7.7);
     html = tile('记录天数', `${st.logged} / ${st.days}`, st.today ? '有饮食记录的天数 · 平均值不含今天' : '有饮食记录的天数')
@@ -4115,11 +4113,7 @@ function renderSummary() {
     <div class="sum-actions"><button class="btn ${saved ? 'ghost' : 'primary'}" type="button" id="sumAIGo">${saved ? '重新生成 AI 总结' : '✨ 生成 AI 总结'}</button><span class="small muted" id="sumMsg" role="status"></span></div>`;
 }
 $('sumSeg').addEventListener('click', e => { const x = e.target.closest('[data-sm]'); if (!x) return; sumMode = x.dataset.sm; renderSummary(); });
-$('sumPrev').addEventListener('click', () => { sumAnchor = sumMode === 'day' ? addDays(sumAnchor, -1) : sumMode === 'week' ? addDays(weekStart(sumAnchor), -7) : addDays(monthStart(sumAnchor), -1); renderSummary(); });
-$('sumNext').addEventListener('click', () => { const [, b] = sumRange(); sumAnchor = sumMode === 'day' ? addDays(sumAnchor, 1) : addDays(b, 1); if (sumAnchor > TODAY) sumAnchor = TODAY; renderSummary(); });
-$('sumNow').addEventListener('click', () => { sumAnchor = TODAY; renderSummary(); });
-$('sumDate').addEventListener('change', e => { if (e.target.value) { sumAnchor = e.target.value > TODAY ? TODAY : e.target.value; renderSummary(); } });
-$('sumStats').addEventListener('click', e => { if (e.target.id === 'sumGoDay') { setLogDate(sumAnchor); goTab('today'); window.scrollTo({ top: 0 }); } });
+$('sumStats').addEventListener('click', e => { if (e.target.id === 'sumGoDay') { goTab('today'); window.scrollTo({ top: 0 }); } });
 $('sumAI').addEventListener('click', async e => {
   if (e.target.id !== 'sumAIGo') return;
   if (!AI.mode) { $('sumMsg').textContent = '正在连接 AI…'; await AI.ready; }
@@ -4255,7 +4249,8 @@ function setCloudStatus(status, msg) {
   const cnt = CLOUD.count != null ? ` · 云端 ${CLOUD.count} 条` : '';
   const txt = { off: `☁︎ 未连接云端，只存在这台设备${CLOUD.msg ? '（' + CLOUD.msg + '）' : ''}`, loading: '☁︎ 正在从云端读取…', syncing: '☁︎ 正在同步…', ok: `☁︎ 已同步 · ${CLOUD.at ? hhmm(CLOUD.at) : ''}${cnt}`, error: `⚠︎ 还有改动没传上云端，已安全存在本机${CLOUD.msg ? '：' + CLOUD.msg : ''}` }[status];
   el.textContent = `${txt} · ${APP_VER}`; el.className = 'cloud-pill ' + status;
-  const bt = $('cloudNow'); if (bt) bt.disabled = status === 'loading' || status === 'syncing';
+  const bt = $('cloudNow');
+  if (bt) { bt.className = 'cloud-dot ' + status; bt.textContent = status === 'error' ? '⚠︎' : status === 'syncing' || status === 'loading' ? '⟳' : '☁︎'; bt.title = `${txt}（点一下立即同步）`; bt.setAttribute('aria-label', bt.title); }
 }
 async function fetchAll() {
   const all = []; let last = '';
@@ -4445,6 +4440,7 @@ $('cloudBk').addEventListener('click', async e => {
   } catch (err) { $('backupMsg').textContent = '这份云端备份读不出来，请换一份。'; b.disabled = false; b.textContent = '恢复到这份'; }
 });
 $('cloudNow').addEventListener('click', () => cloudNow().catch(() => setCloudStatus('error', '请稍后再试')));
+$('cloudNow2').addEventListener('click', () => cloudNow().catch(() => setCloudStatus('error', '请稍后再试')));
 cloudInit().catch(e => setCloudStatus('error', '连接出错 ' + ((e && (e.code || e.message)) || '')));
 })();
 </script>
