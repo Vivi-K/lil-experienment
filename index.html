@@ -85,6 +85,11 @@ section.block{display:grid;gap:14px}
 /* Logger */
 .logger{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
 @media (max-width:760px){.logger{grid-template-columns:1fr}}
+.burn-src{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:14px;background:var(--sunk);font-size:13px;color:var(--ink2)}
+.burn-src.warn{background:color-mix(in srgb,var(--warn) 12%,var(--surface))}
+.burn-src b{color:var(--ink)}
+.burn-btns{display:flex;gap:6px;flex-wrap:wrap}
+.burn-btns .btn{padding:4px 12px;font-size:13px}
 .meal-done{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--sunk);font-size:14px}
 .meal-done.all{background:color-mix(in srgb,var(--good) 12%,var(--surface));color:var(--good);font-weight:500}
 .meal-dots{display:flex;gap:6px;flex:none}
@@ -1318,7 +1323,7 @@ const DEFAULT_PROFILE = { height: 163, weight: 55, age: 28, act: 1.2, goal: -300
 let baseRev = 0;
 let sumMode = 'week';   // analysis → 总结 view (the date is the global logDate)
 const BK = 'moon-energy-bk-';
-const APP_VER = 'v38';
+const APP_VER = 'v39';
 const CLOUD = { db: null, col: null, ready: false, status: 'off', at: 0, sent: {}, timer: null, busy: false, again: false, msg: '', pulledAt: 0, count: null, uid: null, backups: [] };
 let state = load();
 dailyBackup();
@@ -1444,19 +1449,31 @@ const protein = d => day(d).food.reduce((a, f) => a + (f.prot || 0), 0);
 const protPerKg = () => ({ '-300': 2.0, '-550': 2.0, '-275': 1.8, '250': 1.8 })[String(P().goal)] || 1.6;
 const protTarget = () => Math.round(protPerKg() * P().weight);
 const wh = d => (state.whoop || {})[d] || null;
-// WHOOP's measured burn replaces the estimate for finished days (today's cycle is still open)
-const measured = d => d < TODAY && wh(d) && wh(d).kcal > 800 ? wh(d).kcal : null;
 const exBurn = d => day(d).ex.reduce((a, e) => a + exKcal(e), 0);
 const lutealBonus = () => Math.round(bmr() * 0.06);
-function totalBurn(d) {
-  const m = measured(d); if (m) return m;
-  const ph = phaseOf(d).key;
-  return baseBurn() + exBurn(d) + (ph === 'lut' ? lutealBonus() : 0);
+/* A day's total burn comes from ONE source, and everything shown for that day (exercise, net intake,
+   heat balance) is derived from that same source so the numbers can't contradict each other:
+   - estimate: resting burn + logged exercise
+   - WHOOP: the day's measured total (finished days only; today's cycle is still open)
+   A WHOOP total far below the estimate usually means the day wasn't over when it was read, or the
+   watch missed an activity, so it isn't trusted silently: the estimate is used and the day is flagged.
+   day(d).burnSrc = 'whoop' | 'est' records the user's own choice for that day. */
+function burnInfo(d) {
+  const rest = baseBurn() + (phaseOf(d).key === 'lut' ? lutealBonus() : 0), ex = exBurn(d), est = rest + ex;
+  const w = wh(d), whoop = d < TODAY && w && w.kcal > 800 ? w.kcal : null;
+  const mismatch = whoop != null && whoop < est - 500;
+  const pref = day(d).burnSrc;
+  const src = whoop == null ? 'est' : pref === 'est' || pref === 'whoop' ? pref : mismatch ? 'est' : 'whoop';
+  const total = src === 'whoop' ? whoop : est;
+  return { rest, ex, est, whoop, mismatch, src, total, active: src === 'whoop' ? Math.max(0, whoop - rest) : ex, chosen: !!pref };
 }
+const measured = d => { const b = burnInfo(d); return b.src === 'whoop' ? b.whoop : null; };
+function totalBurn(d) { return burnInfo(d).total; }
 // Daily intake target does NOT add exercise back: resting burn (plus the luteal bump) + goal
 const restBurn = d => baseBurn() + (phaseOf(d).key === 'lut' ? lutealBonus() : 0);
 const target = d => Math.max(Number(P().floor) || 0, restBurn(d) + Number(P().goal));
-const netIntake = d => intake(d) - exBurn(d);
+// net intake subtracts the exercise implied by the day's burn source (see burnInfo)
+const netIntake = d => intake(d) - burnInfo(d).active;
 // status of today's actual deficit (total burn - intake) against the goal deficit
 function balance(d) {
   const tb = totalBurn(d), inT = intake(d), def = tb - inT, goal = -Number(P().goal), plan = tb - target(d);
@@ -1551,7 +1568,7 @@ function renderHero() {
   $('phaseSub').textContent = ph.cd ? `周期第 ${ph.cd} 天 / 约 ${CS.len} 天${np ? ` · 预计 ${fmtMD(np)} 来月经（${Math.max(0, diffDays(np, TODAY))} 天后）` : ''}` : '';
   $('phaseTitle').textContent = info.title;
   $('phaseTips').innerHTML = info.tips.map(t => `<li>${t}</li>`).join('');
-  const inT = intake(D), exT = exBurn(D), tb = totalBurn(D), tg = target(D);
+  const bi = burnInfo(D), inT = intake(D), exT = bi.active, tb = bi.total, tg = target(D);
   const bonus = `运动 ${fmt(exT)}${ph.key === 'lut' ? ` · 黄体期 +${lutealBonus()}` : ''}`;
   const pr = protein(D), pt = protTarget();
   $('stats').innerHTML = [
@@ -3162,15 +3179,16 @@ function renderMeals() {
   const why = [`推荐合计 ${fmt(sumK)} kcal · 蛋白 ${fmt(sumP)} g`, `目标摄入 ${fmt(T)}（不含运动）`];
   if (ph.key === 'lut') why.push('黄体期代谢略高，已多给一些');
   $('mealWhy').textContent = why.join(' · ');
-  const exT = exBurn(logDate), goalDef = -Number(P().goal);
+  const bi = burnInfo(logDate), exT = bi.active, goalDef = -Number(P().goal);
   $('meals').innerHTML = `<div class="meal-sum">
       <div><span class="label">目标摄入（不含运动）</span><b>${fmt(T)}</b><span class="small muted">还可以吃 ${fmt(Math.max(0, T - intake(logDate)))} kcal</span></div>
       <div><span class="label">已吃</span><b>${fmt(intake(logDate))}</b><span class="small muted">蛋白 ${fmt(protein(logDate))} / ${PT} g</span></div>
-      <div><span class="label">净摄入</span><b>${fmt(netIntake(logDate))}</b><span class="small muted">已吃 − 运动 ${fmt(exT)}</span></div>
+      <div><span class="label">净摄入</span><b>${fmt(netIntake(logDate))}</b><span class="small muted">已吃 − 运动 ${fmt(exT)}${bi.src === 'whoop' ? '（按 WHOOP）' : ''}</span></div>
       <div class="${bal.cls} hl"><span class="label">热量差（目标 ${goalDef >= 0 ? '−' : '+'}${fmt(Math.abs(goalDef))}）</span><b>${bal.projected ? '<small style="font-size:.5em;font-weight:500">预计 </small>' : ''}${bal.show >= 0 ? '−' : '+'}${fmt(Math.abs(bal.show))}</b><span class="small">${bal.text}</span></div>
     </div>
     <div class="bal-legend"><span><i style="background:var(--good)"></i>达到目标差</span><span><i style="background:var(--warn)"></i>差距还小</span><span><i style="background:var(--p-men)"></i>超过消耗</span><span><i style="background:var(--accent)"></i>缺口偏大</span><span>热量差 = 总消耗（含运动）− 已吃；还在吃的过程中时显示按目标吃完的预计值</span></div>
     ${bal.note ? `<div class="meal-done" style="font-size:13px">${bal.note}</div>` : ''}
+    ${bi.whoop != null ? `<div class="burn-src${bi.mismatch && bi.src === 'est' ? ' warn' : ''}"><span>总消耗 ${bi.src === 'whoop' ? `按 WHOOP 实测 <b>${fmt(bi.whoop)}</b>（已含运动）` : `按估算 <b>${fmt(bi.est)}</b> = 静息 ${fmt(bi.rest)} + 运动 ${fmt(bi.ex)}`}${bi.mismatch ? `。WHOOP 记的是 ${fmt(bi.whoop)}，比估算低 ${fmt(bi.est - bi.whoop)}，可能那天还没结束就填了，或手表没记到某次运动${bi.chosen ? '' : '，所以先按估算算'}` : ''}</span><span class="burn-btns"><button class="btn ${bi.src === 'whoop' ? 'primary' : 'ghost'}" type="button" data-burn="whoop">按 WHOOP ${fmt(bi.whoop)}</button><button class="btn ${bi.src === 'est' ? 'primary' : 'ghost'}" type="button" data-burn="est">按估算 ${fmt(bi.est)}</button></span></div>` : ''}
     ${(() => { const n = ['breakfast', 'lunch', 'dinner'].filter(k => logged[k]).length; return `<div class="meal-done${n === 3 ? ' all' : ''}"><div class="meal-dots">${['早', '午', '晚'].map((t, k) => `<i class="${skipped[['breakfast', 'lunch', 'dinner'][k]] ? 'skip' : logged[['breakfast', 'lunch', 'dinner'][k]] ? 'on' : ''}">${t}</i>`).join('')}</div><span>${n === 3 ? '三餐都记好了，今天的饮食记录已完成 🎉 零食饮料可在下面补记' : `三餐已记录 ${n} / 3 · 吃完点「吃了，记录」，没吃就点「没吃」`}</span></div>`; })()}
     ${dayAIHtml()}
     <div class="meal-grid">${plan.map((m, i) => skipped[m.slot || i] ? `<div class="meal skipped"><div class="meal-head"><b>${m.name} · 没吃</b><span>0 kcal</span></div><div class="meal-foot"><span class="pill">已记为 0</span><button class="btn ghost" type="button" data-meal-unlog="${m.slot || i}">撤销</button></div></div>` : `<div class="meal${logged[m.slot || i] ? ' logged' : ''}">
@@ -3198,6 +3216,8 @@ $('meals').addEventListener('input', e => {
 $('meals').addEventListener('change', e => { if (e.target.dataset.diffK || e.target.dataset.daiK) renderMeals(); });
 $('meals').addEventListener('toggle', e => { if (e.target.classList && e.target.classList.contains('day-ai')) dayAI.open = e.target.open; }, true);
 $('meals').addEventListener('click', async e => {
+  const bs = e.target.closest('[data-burn]');
+  if (bs) { const snap = JSON.stringify(state), r = ensure(logDate); r.burnSrc = bs.dataset.burn; commit(); offerUndo(`${fmtMD(logDate)} 的总消耗改为${bs.dataset.burn === 'whoop' ? '按 WHOOP' : '按估算'}`, snap); return; }
   if (e.target.id === 'dayAIGo') { runDayAI(); return; }
   if (e.target.id === 'dayAIClear') { Object.assign(dayAI, { meals: null, note: '', msg: '' }); renderMeals(); return; }
   if (e.target.id === 'dayAISave') { saveDayAI(); return; }
@@ -4189,7 +4209,7 @@ $('exportJson').addEventListener('click', () => exportData('json'));
    so entries added or deleted on any device, online or offline, all survive.
    Daily full snapshots ('bk-YYYY-MM-DD-<part>') are kept in the cloud for 14 days as a last resort. */
 const EMPTY_DAY = () => ({ food: [], ex: [], period: false });
-const dayHasData = r => r && ((r.food || []).length || (r.ex || []).length || r.period || r.session || r.mood || r.mealLogged || r.flow || r.pain != null);
+const dayHasData = r => r && ((r.food || []).length || (r.ex || []).length || r.period || r.session || r.mood || r.mealLogged || r.flow || r.pain != null || r.burnSrc);
 const BASE_KEY = 'moon-energy-cloudbase';
 const isObj = v => v && typeof v === 'object' && !Array.isArray(v);
 // canonical JSON (sorted keys), so the same content always compares equal whatever order the store returns fields in
