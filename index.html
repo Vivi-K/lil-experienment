@@ -1323,7 +1323,7 @@ const DEFAULT_PROFILE = { height: 163, weight: 55, age: 28, act: 1.2, goal: -300
 let baseRev = 0;
 let sumMode = 'week';   // analysis → 总结 view (the date is the global logDate)
 const BK = 'moon-energy-bk-';
-const APP_VER = 'v39';
+const APP_VER = 'v40';
 const CLOUD = { db: null, col: null, ready: false, status: 'off', at: 0, sent: {}, timer: null, busy: false, again: false, msg: '', pulledAt: 0, count: null, uid: null, backups: [] };
 let state = load();
 dailyBackup();
@@ -3348,11 +3348,11 @@ function renderWhoopQuick() {
       ${isToday ? `<span class="grp">昨天全天（早上看 WHOOP 时顺手填）</span>
       <label>Strain<input id="wqYStrain" type="number" inputmode="decimal" step="0.1" min="0" max="21" value="${v(wy.strain)}" placeholder="例如 11.4"></label>
       <label>消耗 kcal<input id="wqYKcal" type="number" inputmode="numeric" min="800" max="6000" value="${v(wy.kcal)}" placeholder="例如 2050"></label>` : ''}
-      <span class="grp">${dl}全天${isToday ? '（一天结束后再填，或明早在「昨天」里填）' : ''}</span>
+      ${isToday ? '' : `<span class="grp">${dl}全天</span>
       <label>Strain<input id="wqStrain" type="number" inputmode="decimal" step="0.1" min="0" max="21" value="${v(w.strain)}" placeholder="例如 11.4"></label>
-      <label>消耗 kcal<input id="wqKcal" type="number" inputmode="numeric" min="800" max="6000" value="${v(w.kcal)}" placeholder="例如 2050"></label>
+      <label>消耗 kcal<input id="wqKcal" type="number" inputmode="numeric" min="800" max="6000" value="${v(w.kcal)}" placeholder="例如 2050"></label>`}
     </div>
-    <div class="wq-foot"><button class="btn primary" type="button" id="wqSave">确认保存</button>${has ? '<button class="btn ghost" type="button" id="wqCancel">取消</button>' : ''}<span class="small muted" id="wqMsg" role="status">全天消耗会替代估算，用来算那天的热量差</span></div>`;
+    <div class="wq-foot"><button class="btn primary" type="button" id="wqSave">确认保存</button>${has ? '<button class="btn ghost" type="button" id="wqCancel">取消</button>' : ''}<span class="small muted" id="wqMsg" role="status">${isToday ? '今天的全天数据明早在「昨天全天」里填，那时才完整' : '全天消耗会用来算那天的热量差'}</span></div>`;
 }
 $('wq').addEventListener('click', e => {
   if (e.target.id === 'wqEdit') { wqEdit = true; renderWhoopQuick(); return; }
