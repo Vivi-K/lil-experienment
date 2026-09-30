@@ -1318,7 +1318,7 @@ const DEFAULT_PROFILE = { height: 163, weight: 55, age: 28, act: 1.2, goal: -300
 let baseRev = 0;
 let sumMode = 'week';   // analysis → 总结 view (the date is the global logDate)
 const BK = 'moon-energy-bk-';
-const APP_VER = 'v37';
+const APP_VER = 'v38';
 const CLOUD = { db: null, col: null, ready: false, status: 'off', at: 0, sent: {}, timer: null, busy: false, again: false, msg: '', pulledAt: 0, count: null, uid: null, backups: [] };
 let state = load();
 dailyBackup();
@@ -1542,31 +1542,32 @@ const $ = id => document.getElementById(id);
 const fmt = n => Math.round(n).toLocaleString('zh-CN');
 
 function renderHero() {
-  const ph = phaseOf(TODAY);
+  const D = logDate, isT = D === TODAY;
+  const ph = phaseOf(D);
   const info = PHASES[ph.key];
-  $('todayLabel').textContent = `${fmtMD(TODAY)} 星期${WEEK[parse(TODAY).getDay()]}`;
+  $('todayLabel').textContent = `${fmtMD(D)} 星期${WEEK[parse(D).getDay()]}${isT ? '' : ' · 补记中'}`;
   const chip = $('phaseChip'); chip.style.setProperty('--c', info.color); chip.querySelector('span').textContent = info.name;
   const np = nextPeriod();
   $('phaseSub').textContent = ph.cd ? `周期第 ${ph.cd} 天 / 约 ${CS.len} 天${np ? ` · 预计 ${fmtMD(np)} 来月经（${Math.max(0, diffDays(np, TODAY))} 天后）` : ''}` : '';
   $('phaseTitle').textContent = info.title;
   $('phaseTips').innerHTML = info.tips.map(t => `<li>${t}</li>`).join('');
-  const inT = intake(TODAY), exT = exBurn(TODAY), tb = totalBurn(TODAY), tg = target(TODAY);
+  const inT = intake(D), exT = exBurn(D), tb = totalBurn(D), tg = target(D);
   const bonus = `运动 ${fmt(exT)}${ph.key === 'lut' ? ` · 黄体期 +${lutealBonus()}` : ''}`;
-  const pr = protein(TODAY), pt = protTarget();
+  const pr = protein(D), pt = protTarget();
   $('stats').innerHTML = [
-    ['今日摄入', fmt(inT), `净摄入 ${fmt(netIntake(TODAY))}（减去运动 ${fmt(exT)}）`],
+    [isT ? '今日摄入' : '这天摄入', fmt(inT), `净摄入 ${fmt(netIntake(D))}（减去运动 ${fmt(exT)}）`],
     ['蛋白质 g', `${fmt(pr)}<span class="small" style="color:var(--ink3)"> / ${pt}</span>`, pr >= pt ? '已达标' : `还差 ${fmt(pt - pr)} g`],
-    (() => { const b = balance(TODAY); return [b.projected ? '热量差（预计）' : '热量差', `<span class="${b.cls}">${b.show >= 0 ? '−' : '+'}${fmt(Math.abs(b.show))}</span>`, `${b.text}（总消耗 ${fmt(tb)}，含运动 ${fmt(exT)}）${b.note ? '；受最低摄入限制，今天达不到目标差' : ''}`]; })(),
+    (() => { const b = balance(D); return [b.projected ? '热量差（预计）' : '热量差', `<span class="${b.cls}">${b.show >= 0 ? '−' : '+'}${fmt(Math.abs(b.show))}</span>`, `${b.text}（总消耗 ${fmt(tb)}，含运动 ${fmt(exT)}）${b.note ? '；受最低摄入限制，今天达不到目标差' : ''}`]; })(),
     ['还可以吃', fmt(Math.max(0, tg - inT)), tg - inT < 0 ? `多了 ${fmt(inT - tg)}，看一周平均就好` : `目标 ${fmt(tg)}`]
   ].map(([l, v, s]) => `<div class="stat"><span class="label">${l}</span><b>${v}</b><span class="small">${s}</span></div>`).join('');
   const pct = tg > 0 ? inT / tg : 0;
   $('meter').classList.toggle('over', pct > 1.05);
   $('meter').firstElementChild.style.width = Math.min(100, pct * 100) + '%';
-  $('meterText').textContent = `今日目标摄入 ${fmt(tg)} kcal（不含运动，不低于 ${fmt(P().floor)}），已吃 ${Math.round(pct * 100)}%`;
+  $('meterText').textContent = `${isT ? '今日' : fmtMD(D)}目标摄入 ${fmt(tg)} kcal（不含运动，不低于 ${fmt(P().floor)}），已吃 ${Math.round(pct * 100)}%`;
 
   renderDial(ph);
   // latest WHOOP morning metrics (today's recovery is scored on waking)
-  const wd = wh(TODAY) ? TODAY : wh(addDays(TODAY, -1)) ? addDays(TODAY, -1) : null;
+  const wd = wh(D) ? D : wh(addDays(D, -1)) ? addDays(D, -1) : null;
   const w = wd && wh(wd);
   $('whNow').hidden = !w;
   if (w) {
@@ -1575,7 +1576,7 @@ function renderHero() {
     if (w.hrv != null) bits.push(`HRV <b>${w.hrv}</b> ms`);
     if (w.rhr != null) bits.push(`静息心率 <b>${w.rhr}</b>`);
     if (w.sleepMin != null) bits.push(`睡眠 <b>${(w.sleepMin / 60).toFixed(1)}</b> h`);
-    $('whNow').innerHTML = `<span>WHOOP ${wd === TODAY ? '今天' : '昨天'}</span>` + bits.map(b => `<span>${b}</span>`).join('');
+    $('whNow').innerHTML = `<span>WHOOP ${wd === D ? (isT ? '今天' : fmtMD(D)) : (isT ? '昨天' : '前一天')}</span>` + bits.map(b => `<span>${b}</span>`).join('');
   }
 }
 
@@ -1824,7 +1825,7 @@ function renderAll() {
 }
 function commit() { save(); renderAll(); }
 function setLogDate(d) {
-  const nd = d > TODAY ? TODAY : d; if (nd !== logDate) { Object.keys(mealDiff).forEach(k => delete mealDiff[k]); Object.assign(dayAI, { text: '', meals: null, note: '', msg: '' }); clearInterval(restT); $('restBar').hidden = true; }
+  const nd = d > TODAY ? TODAY : d; if (nd !== logDate) { qOffset = 0; Object.keys(mealDiff).forEach(k => delete mealDiff[k]); Object.assign(dayAI, { text: '', meals: null, note: '', msg: '' }); clearInterval(restT); $('restBar').hidden = true; }
   logDate = nd; calMonth = logDate.slice(0, 7); renderAll();
 }
 function renderDayPick() {
@@ -3527,7 +3528,7 @@ function cdState() {
   return state.countdown;
 }
 function renderCountdown() {
-  const c = cdState(), n = diffDays(TODAY, c.start) + 1, end = addDays(c.start, 99);
+  const c = cdState(), n = diffDays(logDate, c.start) + 1, end = addDays(c.start, 99);
   const done = Math.max(0, Math.min(100, n));
   $('cdDay').textContent = n < 1 ? `还有 ${1 - n} 天开始` : n > 100 ? '100 天完成' : `第 ${n} 天`;
   $('cdOf').textContent = n >= 1 && n <= 100 ? `/ 100 · 还剩 ${100 - n} 天` : '';
