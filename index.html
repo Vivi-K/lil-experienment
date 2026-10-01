@@ -1336,7 +1336,7 @@ const DEFAULT_PROFILE = { height: 163, weight: 55, age: 28, act: 1.2, goal: -300
 let baseRev = 0;
 let sumMode = 'week';   // analysis → 总结 view (the date is the global logDate)
 const BK = 'moon-energy-bk-';
-const APP_VER = 'v41';
+const APP_VER = 'v42';
 const CLOUD = { db: null, col: null, ready: false, status: 'off', at: 0, sent: {}, timer: null, busy: false, again: false, msg: '', pulledAt: 0, count: null, uid: null, backups: [] };
 let state = load();
 dailyBackup();
@@ -1863,6 +1863,9 @@ function renderDayPick() {
   $('dayPickTitle').textContent = past ? `周${wd}` : `今天 · 周${wd}`;
   $('dayPickSub').textContent = past ? `正在看 / 补记 ${fmtMD(logDate)}（周${wd}）：所有记录和分析都按这一天` : '';
   $('dayPickSub').hidden = !past;
+  $('aiToday').textContent = past ? `点评 ${fmtMD(logDate)}` : '点评今天';
+  $('aiTrain').textContent = past ? `${fmtMD(logDate)} 练什么` : '今天练什么';
+  $('aiPlan').textContent = past ? `给我 ${fmtMD(addDays(logDate, 1))} 的计划` : '给我明天的计划';
   $('backToday').hidden = !past; $('dateBar').classList.toggle('past', past); $('nextDay').disabled = logDate >= TODAY;
   $('mealH').textContent = past ? `${fmtMD(logDate)} 饮食` : '今日饮食';
   $('wkH').textContent = past ? `${fmtMD(logDate)} 训练与 WHOOP` : '今日训练与 WHOOP';
@@ -2040,10 +2043,11 @@ function dayLine(d) {
 
 /* Compact snapshot of the user's data for the prompt */
 function context() {
-  const ph = phaseOf(TODAY), p = P();
-  const recent = []; for (let i = 13; i >= 0; i--) recent.push(dayLine(addDays(TODAY, -i)));
+  // the coach reads the day picked in the date bar; '今天' in the user's questions means that day
+  const D = logDate, ph = phaseOf(D), p = P();
+  const recent = []; for (let i = 13; i >= 0; i--) recent.push(dayLine(addDays(D, -i)));
   const agg = PH_ORDER.map(k => {
-    const ds = Object.keys(state.days).filter(d => d <= TODAY && logged(d) && phaseOf(d).key === k);
+    const ds = Object.keys(state.days).filter(d => d <= D && logged(d) && phaseOf(d).key === k);
     if (!ds.length) return `${PHASES[k].name}：无数据`;
     const a = f => Math.round(ds.reduce((s, d) => s + f(d), 0) / ds.length);
     return `${PHASES[k].name}：${ds.length}天，日均摄入 ${a(intake)}，日均运动 ${a(exBurn)}，日均盈亏 ${a(d => intake(d) - totalBurn(d))}`;
@@ -2051,8 +2055,8 @@ function context() {
   const goal = { '-300': '减脂同时保住肌肉，最好能增肌（身体重组）', '0': '维持体重', '-275': '慢减（约0.25kg/周）', '-550': '减脂（约0.5kg/周）', '250': '增肌' }[String(p.goal)] || '维持体重';
   const whAgg = PH_ORDER.map(k => { const a = whoopPhaseAvg(k); return a ? `${PHASES[k].name}：恢复${a.recovery ?? '-'}% HRV${a.hrv ?? '-'} 静息心率${a.rhr ?? '-'} 皮肤温度${a.temp ?? '-'}℃ 睡眠${a.sleepMin ? (a.sleepMin / 60).toFixed(1) + 'h' : '-'}` : null; }).filter(Boolean);
   return `【用户资料】女性，${p.age}岁，${p.height}cm，${p.weight}kg，目标：${goal}。BMR≈${bmr()} kcal，日常基础消耗≈${baseBurn()} kcal，蛋白质目标 ${protTarget()} g/天。
-【周期】今天 ${TODAY}，周期第 ${ph.cd ?? '未知'} 天，${PHASES[ph.key].name}；平均周期 ${CS.len} 天，经期 ${CS.plen} 天；预计下次经期 ${nextPeriod() || '未知'}。
-【今天】摄入 ${intake(TODAY)}，蛋白 ${protein(TODAY)}g，运动 ${exBurn(TODAY)}，总消耗 ${totalBurn(TODAY)}，今日目标摄入 ${target(TODAY)}（不含运动，黄体期已含 +${lutealBonus()}），净摄入 ${netIntake(TODAY)}，实际热量差 ${totalBurn(TODAY) - intake(TODAY)}（目标差 ${-Number(P().goal)}）。
+${D !== TODAY ? `【注意】用户正在看 ${D} 这一天（真实今天是 ${TODAY}）。她说的“今天”指 ${D}，“明天”指 ${addDays(D, 1)}，“最近”指 ${D} 之前；只用这一天及之前的数据回答。\n` : ''}【周期】今天 ${D}，周期第 ${ph.cd ?? '未知'} 天，${PHASES[ph.key].name}；平均周期 ${CS.len} 天，经期 ${CS.plen} 天；预计下次经期 ${nextPeriod() || '未知'}。
+【今天】摄入 ${intake(D)}，蛋白 ${protein(D)}g，运动 ${exBurn(D)}，总消耗 ${totalBurn(D)}，今日目标摄入 ${target(D)}（不含运动，黄体期已含 +${lutealBonus()}），净摄入 ${netIntake(D)}，实际热量差 ${totalBurn(D) - intake(D)}（目标差 ${-Number(P().goal)}）。
 【最近14天】
 ${recent.join('\n')}
 【各阶段均值】
@@ -2064,7 +2068,7 @@ function labsCtx() {
   return '\n【最近化验结果】\n' + l.map(x => `${x.name} ${x.value}${x.unit || ''}（参考 ${x.ref || '-'}，${x.date}${labFlag(x) === 'hi' ? '，偏高' : labFlag(x) === 'lo' ? '，偏低' : ''}）`).join('；');
 }
 function moodCtx() {
-  const lines = []; for (let i = 6; i >= 0; i--) { const d = addDays(TODAY, -i), m = mood(d); if (m) lines.push(`${d}｜心情${m.m ?? '-'}/5${m.tags ? '｜' + MOOD_TAGS.filter(([k]) => m.tags[k]).map(t => t[1]).join('、') : ''}｜想喝酒${['没有', '有点', '很想', '忍不住'][m.urge] ?? '-'}｜喝了${m.drinks ?? '-'}杯${m.resisted ? '｜忍住了' + m.resisted + '次' : ''}${m.note ? '｜' + m.note : ''}`); }
+  const lines = []; for (let i = 6; i >= 0; i--) { const d = addDays(logDate, -i), m = mood(d); if (m) lines.push(`${d}｜心情${m.m ?? '-'}/5${m.tags ? '｜' + MOOD_TAGS.filter(([k]) => m.tags[k]).map(t => t[1]).join('、') : ''}｜想喝酒${['没有', '有点', '很想', '忍不住'][m.urge] ?? '-'}｜喝了${m.drinks ?? '-'}杯${m.resisted ? '｜忍住了' + m.resisted + '次' : ''}${m.note ? '｜' + m.note : ''}`); }
   const a = alcoholStats();
   return `\n【心情与酒精】距离上次喝酒 ${a.since ?? '未知'} 天，本月没喝 ${a.monthFree}/${a.monthKnown} 天，最长连续 ${a.best} 天。${lines.length ? '\n' + lines.join('\n') : ''}`;
 }
@@ -2127,6 +2131,7 @@ async function run(label, prompt, { tier = 'default', live = false, chat = false
   if (!AI.mode || AI.busy) return;
   AI.busy = true; setAIEnabled(true); $('aiStop').hidden = false;
   const ctl = new AbortController(); AI.ctl = ctl;
+  if (logDate !== TODAY) label = `${fmtMD(logDate)} · ${label || '问答'}`;
   const body = addMsg('ai', '思考中…', label, live ? 'live' : '');
   let input;
   if (chat) { AI.turns.push({ role: 'user', content: prompt }); input = [{ role: 'user', content: RULES + '\n\n' + context() }, ...AI.turns.slice(-12)]; }
@@ -2154,7 +2159,7 @@ $('aiToday').addEventListener('click', () => run('点评今天', '点评我今�
 $('aiWeek').addEventListener('click', () => run('周期分析', '分析最近 14 天和各阶段均值：找出我的饮食和运动在不同周期阶段的规律（例如黄体期是否吃得多、经期是否运动少），指出 1 个做得好的地方和 2 个最值得改的地方，并给出下一个周期每个阶段的安排。350 字以内。', { tier: 'complex' }));
 $('aiTrain').addEventListener('click', () => run('今天练什么', '根据今天的周期阶段、WHOOP 恢复和睡眠、本周各部位已经练了几次，安排今天的训练：练哪个部位（优先补本周落后的臀部/上肢/腰腹），优先从 app 里的训练组合中选（写明是哪个部位的哪个组合，比如“翘臀 A + 平腹 C”），需要时做小调整，写出每个动作的组数×次数和休息时间，力量训练总时长约 45–55 分钟，按效率安排，组数够用就停。如果今天更适合休息或轻练，直接说并给替代方案。'));
 $('aiPlan').addEventListener('click', () => {
-  const tmr = addDays(TODAY, 1), k = phaseOf(tmr);
+  const tmr = addDays(logDate, 1), k = phaseOf(tmr);
   run('明天的计划', `明天是 ${tmr}，预计处于${PHASES[k.key].name}（周期第 ${k.cd ?? '?'} 天）。按这个阶段给我明天的三餐加一次加餐（每项写食物和大约 kcal，总热量贴近我的目标），再给一个适合这个阶段的运动安排（类型、时长、强度）。`);
 });
 $('aiStop').addEventListener('click', () => AI.ctl && AI.ctl.abort());
