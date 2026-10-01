@@ -85,6 +85,17 @@ section.block{display:grid;gap:14px}
 /* Logger */
 .logger{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
 @media (max-width:760px){.logger{grid-template-columns:1fr}}
+.ai-food{display:grid;gap:10px;padding:14px;border-radius:16px;background:var(--accent-soft)}
+.ai-food-head{display:grid;gap:2px}
+.ai-food textarea{width:100%;min-height:76px;padding:10px 12px;font:inherit;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.ai-done{display:grid;gap:3px;padding:10px 12px;border-radius:12px;background:var(--surface);font-size:14px}
+.ai-done b{color:var(--good)}
+.ai-rec{display:grid;gap:10px}
+.ai-rec p{margin:0;font-size:14px}
+.rec-opt{background:var(--surface);border-radius:14px;padding:12px 14px;display:grid;gap:6px}
+.rec-opt ul{list-style:none;margin:0;padding:0;display:grid;gap:2px;font-size:14px}
+.rec-opt li{display:flex;justify-content:space-between;gap:8px}
+.rec-opt li span:last-child{color:var(--ink2);white-space:nowrap}
 .burn-src{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:14px;background:var(--sunk);font-size:13px;color:var(--ink2)}
 .burn-src.warn{background:color-mix(in srgb,var(--warn) 12%,var(--surface))}
 .burn-src b{color:var(--ink)}
@@ -696,15 +707,17 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
   <!-- MEALS -->
   <section class="block" aria-labelledby="mealH">
     <div class="sec-head">
-      <h2 id="mealH">今日饮食 · 推荐与记录</h2>
+      <h2 id="mealH">今日饮食</h2>
       <span class="small muted" id="mealWhy"></span>
     </div>
     <div class="panel meals" id="meals"></div>
     <div class="panel food-log">
       <div class="food-log-head">
-        <div><h3 id="logH">其他吃的 · 全部记录</h3><span class="small muted">三餐在上面的餐卡记录，这里按餐合并显示（点开看明细）；零食、饮料在这里补记。日期在最上面切换</span></div>
+        <div><h3 id="logH">吃了什么 · 全部记录</h3><span class="small muted">按餐合并，点开看明细，× 删除；要改就跟上面的 AI 说一句</span></div>
 
       </div>
+        <ul class="entries" id="foodEntries"></ul>
+        <details class="ex-manual"><summary class="small muted">不用 AI，手动添加</summary>
         <form class="row" id="foodForm">
           <input class="grow" id="foodName" list="foodList" placeholder="吃了什么" required aria-label="食物名称">
           <input class="w num" id="foodKcal" type="number" min="0" max="5000" placeholder="kcal" required aria-label="热量">
@@ -713,7 +726,7 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
         </form>
         <datalist id="foodList"></datalist>
         <div class="quick" id="foodQuick"></div>
-        <ul class="entries" id="foodEntries"></ul>
+        </details>
     </div>
   </section>
 
@@ -1323,7 +1336,7 @@ const DEFAULT_PROFILE = { height: 163, weight: 55, age: 28, act: 1.2, goal: -300
 let baseRev = 0;
 let sumMode = 'week';   // analysis → 总结 view (the date is the global logDate)
 const BK = 'moon-energy-bk-';
-const APP_VER = 'v40';
+const APP_VER = 'v41';
 const CLOUD = { db: null, col: null, ready: false, status: 'off', at: 0, sent: {}, timer: null, busy: false, again: false, msg: '', pulledAt: 0, count: null, uid: null, backups: [] };
 let state = load();
 dailyBackup();
@@ -1842,7 +1855,7 @@ function renderAll() {
 }
 function commit() { save(); renderAll(); }
 function setLogDate(d) {
-  const nd = d > TODAY ? TODAY : d; if (nd !== logDate) { qOffset = 0; Object.keys(mealDiff).forEach(k => delete mealDiff[k]); Object.assign(dayAI, { text: '', meals: null, note: '', msg: '' }); clearInterval(restT); $('restBar').hidden = true; }
+  const nd = d > TODAY ? TODAY : d; if (nd !== logDate) { qOffset = 0; Object.keys(mealDiff).forEach(k => delete mealDiff[k]); Object.assign(dayAI, { text: '', msg: '', last: null, rec: null }); clearInterval(restT); $('restBar').hidden = true; }
   logDate = nd; calMonth = logDate.slice(0, 7); renderAll();
 }
 function renderDayPick() {
@@ -1851,7 +1864,7 @@ function renderDayPick() {
   $('dayPickSub').textContent = past ? `正在看 / 补记 ${fmtMD(logDate)}（周${wd}）：所有记录和分析都按这一天` : '';
   $('dayPickSub').hidden = !past;
   $('backToday').hidden = !past; $('dateBar').classList.toggle('past', past); $('nextDay').disabled = logDate >= TODAY;
-  $('mealH').textContent = past ? `${fmtMD(logDate)} 饮食 · 推荐与记录` : '今日饮食 · 推荐与记录';
+  $('mealH').textContent = past ? `${fmtMD(logDate)} 饮食` : '今日饮食';
   $('wkH').textContent = past ? `${fmtMD(logDate)} 训练与 WHOOP` : '今日训练与 WHOOP';
 }
 $('backToday').addEventListener('click', () => setLogDate(TODAY));
@@ -2187,61 +2200,86 @@ function markSkipped(r, tag) {
   (r.mealActual || (r.mealActual = {}))[tag] = [];
   (r.mealSkipped || (r.mealSkipped = {}))[tag] = true;
 }
-/* ---------- whole-day AI: one sentence -> every meal (eaten, changed or skipped) ---------- */
+/* ---------- the food box: tell AI what you ate (analysed and recorded straight away), or ask it to recommend ---------- */
 const SLOT_NAME = { breakfast: '早餐', lunch: '午餐', dinner: '晚餐', snack: '加餐', other: '其他零食饮料' };
-const dayAI = { open: false, text: '', busy: false, msg: '', meals: null, note: '' };
+const dayAI = { text: '', busy: false, msg: '', last: null, rec: null };
 function dayAIHtml() {
-  const st = dayAI;
-  return `<details class="day-ai" ${st.open ? 'open' : ''}><summary><span class="sum-txt"><span>✨ 一句话告诉 AI 今天吃了什么</span><span class="small muted" style="font-weight:400">没吃、吃少了、换了别的、不吃晚餐，都能自动算</span></span></summary>
-    <div class="ai-box">
-      <textarea id="dayAIText" placeholder="比如：早餐没吃；午饭按推荐；下午一杯少甜奶茶；晚餐不吃了" aria-label="今天吃了什么">${esc(st.text)}</textarea>
-      <div class="meal-foot"><button class="btn primary" type="button" id="dayAIGo" ${st.busy ? 'disabled' : ''}>${st.busy ? '分析中…' : 'AI 分析'}</button>${st.meals ? '<button class="btn ghost" type="button" id="dayAIClear">清空结果</button>' : ''}<span class="small muted" role="status">${esc(st.msg)}</span></div>
-      ${st.meals && st.meals.length ? st.meals.map((g, gi) => `<div class="ai-grp">${SLOT_NAME[g.slot]}${g.skipped ? ' · 没吃，记为 0 kcal' : ` · ${fmt(g.items.reduce((a, x) => a + x.kcal, 0))} kcal`}</div>${g.skipped ? '' : `<div class="tbl-wrap"><table><tbody>${g.items.map((x, i) => `<tr><td style="text-align:left;white-space:normal">${esc(x.name)}</td><td><input type="number" min="0" data-dai-k="kcal" data-dai-g="${gi}" data-dai-i="${i}" value="${x.kcal}" aria-label="${esc(x.name)} 热量"> kcal</td><td><input type="number" min="0" data-dai-k="prot" data-dai-g="${gi}" data-dai-i="${i}" value="${x.prot}" aria-label="${esc(x.name)} 蛋白质"> g</td></tr>`).join('')}</tbody></table></div>`}`).join('') + `
-      ${st.note ? `<span class="small">${esc(st.note)}</span>` : ''}
-      <div class="meal-foot"><button class="btn primary" type="button" id="dayAISave">确认，按这个记录</button><span class="small muted">提到的几餐会替换原来的记录；零食饮料是加上去的；数字可以直接改</span></div>` : ''}
-    </div></details>`;
+  const st = dayAI, n = v => fmt(v.items.reduce((a, x) => a + x.kcal, 0));
+  return `<div class="ai-food">
+    <div class="ai-food-head"><b>✨ 告诉 AI 吃了什么，或让它推荐</b><span class="small muted">说完自动分析并记录；说错了直接再说一句更正，比如「午饭的饭只吃了一半」</span></div>
+    <textarea id="dayAIText" placeholder="比如：早餐两个鸡蛋一片全麦吐司；午饭食堂烧鹅饭，饭吃了一半；下午一杯少甜奶茶；晚餐没吃&#10;或者：推荐我今晚吃什么" aria-label="吃了什么，或想让 AI 推荐什么">${esc(st.text)}</textarea>
+    <div class="meal-foot"><button class="btn primary" type="button" id="dayAIGo" ${st.busy ? 'disabled' : ''}>${st.busy ? 'AI 处理中…' : '发送'}</button>
+      <button class="btn ghost" type="button" data-ask="推荐我下一餐吃什么" ${st.busy ? 'disabled' : ''}>推荐下一餐</button>
+      <button class="btn ghost" type="button" data-ask="按我还能吃的热量和蛋白，推荐今天剩下的几餐" ${st.busy ? 'disabled' : ''}>推荐今天剩下的</button>
+      <span class="small muted" role="status">${esc(st.msg)}</span></div>
+    ${st.last ? `<div class="ai-done"><b>✓ 已记录</b>${st.last.lines.map(l => `<span>${esc(l)}</span>`).join('')}${st.last.note ? `<span class="small muted">${esc(st.last.note)}</span>` : ''}</div>` : ''}
+    ${st.rec ? `<div class="ai-rec">${st.rec.text ? `<p>${esc(st.rec.text)}</p>` : ''}${st.rec.options.map((o, i) => `<div class="rec-opt"><div class="meal-head"><b>${esc(SLOT_NAME[o.slot] || '')} · ${esc(o.title)}</b><span>${n(o)} kcal · 蛋白 ${o.items.reduce((a, x) => a + x.prot, 0)} g</span></div><ul>${o.items.map(x => `<li><span>${esc(x.name)}</span><span>${x.kcal} kcal · ${x.prot} g</span></li>`).join('')}</ul><div class="meal-foot"><button class="btn" type="button" data-rec-log="${i}">吃了这个，记录</button></div></div>`).join('')}<button class="btn ghost" type="button" id="recClear">收起推荐</button></div>` : ''}
+  </div>`;
 }
-async function runDayAI() {
-  const ta = $('dayAIText'); dayAI.text = ta ? ta.value.trim() : dayAI.text.trim();
-  if (!dayAI.text) { dayAI.msg = '先写一句今天吃了什么。'; renderMeals(); return; }
+function dayRecordsText(d) {
+  const r = day(d), by = {};
+  r.food.forEach(f => { const k = f.meal != null && SLOT_NAME[f.meal] ? f.meal : 'other'; (by[k] || (by[k] = [])).push(`${f.name.replace(/^[^：]{1,6}：/, '')} ${f.kcal}kcal`); });
+  return Object.keys(by).length ? Object.entries(by).map(([k, v]) => `${SLOT_NAME[k]}：${v.join('、')}`).join('\n') : '还没有记录';
+}
+async function runDayAI(askText) {
+  const ta = $('dayAIText'); const text = (askText || (ta ? ta.value : dayAI.text) || '').trim();
+  dayAI.text = askText ? (ta ? ta.value : dayAI.text) : text;
+  if (!text) { dayAI.msg = '先写一句吃了什么，或者想让 AI 推荐什么。'; renderMeals(); return; }
   if (!AI.mode) { dayAI.msg = '正在连接 AI…'; renderMeals(); await AI.ready; }
-  if (!AI.mode || AI.busy) { dayAI.msg = AI.mode ? 'AI 正在忙，稍等再点。' : 'AI 还没连接上。'; renderMeals(); return; }
-  const plan = JSON.parse($('meals').dataset.plan || '[]');
-  const planTxt = plan.map(m => `${SLOT_NAME[m.slot] || m.name}（${m.title}）：${m.items.map(x => `${x.name} ${x.kcal}kcal/${x.prot}g蛋白`).join('、')}`).join('\n');
-  const prompt = `你是营养师。用户用一段话描述今天的饮食，请按餐次拆开，并估算实际吃下的热量和营养素。
-用户描述：${dayAI.text}
-今天 app 推荐的餐单（用户说“按推荐吃了”某餐时，直接用对应内容）：
-${planTxt}
-${P().about ? '用户背景：' + P().about.slice(0, 500) + '\n' : ''}规则：
-- slot 只能是 breakfast、lunch、dinner、snack、other；other 用于正餐之外、说不清是哪一餐的零食和饮料（奶茶、咖啡、水果等）。
-- 用户说没吃、不吃、跳过、删掉、取消某一餐：该餐 skipped 为 true，items 为空数组。
-- 描述里没提到的餐次不要输出。
-- 按中国和香港常见做法和份量估算（食堂、外卖、茶餐厅都常见）；“吃了一半”“少饭”按实际吃下的量算；份量没说清按中等份量，并在 name 里写“估”。饮品也要算。
-只回复一个 JSON 对象：{"meals":[{"slot":"lunch","skipped":false,"items":[{"name":"食物和份量","kcal":整数,"prot":整数,"carb":整数,"fat":整数}]}],"note":"一句话：今天整体和目标比怎么样、接下来怎么吃，温和不评判，40 字以内"}`;
+  if (!AI.mode || AI.busy) { dayAI.msg = AI.mode ? 'AI 正在忙，稍等再点。' : 'AI 还没连接上，可以先用下面的手动添加。'; renderMeals(); return; }
+  const D = logDate, T = target(D), left = Math.max(0, T - intake(D)), protLeft = Math.max(0, protTarget() - protein(D));
+  const ideas = SLOTS.map(sl => `${MEALS[sl].name}：${MEALS[sl].opts.map(o => o.name).join(' / ')}`).join('\n');
+  const prompt = `你是注册营养师，帮用户记录和规划饮食。日期：${D}${D === TODAY ? '（今天）' : ''}，现在 ${hhmm(Date.now())}。
+用户说：${text}
+这一天已经记录的：
+${dayRecordsText(D)}
+目标摄入 ${T} kcal（不含运动），已吃 ${intake(D)}，还可以吃约 ${left} kcal；蛋白目标 ${protTarget()} g，还差 ${protLeft} g；${PHASES[phaseOf(D).key].name}。
+${P().about ? '用户背景：' + P().about.slice(0, 500) + '\n' : ''}先判断用户的意思：
+A. 在说吃了什么、没吃什么、或更正之前的记录 → mode 为 "log"：
+- 按餐次拆开，slot 只能是 breakfast、lunch、dinner、snack、other（other 用于说不清哪一餐的零食饮料）。
+- 说没吃 / 不吃 / 删掉某一餐 → 该餐 skipped 为 true，items 为空。
+- 更正某一餐时，输出这一餐更正后的完整内容（会替换这一餐原来的记录）；没提到的餐次不要输出。
+- 按中国和香港常见做法和份量估算（食堂、外卖、茶餐厅都常见）；“吃了一半”“少饭”按实际吃下的量；份量没说清按中等份量，并在 name 里写“估”。饮品也要算。
+B. 在问吃什么、要推荐 → mode 为 "recommend"：给 1–3 个具体选择，按剩余热量和蛋白配好份量；默认不含乳制品、少油；适合香港（食堂、茶餐厅、自己做都行）。可以参考这些家常选项：
+${ideas}
+只回复一个 JSON 对象：
+{"mode":"log","meals":[{"slot":"lunch","skipped":false,"items":[{"name":"食物和份量","kcal":整数,"prot":整数,"carb":整数,"fat":整数}]}],"note":"一句话：和目标比怎么样、接下来怎么吃，温和，40 字内"}
+或
+{"mode":"recommend","text":"一两句说明为什么这样推荐，40 字内","options":[{"slot":"dinner","title":"简短名字","items":[{"name":"食物和份量","kcal":整数,"prot":整数}]}]}`;
   dayAI.busy = true; dayAI.msg = ''; renderMeals(); AI.busy = true; setAIEnabled(true);
   try {
     const r = await askJSON(prompt, { modelTier: 'default' });
     const n = v => Math.max(0, Math.round(Number(v) || 0)), ok = ['breakfast', 'lunch', 'dinner', 'snack', 'other'];
-    const meals = ((r && r.meals) || []).filter(g => g && ok.includes(g.slot)).map(g => ({ slot: g.slot, skipped: !!g.skipped && g.slot !== 'other', items: (g.skipped ? [] : (g.items || [])).map(x => ({ name: String(x.name || '').slice(0, 40), kcal: n(x.kcal), prot: n(x.prot), carb: n(x.carb), fat: n(x.fat) })).filter(x => x.name && x.kcal < 5000) })).filter(g => g.skipped || g.items.length);
-    dayAI.meals = meals; dayAI.note = String((r && r.note) || '').slice(0, 120); dayAI.msg = meals.length ? '' : '没认出吃了什么，写得具体一点再试。';
+    const items = list => (list || []).map(x => ({ name: String(x.name || '').slice(0, 40), kcal: n(x.kcal), prot: n(x.prot), carb: n(x.carb), fat: n(x.fat) })).filter(x => x.name && x.kcal < 5000);
+    if (r && r.mode === 'recommend') {
+      const options = (r.options || []).filter(o => o && ok.includes(o.slot)).map(o => ({ slot: o.slot, title: String(o.title || '').slice(0, 30), items: items(o.items) })).filter(o => o.items.length).slice(0, 3);
+      dayAI.rec = { text: String(r.text || '').slice(0, 160), options }; dayAI.last = null;
+      dayAI.msg = options.length ? '' : '这次没给出具体推荐，换个说法再试。';
+      if (!askText) dayAI.text = '';
+    } else {
+      const meals = ((r && r.meals) || []).filter(g => g && ok.includes(g.slot)).map(g => ({ slot: g.slot, skipped: !!g.skipped && g.slot !== 'other', items: g.skipped ? [] : items(g.items) })).filter(g => g.skipped || g.items.length);
+      if (!meals.length) dayAI.msg = '没认出吃了什么，写得具体一点再试。';
+      else { recordMeals(meals, String((r && r.note) || '').slice(0, 120)); dayAI.text = ''; dayAI.rec = null; }
+    }
   } catch (err) { dayAI.msg = err && err.code === 'invalid_json' ? '这次结果格式不对，再点一次试试。' : errCopy(err && err.code); }
   finally { dayAI.busy = false; AI.busy = false; setAIEnabled(!!AI.mode); renderMeals(); }
 }
-function saveDayAI() {
-  if (!dayAI.meals || !dayAI.meals.length) return;
-  const snap = JSON.stringify(state), r = ensure(logDate), said = [];
-  for (const g of dayAI.meals) {
-    if (g.slot === 'other') { g.items.forEach(x => r.food.push({ name: `零食饮料：${x.name}`, kcal: x.kcal, prot: x.prot, carb: x.carb, fat: x.fat, ai: true })); said.push(g.items.map(x => x.name).join('、')); continue; }
-    if (g.skipped) { markSkipped(r, g.slot); said.push(`${SLOT_NAME[g.slot]}没吃`); continue; }
+// write analysed meals into the day: a named meal replaces that meal's earlier entries; snacks/drinks are added
+function recordMeals(meals, note) {
+  const snap = JSON.stringify(state), r = ensure(logDate), said = [], lines = [];
+  for (const g of meals) {
+    const kc = g.items.reduce((a, x) => a + x.kcal, 0);
+    if (g.slot === 'other') { g.items.forEach(x => r.food.push({ name: `零食饮料：${x.name}`, kcal: x.kcal, prot: x.prot, carb: x.carb, fat: x.fat, ai: true })); said.push(g.items.map(x => x.name).join('、')); lines.push(`零食饮料：${g.items.map(x => x.name).join('、')} · ${fmt(kc)} kcal`); continue; }
+    if (g.skipped) { markSkipped(r, g.slot); said.push(`${SLOT_NAME[g.slot]}没吃`); lines.push(`${SLOT_NAME[g.slot]}：没吃，记为 0`); continue; }
     r.food = r.food.filter(f => f.meal !== g.slot);
     g.items.forEach(x => r.food.push({ name: `${SLOT_NAME[g.slot]}：${x.name}`, kcal: x.kcal, prot: x.prot, carb: x.carb, fat: x.fat, meal: g.slot, ai: true }));
     (r.mealLogged || (r.mealLogged = {}))[g.slot] = true;
-    (r.mealActual || (r.mealActual = {}))[g.slot] = g.items.map(({ name, kcal, prot }) => ({ name, kcal, prot }));
     if (r.mealSkipped) delete r.mealSkipped[g.slot];
     said.push(`${SLOT_NAME[g.slot]}：${g.items.map(x => x.name).join('、')}`);
+    lines.push(`${SLOT_NAME[g.slot]}：${g.items.map(x => x.name).join('、')} · ${fmt(kc)} kcal`);
   }
-  Object.assign(dayAI, { text: '', meals: null, note: '', msg: '', open: false });
-  commit(); offerUndo('已按 AI 分析记录今天的饮食', snap); onLogged(said.join('；'));
+  dayAI.last = { lines, note };
+  commit(); offerUndo('已记录（数字是 AI 估算）', snap); onLogged(said.join('；'));
 }
 /* ---------- exercise from free text: AI estimates type, minutes and burn ---------- */
 const exAI = { busy: false, items: null, note: '', msg: '' };
@@ -3172,11 +3210,7 @@ function mealSel(slot) {
 function renderMeals() {
   const ph = phaseOf(logDate);
   const T = target(logDate), PT = protTarget(), bal = balance(logDate);
-  const ai = day(logDate).mealAI;
-  const plan = ai ? ai.meals : SLOTS.map(slot => { const m = MEALS[slot], o = m.opts[mealSel(slot)]; return { slot, name: m.name, title: o.name, tip: o.tip, ...buildMeal(slot, o, T * m.share) }; });
-  const sumK = plan.reduce((a, m) => a + m.kcal, 0), sumP = plan.reduce((a, m) => a + m.prot, 0);
-  const logged = day(logDate).mealLogged || {}, conf = day(logDate).mealConfirmed, actual = day(logDate).mealActual || {}, skipped = day(logDate).mealSkipped || {};
-  const why = [`推荐合计 ${fmt(sumK)} kcal · 蛋白 ${fmt(sumP)} g`, `目标摄入 ${fmt(T)}（不含运动）`];
+  const why = [`目标摄入 ${fmt(T)} kcal（不含运动）`, `蛋白 ${PT} g`];
   if (ph.key === 'lut') why.push('黄体期代谢略高，已多给一些');
   $('mealWhy').textContent = why.join(' · ');
   const bi = burnInfo(logDate), exT = bi.active, goalDef = -Number(P().goal);
@@ -3189,38 +3223,24 @@ function renderMeals() {
     <div class="bal-legend"><span><i style="background:var(--good)"></i>达到目标差</span><span><i style="background:var(--warn)"></i>差距还小</span><span><i style="background:var(--p-men)"></i>超过消耗</span><span><i style="background:var(--accent)"></i>缺口偏大</span><span>热量差 = 总消耗（含运动）− 已吃；还在吃的过程中时显示按目标吃完的预计值</span></div>
     ${bal.note ? `<div class="meal-done" style="font-size:13px">${bal.note}</div>` : ''}
     ${bi.whoop != null ? `<div class="burn-src${bi.mismatch && bi.src === 'est' ? ' warn' : ''}"><span>总消耗 ${bi.src === 'whoop' ? `按 WHOOP 实测 <b>${fmt(bi.whoop)}</b>（已含运动）` : `按估算 <b>${fmt(bi.est)}</b> = 静息 ${fmt(bi.rest)} + 运动 ${fmt(bi.ex)}`}${bi.mismatch ? `。WHOOP 记的是 ${fmt(bi.whoop)}，比估算低 ${fmt(bi.est - bi.whoop)}，可能那天还没结束就填了，或手表没记到某次运动${bi.chosen ? '' : '，所以先按估算算'}` : ''}</span><span class="burn-btns"><button class="btn ${bi.src === 'whoop' ? 'primary' : 'ghost'}" type="button" data-burn="whoop">按 WHOOP ${fmt(bi.whoop)}</button><button class="btn ${bi.src === 'est' ? 'primary' : 'ghost'}" type="button" data-burn="est">按估算 ${fmt(bi.est)}</button></span></div>` : ''}
-    ${(() => { const n = ['breakfast', 'lunch', 'dinner'].filter(k => logged[k]).length; return `<div class="meal-done${n === 3 ? ' all' : ''}"><div class="meal-dots">${['早', '午', '晚'].map((t, k) => `<i class="${skipped[['breakfast', 'lunch', 'dinner'][k]] ? 'skip' : logged[['breakfast', 'lunch', 'dinner'][k]] ? 'on' : ''}">${t}</i>`).join('')}</div><span>${n === 3 ? '三餐都记好了，今天的饮食记录已完成 🎉 零食饮料可在下面补记' : `三餐已记录 ${n} / 3 · 吃完点「吃了，记录」，没吃就点「没吃」`}</span></div>`; })()}
-    ${dayAIHtml()}
-    <div class="meal-grid">${plan.map((m, i) => skipped[m.slot || i] ? `<div class="meal skipped"><div class="meal-head"><b>${m.name} · 没吃</b><span>0 kcal</span></div><div class="meal-foot"><span class="pill">已记为 0</span><button class="btn ghost" type="button" data-meal-unlog="${m.slot || i}">撤销</button></div></div>` : `<div class="meal${logged[m.slot || i] ? ' logged' : ''}">
-      <div class="meal-head"><b>${m.name} · ${actual[m.slot] ? '实际吃的' : esc(m.title)}</b><span>${fmt(actual[m.slot] ? actual[m.slot].reduce((a, x) => a + x.kcal, 0) : m.kcal)} kcal · 蛋白 ${actual[m.slot] ? actual[m.slot].reduce((a, x) => a + x.prot, 0) : m.prot} g</span></div>
-      ${actual[m.slot] ? `<span class="actual">已按实际记录（推荐是：${esc(m.title)}）</span>` : ''}
-      <ul>${(actual[m.slot] || m.items).map(x => `<li><span>${esc(x.name)}</span><span>${x.kcal} kcal · ${x.prot} g</span></li>`).join('')}</ul>
-      ${m.tip ? `<span class="meal-tip">${esc(m.tip)}</span>` : ''}
-      ${logged[m.slot || i] ? '' : mealDiffHtml(m.slot, m.name)}
-      <div class="meal-foot">${logged[m.slot || i] ? `<span class="pill ok">✓ 已记录</span><button class="btn ghost" type="button" data-meal-unlog="${m.slot || i}">撤销记录</button>` : `<button class="btn primary" type="button" data-meal-log="${i}">✓ 吃了，记录</button><button class="btn" type="button" data-diff-open="${m.slot}">我吃的不一样</button><button class="btn ghost" type="button" data-meal-skip="${m.slot || i}">没吃</button>`}${ai || conf ? '' : `<button class="btn" type="button" data-meal-swap="${m.slot}">换一个</button>`}</div>
-    </div>`).join('')}</div>
-    <div class="confirm-row">${conf ? `<span class="pill ok">✓ 已确认今天的饮食计划 · ${hhmm(conf)}</span><button class="btn ghost" type="button" id="mealUnconfirm">修改计划</button>` : '<button class="btn primary" type="button" id="mealConfirm">确认今天的饮食计划</button><span class="small muted">确认后照着吃，吃完点「吃了，记录」</span>'}</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center" ${conf ? 'hidden' : ''}>
-      <button class="btn" type="button" id="mealAI">让 AI 按我的背景定制一套</button>${ai ? '<button class="btn ghost" type="button" id="mealReset">换回默认推荐</button>' : ''}
-      <span class="small muted" id="mealMsg" role="status">${ai ? 'AI 定制的一套，数字是估算。' : '默认不含乳制品；份量按今天的热量目标自动调整。'}</span>
-    </div>`;
-  $('meals').dataset.plan = JSON.stringify(plan);
+    ${dayAIHtml()}`;
 }
 $('meals').addEventListener('input', e => {
   const t = e.target;
   if (t.id === 'dayAIText') { dayAI.text = t.value; return; }
-  if (t.dataset.daiK) { const g = dayAI.meals && dayAI.meals[Number(t.dataset.daiG)]; if (g) g.items[Number(t.dataset.daiI)][t.dataset.daiK] = Math.max(0, Math.round(Number(t.value) || 0)); return; }
   if (t.dataset.diffText) { (mealDiff[t.dataset.diffText] || (mealDiff[t.dataset.diffText] = { open: true })).text = t.value; return; }
   if (t.dataset.diffK) { const st = mealDiff[t.dataset.diffSlot]; if (st && st.items) st.items[Number(t.dataset.diffI)][t.dataset.diffK] = Math.max(0, Math.round(Number(t.value) || 0)); }
 });
-$('meals').addEventListener('change', e => { if (e.target.dataset.diffK || e.target.dataset.daiK) renderMeals(); });
-$('meals').addEventListener('toggle', e => { if (e.target.classList && e.target.classList.contains('day-ai')) dayAI.open = e.target.open; }, true);
+$('meals').addEventListener('keydown', e => { if (e.target.id === 'dayAIText' && e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); runDayAI(); } });
+$('meals').addEventListener('change', e => { if (e.target.dataset.diffK) renderMeals(); });
 $('meals').addEventListener('click', async e => {
   const bs = e.target.closest('[data-burn]');
   if (bs) { const snap = JSON.stringify(state), r = ensure(logDate); r.burnSrc = bs.dataset.burn; commit(); offerUndo(`${fmtMD(logDate)} 的总消耗改为${bs.dataset.burn === 'whoop' ? '按 WHOOP' : '按估算'}`, snap); return; }
   if (e.target.id === 'dayAIGo') { runDayAI(); return; }
-  if (e.target.id === 'dayAIClear') { Object.assign(dayAI, { meals: null, note: '', msg: '' }); renderMeals(); return; }
-  if (e.target.id === 'dayAISave') { saveDayAI(); return; }
+  const ask = e.target.closest('[data-ask]'); if (ask) { runDayAI(ask.dataset.ask); return; }
+  const rl = e.target.closest('[data-rec-log]');
+  if (rl && dayAI.rec) { const o = dayAI.rec.options[Number(rl.dataset.recLog)]; if (o) { recordMeals([{ slot: o.slot, skipped: false, items: o.items }], ''); dayAI.rec = null; renderMeals(); } return; }
+  if (e.target.id === 'recClear') { dayAI.rec = null; renderMeals(); return; }
   const sw = e.target.closest('[data-meal-swap]');
   if (sw) { const slot = sw.dataset.mealSwap, r = ensure(logDate); r.mealSel = r.mealSel || {}; r.mealSel[slot] = (mealSel(slot) + 1) % MEALS[slot].opts.length; save(); renderMeals(); return; }
   const lg = e.target.closest('[data-meal-log]');
