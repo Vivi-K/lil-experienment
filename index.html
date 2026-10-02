@@ -1337,7 +1337,7 @@ const DEFAULT_PROFILE = { height: 163, weight: 55, age: 28, act: 1.2, goal: -300
 let baseRev = 0;
 let sumMode = 'week';   // analysis → 总结 view (the date is the global logDate)
 const BK = 'moon-energy-bk-';
-const APP_VER = 'v44';
+const APP_VER = 'v45';
 const CLOUD = { db: null, col: null, ready: false, status: 'off', at: 0, sent: {}, timer: null, busy: false, again: false, msg: '', pulledAt: 0, count: null, uid: null, backups: [] };
 let state = load();
 dailyBackup();
@@ -3350,15 +3350,20 @@ ${P().about ? '用户背景：' + P().about.slice(0, 900) : ''}
 // which day of the period d is: counted from the period's first day, so a forgotten day in between doesn't reset it
 function periodRun(d) { if (!day(d).period) return 0; const g = periodGroupOf(d); return g ? diffDays(d, g.start) + 1 : 1; }
 function renderPeriod() {
-  const d = logDate, rec = day(d), on = !!rec.period, ph = phaseOf(TODAY), np = nextPeriod();
-  $('pc').classList.toggle('on', !!day(TODAY).period);
-  const curG = day(TODAY).period ? periodGroupOf(TODAY) : null, missing = [];
-  if (curG) for (let x = curG.start; x < TODAY; x = addDays(x, 1)) if (!day(x).period) missing.push(x);
+  // everything on this card is about the day picked in the date bar
+  const d = logDate, rec = day(d), on = !!rec.period, ph = phaseOf(d), np = nextPeriod(), isT = d === TODAY, dl = isT ? '今天' : fmtMD(d);
+  const g = periodGroupOf(d), inPer = on || (!!g && d < TODAY);
+  $('pc').classList.toggle('on', inPer);
+  const missing = [];
+  if (g) for (let x = g.start; x < d; x = addDays(x, 1)) if (!day(x).period) missing.push(x);
+  if (!on && g && d < TODAY) missing.push(d);   // the picked day itself was forgotten
   $('pcFill').hidden = !missing.length; $('pcFill').dataset.days = missing.join(',');
   $('pcFill').textContent = missing.length ? `${missing.map(fmtMD).join('、')} 没有标记，补上` : '';
-  if (day(TODAY).period) { $('pcTitle').textContent = `经期第 ${periodRun(TODAY)} 天（从 ${fmtMD(curG ? curG.start : TODAY)} 开始）`; $('pcSub').textContent = '多补铁和蛋白质，训练按感觉来；结束那天点「经期结束了」或者不再标记就行'; }
-  else { $('pcTitle').textContent = np ? `预计 ${fmtMD(np)} 来月经（${diffDays(np, TODAY) >= 0 ? diffDays(np, TODAY) + ' 天后' : '已推迟 ' + -diffDays(np, TODAY) + ' 天'}）` : '记录经期'; $('pcSub').textContent = ph.cd ? `现在是周期第 ${ph.cd} 天 · ${PHASES[ph.key].name}，平均周期 ${CS.len} 天` : '标记一次经期后，app 会推算周期和阶段'; }
-  const isToday = d === TODAY;
+  if (inPer && g) { $('pcTitle').textContent = `${isT ? '' : dl + ' · '}经期第 ${diffDays(d, g.start) + 1} 天（从 ${fmtMD(g.start)} 开始）`; $('pcSub').textContent = isT ? '多补铁和蛋白质，训练按感觉来；结束那天点「经期结束了」或者不再标记就行' : `这次经期 ${fmtMD(g.start)} – ${fmtMD(g.end)}`; }
+  else if (on) { $('pcTitle').textContent = `${isT ? '' : dl + ' · '}经期第 1 天`; $('pcSub').textContent = '多补铁和蛋白质，训练按感觉来'; }
+  else if (isT) { $('pcTitle').textContent = np ? `预计 ${fmtMD(np)} 来月经（${diffDays(np, TODAY) >= 0 ? diffDays(np, TODAY) + ' 天后' : '已推迟 ' + -diffDays(np, TODAY) + ' 天'}）` : '记录经期'; $('pcSub').textContent = ph.cd ? `现在是周期第 ${ph.cd} 天 · ${PHASES[ph.key].name}，平均周期 ${CS.len} 天` : '标记一次经期后，app 会推算周期和阶段'; }
+  else { $('pcTitle').textContent = ph.cd ? `${dl} · 周期第 ${ph.cd} 天 · ${PHASES[ph.key].name}` : `${dl} · 记录经期`; $('pcSub').textContent = np ? `预计下次 ${fmtMD(np)} 来月经（按今天算）` : ''; }
+  const isToday = isT;
   $('pcToggle').textContent = on ? (isToday ? '经期结束了（取消今天的标记）' : `取消 ${fmtMD(d)} 的经期标记`) : (isToday ? (day(addDays(TODAY, -1)).period ? '今天还在经期' : '今天来月经了') : `标记 ${fmtMD(d)} 是经期`);
   $('pcToggle').classList.toggle('stop', on);
   $('pcFlow').value = rec.flow != null ? String(rec.flow) : ''; $('pcPain').value = rec.pain != null ? String(rec.pain) : '';
