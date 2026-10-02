@@ -1344,7 +1344,7 @@ function isAlcohol(f) { return f.alc === true || (f.alc == null && ALC_RE.test(f
 function alcoholKcal(d) { return day(d).food.filter(isAlcohol).reduce((a, f) => a + f.kcal, 0); }
 function drankOn(d) { return alcoholKcal(d) > 0 || drank(d) === true; }
 const BK = 'moon-energy-bk-';
-const APP_VER = 'v47';
+const APP_VER = 'v48';
 const CLOUD = { db: null, col: null, ready: false, status: 'off', at: 0, sent: {}, timer: null, busy: false, again: false, msg: '', pulledAt: 0, count: null, uid: null, backups: [] };
 let state = load();
 dailyBackup();
@@ -2141,7 +2141,7 @@ const RULES = `你是一位懂女性生理周期的营养与运动教练，用�
 · 动作选择：臀部以臀推、罗马尼亚硬拉、髋外展、臀向分腿蹲等髋主导动作为主，臀推做力量主项（5×5）和增肌（10–12 次）；为了腿细，少做大重量深蹲、腿举、腿屈伸，深蹲会让大腿前侧和内收肌长得更多 [E10]。背部用中等重量、10–15 次、控制离心练线条，不做耸肩和大重量杠铃划船。腰部练抗旋转和腹横肌，不做负重侧弯和大重量负重转体。
 · 重量：用【重量基础】里的估算 1RM 给出具体公斤数，没填时请她先填。
 · 训练量：每个动作 2–4 组，每次目标部位约 10–15 个有效组，更多收益递减 [E17]；组数分到一周 2–3 次 [E18]；女性更耐疲劳，组间休息可以短一些 [E19]；有氧和力量分开在不同的日子 [E20]。
-· 课表：每周 2 天完全休息；默认 4 天力量（臀 2 次、上肢综合 2 次，上肢以背为主，肩、手臂、胸少量）+ 1 天有氧，也可以 3 天力量 + 2 天有氧；按“最大收益 + 效率”设计：每次力量训练约 45–55 分钟（组数够用就停，不为凑时间加组），有氧约 45 分钟，有氧和力量不在同一天；腰腹附在力量日最后。渐进超负荷，每组 6–20 次、离力竭 1–3 次。卵泡期冲重量，经前一周总量减 20–30%。
+· 课表（减脂期）：默认 4 天力量（臀 2 次、上肢综合 2 次，上肢以背为主，肩、手臂、胸少量）+ 2 天有氧（周三一次、周六一次，周六可以是户外 / 网球 / 行山）+ 1 天完全休息；也可以 3 天力量 + 3 天有氧 + 1 天休息；按“最大收益 + 效率”设计：每次力量训练约 45–55 分钟（组数够用就停，不为凑时间加组），有氧约 45 分钟，有氧和力量不在同一天；腰腹附在力量日最后。渐进超负荷，每组 6–20 次、离力竭 1–3 次。卵泡期冲重量，经前一周总量减 20–30%。
 · 平坦小腹靠全身减脂，不存在局部减脂；少腹胀（经前、外卖、酒精、高盐）会让肚子明显更平。
 · 饮食：蛋白质每公斤体重约 2 g，分 4 餐左右吃；温和热量缺口，训练日和卵泡期多给碳水，黄体期缺口放小；不为了掉秤牺牲肌肉。体重不降但腰围降、臀围和肩围不掉，就是进步。
 有 WHOOP 数据时，用恢复分数、HRV、静息心率、睡眠来判断当天训练强度（例如恢复低于 34% 建议恢复性训练），并说明黄体期 HRV 下降、静息心率和体温升高是正常的周期现象。
@@ -2770,9 +2770,9 @@ function renderTraining() {
   }).join('');
   renderLifts();
   $('trOther').textContent = c.other ? `本周还有 ${c.other} 次没标部位的力量训练（比如 WHOOP 导入的），在记录里新加一条对应部位就能算进来。` : '';
-  $('planTabs').innerHTML = [4, 3].map(n => `<button class="btn${n === trainDays() ? ' primary' : ''}" type="button" data-plan="${n}">${n} 天力量 + ${5 - n} 天有氧 + 2 天休息</button>`).join('');
+  $('planTabs').innerHTML = PLAN_ORDER.map(k => `<button class="btn${k === planKey() ? ' primary' : ''}" type="button" data-plan="${k}">${planLabel(k)}${k === 'p42' ? '（推荐 · 减脂）' : ''}</button>`).join('');
   const core = { glute: '细腰 A', shoulder: '细腰 B', cardio: '细腰 C', off: '细腰 D（可选）' };
-  $('planBody').innerHTML = TEMPLATES[trainDays()].map((t, i) => { const [f, c] = t.split(':'); const sl = { f, c }; const p = PARTS.find(x => x.k === f), cb = p && p.combos.find(x => x.id === c);
+  $('planBody').innerHTML = TEMPLATES[planKey()].map((t, i) => { const [f, c] = t.split(':'); const sl = { f, c }; const p = PARTS.find(x => x.k === f), cb = p && p.combos.find(x => x.id === c);
     return `<tr${i === (parse(TODAY).getDay() + 6) % 7 ? ' style="background:var(--sunk)"' : ''}><td>${WD[i]}</td><td><span class="tag">${slotLabel(sl)}${cb ? ' · ' + cb.name : ''}</span><span class="tag">${f === 'cardio' ? '有氧约 45 分钟' : f === 'off' ? '休息，想动就散步 20 分钟' : `约 ${cb ? cb.min : 50} 分钟 · ` + core[f]}</span>${f !== 'off' && f !== 'cardio' ? '' : `<span class="tag">${core[f]}</span>`}</td></tr>`; }).join('');
   $('planNote').textContent = '按周期换组合：卵泡期、排卵期多用 A（力量日），黄体期用 B（增肌日），经前一周或恢复低于 34% 换成 D（轻量）。没去健身房就用 C（居家）。有氧不和力量放在同一天。';
 }
@@ -2786,7 +2786,7 @@ $('parts').addEventListener('click', e => {
   ensure(TODAY).ex.push({ type, met: p.log[1], min: cb.min }); commit(); offerUndo(`已记录：${type}`, snap);
   onLogged(`${type} ${cb.min} 分钟`);
 });
-$('planTabs').addEventListener('click', e => { const b = e.target.closest('[data-plan]'); if (!b) return; const snap = JSON.stringify(state); state.profile.trainDays = Number(b.dataset.plan); const r = ensure(TODAY); if (r.session && !r.session.finished && !r.session.confirmed && !Object.values(r.session.sets || {}).some(v => v.d)) delete r.session; save(); offerUndo(`已改成 ${trainDays()} 天力量 + ${5 - trainDays()} 天有氧`, snap); renderWorkout(); renderMeals(); renderTraining(); });
+$('planTabs').addEventListener('click', e => { const b = e.target.closest('[data-plan]'); if (!b) return; const snap = JSON.stringify(state); state.profile.trainDays = b.dataset.plan; const r = ensure(TODAY); if (r.session && !r.session.finished && !r.session.confirmed && !Object.values(r.session.sets || {}).some(v => v.d)) delete r.session; save(); offerUndo(`已改成 ${planLabel()}`, snap); renderWorkout(); renderMeals(); renderTraining(); });
 
 function progCells(k) {
   const x = liftLatest(k); if (!x) return '<td class="small muted" colspan="4">填了以后显示进度目标</td>';
@@ -2845,13 +2845,19 @@ function parseDose(d) {
 function trainedOn(d) { return day(d).ex.map(e => PARTS.find(p => p.k !== 'core' && p.re.test(e.type))).filter(Boolean).map(p => p.k); }
 // Fixed weekly schedule (Mon..Sun). 'cardio' = cardio day, 'off' = rest day. Strength and cardio never share a day.
 // Always two rest days a week
+// weekly schedules (Mon → Sun). Cardio and strength are never on the same day; at least one full rest day.
 const TEMPLATES = {
-  4: ['glute:A', 'shoulder:A', 'cardio', 'glute:B', 'shoulder:B', 'off', 'off'],
-  3: ['glute:A', 'shoulder:A', 'cardio', 'off', 'glute:B', 'cardio', 'off']
+  p42: ['glute:A', 'shoulder:A', 'cardio', 'glute:B', 'shoulder:B', 'cardio', 'off'],
+  p33: ['glute:A', 'cardio', 'shoulder:A', 'cardio', 'glute:B', 'cardio', 'off'],
+  p41: ['glute:A', 'shoulder:A', 'cardio', 'glute:B', 'shoulder:B', 'off', 'off'],
+  p32: ['glute:A', 'shoulder:A', 'cardio', 'off', 'glute:B', 'cardio', 'off']
 };
+const PLAN_ORDER = ['p42', 'p33', 'p41', 'p32'];
 const WD = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
-const trainDays = () => [3, 4].includes(Number(P().trainDays)) ? Number(P().trainDays) : 4;
-function slotFor(d) { const i = (parse(d).getDay() + 6) % 7; const [f, c] = TEMPLATES[trainDays()][i].split(':'); return { f, c: c || null, i }; }
+// older saves stored 4 / 3; the default is now the cardio-heavier 4 + 2 week
+function planKey() { const v = P().trainDays; return TEMPLATES[v] ? v : v === 4 || v === '4' ? 'p41' : v === 3 || v === '3' ? 'p32' : 'p42'; }
+function planLabel(k = planKey()) { const t = TEMPLATES[k], n = f => t.filter(x => x.split(':')[0] === f).length; return `${n('glute') + n('shoulder')} 天力量 + ${n('cardio')} 天有氧 + ${n('off')} 天休息`; }
+function slotFor(d) { const i = (parse(d).getDay() + 6) % 7; const [f, c] = TEMPLATES[planKey()][i].split(':'); return { f, c: c || null, i }; }
 function slotLabel(sl, short) {
   if (sl.f === 'glute') return short ? '臀' : `练臀 ${sl.c}`;
   if (sl.f === 'shoulder') return short ? '上' : `练上肢 ${sl.c}`;
@@ -2860,7 +2866,7 @@ function slotLabel(sl, short) {
 }
 function planToday(d = TODAY) {
   const ph = phaseOf(d), w = wh(d) || wh(addDays(d, -1)), sl = slotFor(d);
-  const why = [`课表 ${trainDays()} 天力量 + ${5 - trainDays()} 天有氧 + 2 天休息：今天${WD[sl.i]}是${slotLabel(sl)}`];
+  const why = [`课表 ${planLabel()}：今天${WD[sl.i]}是${slotLabel(sl)}`];
   let focus, combo = sl.c || 'A', light = false;
   if (sl.f === 'glute' || sl.f === 'shoulder') {
     focus = sl.f;
@@ -2905,7 +2911,8 @@ const CARDIO = [
 function defaultCardio(ss) {
   const ph = phaseOf(logDate), light = ss.combo === 'D' || (ph.key === 'lut' && ph.cd && ph.cd >= CS.len - 6);
   const doy = diffDays(logDate, logDate.slice(0, 4) + '-01-01');
-  const pool = light ? ['walk', 'elliptical', 'swim', 'incline'] : ss.focus === 'rest' ? ['incline', 'swim', 'hike', 'dance', 'jog', 'elliptical', 'rower'] : ['incline', 'elliptical', 'rower', 'stairs', 'bike', 'rope'];
+  const sat = parse(logDate).getDay() === 6;   // the weekend cardio day leans outdoor (hiking, swimming, tennis-style fun)
+  const pool = light ? ['walk', 'elliptical', 'swim', 'incline'] : sat ? ['hike', 'swim', 'dance', 'incline'] : ss.focus === 'rest' ? ['incline', 'swim', 'hike', 'dance', 'jog', 'elliptical', 'rower'] : ['incline', 'elliptical', 'rower', 'stairs', 'bike', 'rope'];
   if (ss.light) return { k: 'walk', min: 20, d: false };
   return { k: pool[doy % pool.length], min: 35, d: false };
 }
