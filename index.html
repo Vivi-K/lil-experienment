@@ -699,6 +699,7 @@ th,td{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
         <select id="pcFlow" aria-label="流量"><option value="">流量</option><option value="1">少</option><option value="2">中</option><option value="3">多</option></select>
         <select id="pcPain" aria-label="疼痛"><option value="">疼痛</option><option value="0">不痛</option><option value="1">轻微</option><option value="2">明显</option><option value="3">很痛</option></select>
         <button class="btn" type="button" id="pcSave">保存</button>
+        <button class="btn ghost" type="button" id="pcFill" hidden></button>
         <span class="small muted" id="pcSaved" role="status"></span>
       </div>
     </div>
@@ -1336,7 +1337,7 @@ const DEFAULT_PROFILE = { height: 163, weight: 55, age: 28, act: 1.2, goal: -300
 let baseRev = 0;
 let sumMode = 'week';   // analysis → 总结 view (the date is the global logDate)
 const BK = 'moon-energy-bk-';
-const APP_VER = 'v43';
+const APP_VER = 'v44';
 const CLOUD = { db: null, col: null, ready: false, status: 'off', at: 0, sent: {}, timer: null, busy: false, again: false, msg: '', pulledAt: 0, count: null, uid: null, backups: [] };
 let state = load();
 dailyBackup();
@@ -1515,11 +1516,14 @@ function balance(d) {
 const logged = d => day(d).food.length > 0;
 
 /* ---------- cycle model ---------- */
-function periodStarts() {
-  const ds = Object.keys(state.days).filter(d => state.days[d].period).sort();
-  // a new period begins when the previous marked day is more than 2 days back
-  return ds.filter((d, i) => i === 0 || diffDays(d, ds[i - 1]) > 2);
+// marked days grouped into periods; a gap of up to 2 unmarked days (a forgotten tap) stays inside the same period
+function periodGroups() {
+  const ds = Object.keys(state.days).filter(d => state.days[d].period).sort(), out = [];
+  for (const d of ds) { const g = out[out.length - 1]; if (g && diffDays(d, g.end) <= 2) g.end = d; else out.push({ start: d, end: d }); }
+  return out;
 }
+function periodStarts() { return periodGroups().map(g => g.start); }
+const periodGroupOf = d => periodGroups().find(g => g.start <= d && d <= g.end) || null;
 function cycleStats() {
   const starts = periodStarts();
   const gaps = [];
@@ -1527,7 +1531,7 @@ function cycleStats() {
   const recent = gaps.slice(-6);
   const len = recent.length ? Math.round(recent.reduce((a, b) => a + b) / recent.length) : P().cycle;
   // period length: average run length of marked days
-  const runs = starts.map(s => { let n = 0, d = s; while (day(d).period) { n++; d = addDays(d, 1); } return n; }).filter(n => n > 0);
+  const runs = periodGroups().map(g => diffDays(g.end, g.start) + 1);
   const completeRuns = runs.slice(0, -1).length ? runs.slice(0, -1) : runs;
   const plen = completeRuns.length ? Math.round(completeRuns.reduce((a, b) => a + b) / completeRuns.length) : P().period;
   return { starts, len, plen: Math.max(2, Math.min(9, plen)), gaps: recent };
@@ -1544,7 +1548,7 @@ function phaseOf(d) {
   const ov = len - 14;
   let inPeriod;
   if (day(d).period) inPeriod = true;
-  else if (d < TODAY) inPeriod = false;                       // past: only what was marked
+  else if (d < TODAY) inPeriod = !!periodGroupOf(d);          // past: what was marked, incl. a forgotten day inside a period
   else if (d === TODAY) inPeriod = cd <= plen && day(addDays(d, -1)).period; // ongoing, not yet marked today
   else inPeriod = cd <= plen;                                  // future: prediction
   let key;
@@ -3343,11 +3347,16 @@ ${P().about ? '用户背景：' + P().about.slice(0, 900) : ''}
 });
 
 /* ---------- period log (top of Today) ---------- */
-function periodRun(d) { if (!day(d).period) return 0; let n = 1, x = addDays(d, -1); while (day(x).period && n < 15) { n++; x = addDays(x, -1); } return n; }
+// which day of the period d is: counted from the period's first day, so a forgotten day in between doesn't reset it
+function periodRun(d) { if (!day(d).period) return 0; const g = periodGroupOf(d); return g ? diffDays(d, g.start) + 1 : 1; }
 function renderPeriod() {
   const d = logDate, rec = day(d), on = !!rec.period, ph = phaseOf(TODAY), np = nextPeriod();
   $('pc').classList.toggle('on', !!day(TODAY).period);
-  if (day(TODAY).period) { $('pcTitle').textContent = `经期第 ${periodRun(TODAY)} 天`; $('pcSub').textContent = '多补铁和蛋白质，训练按感觉来；结束那天点「经期结束了」或者不再标记就行'; }
+  const curG = day(TODAY).period ? periodGroupOf(TODAY) : null, missing = [];
+  if (curG) for (let x = curG.start; x < TODAY; x = addDays(x, 1)) if (!day(x).period) missing.push(x);
+  $('pcFill').hidden = !missing.length; $('pcFill').dataset.days = missing.join(',');
+  $('pcFill').textContent = missing.length ? `${missing.map(fmtMD).join('、')} 没有标记，补上` : '';
+  if (day(TODAY).period) { $('pcTitle').textContent = `经期第 ${periodRun(TODAY)} 天（从 ${fmtMD(curG ? curG.start : TODAY)} 开始）`; $('pcSub').textContent = '多补铁和蛋白质，训练按感觉来；结束那天点「经期结束了」或者不再标记就行'; }
   else { $('pcTitle').textContent = np ? `预计 ${fmtMD(np)} 来月经（${diffDays(np, TODAY) >= 0 ? diffDays(np, TODAY) + ' 天后' : '已推迟 ' + -diffDays(np, TODAY) + ' 天'}）` : '记录经期'; $('pcSub').textContent = ph.cd ? `现在是周期第 ${ph.cd} 天 · ${PHASES[ph.key].name}，平均周期 ${CS.len} 天` : '标记一次经期后，app 会推算周期和阶段'; }
   const isToday = d === TODAY;
   $('pcToggle').textContent = on ? (isToday ? '经期结束了（取消今天的标记）' : `取消 ${fmtMD(d)} 的经期标记`) : (isToday ? (day(addDays(TODAY, -1)).period ? '今天还在经期' : '今天来月经了') : `标记 ${fmtMD(d)} 是经期`);
@@ -3356,6 +3365,11 @@ function renderPeriod() {
   $('pcFlow').disabled = $('pcPain').disabled = $('pcSave').disabled = !on;
   $('pcSaved').textContent = on && rec.periodSavedAt ? `✓ 已保存 · ${hhmm(rec.periodSavedAt)}` : on ? '可以补充流量和疼痛程度' : '';
 }
+$('pcFill').addEventListener('click', () => {
+  const ds = ($('pcFill').dataset.days || '').split(',').filter(Boolean); if (!ds.length) return;
+  const snap = JSON.stringify(state); ds.forEach(d => { ensure(d).period = true; });
+  commit(); offerUndo(`已补上 ${ds.map(fmtMD).join('、')} 的经期标记`, snap);
+});
 $('pcToggle').addEventListener('click', () => {
   const snap = JSON.stringify(state), r = ensure(logDate); r.period = !r.period;
   if (!r.period) { delete r.flow; delete r.pain; delete r.periodSavedAt; }
