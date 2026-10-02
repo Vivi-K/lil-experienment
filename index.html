@@ -1336,8 +1336,15 @@ const PH_ORDER = ['men', 'fol', 'ovu', 'lut'];
 const DEFAULT_PROFILE = { height: 163, weight: 55, age: 28, act: 1.2, goal: -300, cycle: 33, period: 5, floor: 1450, about: '', aboutAt: 0 };
 let baseRev = 0;
 let sumMode = 'week';   // analysis → 总结 view (the date is the global logDate)
+// alcoholic drinks among the day's food: AI marks them (alc:true); older entries are recognised by drink names,
+// never by dishes cooked with alcohol (料酒, 醉鸡, 辣酒花螺 …)
+const ALC_RE = /(葡萄酒|红酒|白酒(?!醋)|啤酒|清酒|梅酒|米酒|黄酒|威士忌|伏特加|白兰地|朗姆|龙舌兰|金酒|香槟|鸡尾酒|烧酒|果酒|起泡酒|酒精饮料|highball|sake|soju|wine|beer|whisk|vodka|\bgin\b|\brum\b|tequila|champagne|cocktail|prosecco|sangria|cava)/i;
+const NOT_DRINK_RE = /(料酒|酒酿|醉[鸡虾蟹]|酒煮|辣酒|花雕鸡|酒香|酒蒸|红酒烩|红酒炖|啤酒鸭)/;
+function isAlcohol(f) { return f.alc === true || (f.alc == null && ALC_RE.test(f.name) && !NOT_DRINK_RE.test(f.name)); }
+function alcoholKcal(d) { return day(d).food.filter(isAlcohol).reduce((a, f) => a + f.kcal, 0); }
+function drankOn(d) { return alcoholKcal(d) > 0 || drank(d) === true; }
 const BK = 'moon-energy-bk-';
-const APP_VER = 'v46';
+const APP_VER = 'v47';
 const CLOUD = { db: null, col: null, ready: false, status: 'off', at: 0, sent: {}, timer: null, busy: false, again: false, msg: '', pulledAt: 0, count: null, uid: null, backups: [] };
 let state = load();
 dailyBackup();
@@ -2274,17 +2281,18 @@ A. 在说吃了什么、没吃什么、或更正之前的记录 → mode 为 "lo
 - 说没吃 / 不吃 / 删掉某一餐 → 该餐 skipped 为 true，items 为空。
 - 更正某一餐时，输出这一餐更正后的完整内容（会替换这一餐原来的记录）；没提到的餐次不要输出。
 - 按中国和香港常见做法和份量估算（食堂、外卖、茶餐厅都常见）；“吃了一半”“少饭”按实际吃下的量；份量没说清按中等份量，并在 name 里写“估”。饮品也要算。
+- 含酒精的饮料（葡萄酒、啤酒、清酒、烈酒、鸡尾酒等）这一项加 "alc":true；用酒做的菜（料酒、醉鸡、辣酒花螺）不算。
 B. 在问吃什么、要推荐 → mode 为 "recommend"：给 1–3 个具体选择，按剩余热量和蛋白配好份量；默认不含乳制品、少油；适合香港（食堂、茶餐厅、自己做都行）。可以参考这些家常选项：
 ${ideas}
 只回复一个 JSON 对象：
-{"mode":"log","meals":[{"slot":"lunch","skipped":false,"items":[{"name":"食物和份量","kcal":整数,"prot":整数,"carb":整数,"fat":整数}]}],"note":"一句话：和目标比怎么样、接下来怎么吃，温和，40 字内"}
+{"mode":"log","meals":[{"slot":"lunch","skipped":false,"items":[{"name":"食物和份量","kcal":整数,"prot":整数,"carb":整数,"fat":整数,"alc":false}]}],"note":"一句话：和目标比怎么样、接下来怎么吃，温和，40 字内"}
 或
 {"mode":"recommend","text":"一两句说明为什么这样推荐，40 字内","options":[{"slot":"dinner","title":"简短名字","items":[{"name":"食物和份量","kcal":整数,"prot":整数}]}]}`;
   dayAI.busy = true; dayAI.msg = ''; renderMeals(); AI.busy = true; setAIEnabled(true);
   try {
     const r = await askJSON(prompt, { modelTier: 'default' });
     const n = v => Math.max(0, Math.round(Number(v) || 0)), ok = ['breakfast', 'lunch', 'dinner', 'snack', 'other'];
-    const items = list => (list || []).map(x => ({ name: String(x.name || '').slice(0, 40), kcal: n(x.kcal), prot: n(x.prot), carb: n(x.carb), fat: n(x.fat) })).filter(x => x.name && x.kcal < 5000);
+    const items = list => (list || []).map(x => ({ name: String(x.name || '').slice(0, 40), kcal: n(x.kcal), prot: n(x.prot), carb: n(x.carb), fat: n(x.fat), alc: x.alc === true ? true : x.alc === false ? false : undefined })).filter(x => x.name && x.kcal < 5000);
     if (r && r.mode === 'recommend') {
       const options = (r.options || []).filter(o => o && ok.includes(o.slot)).map(o => ({ slot: o.slot, title: String(o.title || '').slice(0, 30), items: items(o.items) })).filter(o => o.items.length).slice(0, 3);
       dayAI.rec = { text: String(r.text || '').slice(0, 160), options }; dayAI.last = null;
@@ -2303,10 +2311,10 @@ function recordMeals(meals, note) {
   const snap = JSON.stringify(state), r = ensure(logDate), said = [], lines = [];
   for (const g of meals) {
     const kc = g.items.reduce((a, x) => a + x.kcal, 0);
-    if (g.slot === 'other') { g.items.forEach(x => r.food.push({ name: `零食饮料：${x.name}`, kcal: x.kcal, prot: x.prot, carb: x.carb, fat: x.fat, ai: true })); said.push(g.items.map(x => x.name).join('、')); lines.push(`零食饮料：${g.items.map(x => x.name).join('、')} · ${fmt(kc)} kcal`); continue; }
+    if (g.slot === 'other') { g.items.forEach(x => r.food.push({ name: `零食饮料：${x.name}`, kcal: x.kcal, prot: x.prot, carb: x.carb, fat: x.fat, ai: true, ...(x.alc != null ? { alc: x.alc } : {}) })); said.push(g.items.map(x => x.name).join('、')); lines.push(`零食饮料：${g.items.map(x => x.name).join('、')} · ${fmt(kc)} kcal`); continue; }
     if (g.skipped) { markSkipped(r, g.slot); said.push(`${SLOT_NAME[g.slot]}没吃`); lines.push(`${SLOT_NAME[g.slot]}：没吃，记为 0`); continue; }
     r.food = r.food.filter(f => f.meal !== g.slot);
-    g.items.forEach(x => r.food.push({ name: `${SLOT_NAME[g.slot]}：${x.name}`, kcal: x.kcal, prot: x.prot, carb: x.carb, fat: x.fat, meal: g.slot, ai: true }));
+    g.items.forEach(x => r.food.push({ name: `${SLOT_NAME[g.slot]}：${x.name}`, kcal: x.kcal, prot: x.prot, carb: x.carb, fat: x.fat, meal: g.slot, ai: true, ...(x.alc != null ? { alc: x.alc } : {}) }));
     (r.mealLogged || (r.mealLogged = {}))[g.slot] = true;
     if (r.mealSkipped) delete r.mealSkipped[g.slot];
     said.push(`${SLOT_NAME[g.slot]}：${g.items.map(x => x.name).join('、')}`);
@@ -4159,7 +4167,8 @@ function periodStats(a, b) {
     deficit: defs.length ? Math.round(defs.reduce((x, y) => x + y, 0) / defs.length) : null, deficitSum: defs.reduce((x, y) => x + y, 0),
     strength, cardio, exKcal: ds.reduce((s, d) => s + exBurn(d), 0), sets: ds.reduce((s, d) => s + doneSetsOf(d), 0),
     rec: whs('recovery'), hrv: whs('hrv'), sleep: whs('sleepMin'), rhr: whs('rhr'),
-    period: ds.filter(d => day(d).period).length, drinks: ds.filter(d => drank(d) === true).length,
+    period: ds.filter(d => day(d).period).length, drinks: ds.filter(drankOn).length,
+    alcKcal: ds.reduce((a, d) => a + alcoholKcal(d), 0), foodKcal: ds.reduce((a, d) => a + intake(d), 0),
     weight: bd('weight'), waist: bd('waist'), hip: bd('hip'),
     phases: [...new Set(ds.map(d => phaseOf(d).key))].map(k => PHASES[k].name)
   };
@@ -4183,7 +4192,7 @@ function renderSummary() {
       + tile('训练', trained, r.ex.length ? r.ex.map(e => `${e.type} ${e.min} 分钟`).join('、') : '')
       + tile('恢复', w.recovery != null ? w.recovery + '%' : '—', [w.hrv != null ? `HRV ${w.hrv}` : '', w.sleepMin != null ? `睡眠 ${(w.sleepMin / 60).toFixed(1)} h` : '', w.strain != null ? `Strain ${w.strain}` : ''].filter(Boolean).join(' · '))
       + tile('周期', PHASES[ph.key].name, `${ph.cd ? '第 ' + ph.cd + ' 天' : ''}${r.period ? ' · 经期' : ''}`)
-      + tile('饮酒', drank(a) === true ? '喝了' : drank(a) === false ? '没喝' : '—', '');
+      + tile('酒精', alcoholKcal(a) ? `${fmt(alcoholKcal(a))} kcal` : drank(a) === true ? '喝了' : drank(a) === false ? '没喝' : '0', alcoholKcal(a) ? `占这天摄入 ${Math.round(alcoholKcal(a) / Math.max(1, intake(a)) * 100)}%` : '');
     html += `<div class="sum-actions"><button class="btn ghost" type="button" id="sumGoDay">去「今天」页看 / 改这一天的记录</button></div>`;
   } else {
     const st = periodStats(a, b), fatG = Math.round(st.deficitSum / 7.7);
@@ -4192,7 +4201,8 @@ function renderSummary() {
       + tile('日均热量差', st.deficit != null ? (st.deficit >= 0 ? '−' : '+') + fmt(Math.abs(st.deficit)) : '—', st.done ? `${st.done} 天累计约 ${fatG >= 0 ? '−' : '+'}${fmt(Math.abs(fatG))} g 脂肪` : '今天结束后才开始算', st.deficit == null ? '' : st.deficit >= -Number(P().goal) * 0.7 ? 'good' : st.deficit < 0 ? 'bad' : '')
       + tile('训练', `力量 ${st.strength} · 有氧 ${st.cardio}`, `完成 ${st.sets} 组 · 运动消耗 ${fmt(st.exKcal)}`)
       + tile('恢复（平均）', st.rec != null ? Math.round(st.rec) + '%' : '—', [st.hrv != null ? `HRV ${Math.round(st.hrv)}` : '', st.sleep != null ? `睡眠 ${(st.sleep / 60).toFixed(1)} h` : '', st.rhr != null ? `静息 ${Math.round(st.rhr)}` : ''].filter(Boolean).join(' · '))
-      + tile('周期与饮酒', st.phases.join(' → '), `经期 ${st.period} 天 · 饮酒 ${st.drinks} 天`)
+      + tile('酒精', st.alcKcal ? `${fmt(st.alcKcal)} kcal` : '0', st.alcKcal ? `${st.drinks} 天喝酒 · 占摄入 ${Math.round(st.alcKcal / Math.max(1, st.foodKcal) * 100)}%` : `${st.drinks ? st.drinks + ' 天喝酒' : '这段时间没喝'}`)
+      + tile('周期', st.phases.join(' → '), `经期 ${st.period} 天`)
       + (st.weight != null || st.waist != null ? tile('身材变化', st.weight != null ? `体重 ${sgn(st.weight)} kg` : `腰围 ${sgn(st.waist)} cm`, [st.waist != null ? `腰围 ${sgn(st.waist)} cm` : '', st.hip != null ? `臀围 ${sgn(st.hip)} cm` : ''].filter(Boolean).join(' · ')) : '');
   }
   $('sumStats').innerHTML = html;
@@ -4212,7 +4222,7 @@ $('sumAI').addEventListener('click', async e => {
 
 请为用户写「${label}」的总结${b >= TODAY ? '（这段时间还没结束，按目前数据写）' : ''}。
 用户目标：${({ '-300': '减脂同时保肌/增肌', '0': '维持', '-275': '慢减', '-550': '减脂', '250': '增肌' })[String(P().goal)] || '减脂增肌'}；想要翘臀和臀部力量、薄而有型的背、细腿细腰。每日目标摄入约 ${target(TODAY)} kcal（不含运动），蛋白 ${protTarget()} g。
-${st ? `汇总：记录 ${st.logged}/${st.days} 天（平均值只算已结束的 ${st.done} 天）；日均摄入 ${st.intake ?? '-'}；日均蛋白 ${st.protein ?? '-'} g（达标 ${st.protOk} 天）；日均热量差 ${st.deficit ?? '-'}（正数=缺口）；力量 ${st.strength} 次、有氧 ${st.cardio} 次、完成 ${st.sets} 组；平均恢复 ${st.rec != null ? Math.round(st.rec) : '-'}%、HRV ${st.hrv != null ? Math.round(st.hrv) : '-'}、睡眠 ${st.sleep != null ? (st.sleep / 60).toFixed(1) : '-'} h；经期 ${st.period} 天；饮酒 ${st.drinks} 天；体重变化 ${st.weight ?? '-'} kg，腰围变化 ${st.waist ?? '-'} cm。\n` : ''}每天明细：
+${st ? `汇总：记录 ${st.logged}/${st.days} 天（平均值只算已结束的 ${st.done} 天）；日均摄入 ${st.intake ?? '-'}；日均蛋白 ${st.protein ?? '-'} g（达标 ${st.protOk} 天）；日均热量差 ${st.deficit ?? '-'}（正数=缺口）；力量 ${st.strength} 次、有氧 ${st.cardio} 次、完成 ${st.sets} 组；平均恢复 ${st.rec != null ? Math.round(st.rec) : '-'}%、HRV ${st.hrv != null ? Math.round(st.hrv) : '-'}、睡眠 ${st.sleep != null ? (st.sleep / 60).toFixed(1) : '-'} h；经期 ${st.period} 天；饮酒 ${st.drinks} 天，酒精共 ${st.alcKcal} kcal；体重变化 ${st.weight ?? '-'} kg，腰围变化 ${st.waist ?? '-'} cm。\n` : ''}每天明细：
 ${ds.map(dayLine).join('\n')}
 
 格式：先一句话总评；然后「做得好的」「需要注意的」各 2–3 条，每条都引用上面的具体数字；最后「${sumMode === 'day' ? '明天' : sumMode === 'week' ? '下周' : '下个月'}重点」1–2 条可执行的建议，结合周期阶段。总长度不超过 ${sumMode === 'month' ? 320 : 220} 字，不用表格。`;
@@ -4234,13 +4244,13 @@ function csvCell(v) { const t = v == null ? '' : String(v); return /[",\n]/.test
 function allDataCSV() {
   const dates = new Set(Object.keys(state.days || {}).filter(d => dayHasData(day(d))));
   Object.keys(state.whoop || {}).forEach(d => dates.add(d));
-  const head = ['日期', '星期', '周期阶段', '周期第几天', '经期', '摄入 kcal', '蛋白 g', '运动消耗 kcal', '总消耗 kcal', '热量差 kcal（正=缺口）', '训练', '完成组数', '饮食明细', '运动明细', 'WHOOP 恢复 %', 'HRV ms', '静息心率', '睡眠 h', 'Strain', 'WHOOP 消耗 kcal', '饮酒'];
+  const head = ['日期', '星期', '周期阶段', '周期第几天', '经期', '摄入 kcal', '蛋白 g', '运动消耗 kcal', '总消耗 kcal', '热量差 kcal（正=缺口）', '训练', '完成组数', '饮食明细', '运动明细', 'WHOOP 恢复 %', 'HRV ms', '静息心率', '睡眠 h', 'Strain', 'WHOOP 消耗 kcal', '饮酒', '酒精 kcal'];
   const rows = [...dates].filter(d => d <= TODAY).sort().map(d => {
     const r = day(d), w = wh(d) || {}, ph = phaseOf(d), ss = r.session;
     return [d, '日一二三四五六'[parse(d).getDay()], PHASES[ph.key].name, ph.cd || '', r.period ? '是' : '', logged(d) ? intake(d) : '', logged(d) ? protein(d) : '', exBurn(d) || '', totalBurn(d), logged(d) ? totalBurn(d) - intake(d) : '',
       ss && (ss.finished || doneSetsOf(d)) ? (ss.focus === 'rest' ? '有氧/休息' : slotLabel({ f: ss.focus, c: ss.combo })) : '', doneSetsOf(d) || '',
       r.food.map(f => `${f.name} ${f.kcal}`).join('；'), r.ex.map(e => `${e.type} ${e.min}分钟 ${exKcal(e)}kcal`).join('；'),
-      w.recovery ?? '', w.hrv ?? '', w.rhr ?? '', w.sleepMin != null ? (w.sleepMin / 60).toFixed(1) : '', w.strain ?? '', w.kcal ?? '', drank(d) === true ? '是' : drank(d) === false ? '否' : ''];
+      w.recovery ?? '', w.hrv ?? '', w.rhr ?? '', w.sleepMin != null ? (w.sleepMin / 60).toFixed(1) : '', w.strain ?? '', w.kcal ?? '', drankOn(d) ? '是' : drank(d) === false ? '否' : '', alcoholKcal(d) || ''];
   });
   return '﻿' + [head, ...rows].map(r => r.map(csvCell).join(',')).join('\n');   // BOM so Excel reads Chinese correctly
 }
