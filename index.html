@@ -1337,7 +1337,7 @@ const DEFAULT_PROFILE = { height: 163, weight: 55, age: 28, act: 1.2, goal: -300
 let baseRev = 0;
 let sumMode = 'week';   // analysis → 总结 view (the date is the global logDate)
 const BK = 'moon-energy-bk-';
-const APP_VER = 'v45';
+const APP_VER = 'v46';
 const CLOUD = { db: null, col: null, ready: false, status: 'off', at: 0, sent: {}, timer: null, busy: false, again: false, msg: '', pulledAt: 0, count: null, uid: null, backups: [] };
 let state = load();
 dailyBackup();
@@ -3396,13 +3396,13 @@ function renderWhoopQuick() {
   const D = logDate, isToday = D === TODAY, yd = addDays(D, -1), w = wh(D) || {}, wy = wh(yd) || {};
   if (wqDate !== D) { wqEdit = false; wqDate = D; }
   const dl = isToday ? '今天' : fmtMD(D);
-  const has = ['recovery', 'hrv', 'rhr', 'sleepMin', 'strain', 'kcal'].some(k => w[k] != null) || (isToday && (wy.strain != null || wy.kcal != null));
+  const has = ['recovery', 'hrv', 'rhr', 'sleepMin'].some(k => w[k] != null) || wy.strain != null || wy.kcal != null;
   const cls = recCls(w.recovery);
   const tip = w.recovery == null ? '' : w.recovery >= 67 ? '恢复很好，可以冲重量' : w.recovery >= 34 ? '恢复一般，按计划练，别硬冲最后几次' : '恢复偏低，练轻量或散步就好';
   const src = w.manual ? '手动填写' : Object.keys(w).length ? 'WHOOP 导入' : '';
   if (has && !wqEdit) {
     $('wq').innerHTML = `<div class="wq-head"><span class="wq-ring ${cls}">${w.recovery != null ? w.recovery + '%' : '—'}</span><div style="display:grid;gap:2px;min-width:0"><b>${dl}的 WHOOP</b><span class="small muted">${tip ? tip + ' · ' : ''}${src}${w.at ? ` · ${hhmm(w.at)} 更新` : ''}</span></div></div>
-      <div class="wq-sum">${w.hrv != null ? `<span>HRV <b>${w.hrv}</b> ms</span>` : ''}${w.rhr != null ? `<span>静息心率 <b>${w.rhr}</b></span>` : ''}${w.sleepMin != null ? `<span>睡眠 <b>${(w.sleepMin / 60).toFixed(1)}</b> h</span>` : ''}${w.strain != null ? `<span>${dl} Strain <b>${w.strain}</b></span>` : ''}${w.kcal != null ? `<span>${dl}消耗 <b>${fmt(w.kcal)}</b> kcal</span>` : ''}${isToday && wy.strain != null ? `<span>昨天 Strain <b>${wy.strain}</b></span>` : ''}${isToday && wy.kcal != null ? `<span>昨天消耗 <b>${fmt(wy.kcal)}</b> kcal</span>` : ''}</div>
+      <div class="wq-sum">${w.hrv != null ? `<span>HRV <b>${w.hrv}</b> ms</span>` : ''}${w.rhr != null ? `<span>静息心率 <b>${w.rhr}</b></span>` : ''}${w.sleepMin != null ? `<span>睡眠 <b>${(w.sleepMin / 60).toFixed(1)}</b> h</span>` : ''}${wy.strain != null ? `<span>${isToday ? '昨天' : fmtMD(yd)} Strain <b>${wy.strain}</b></span>` : ''}${wy.kcal != null ? `<span>${isToday ? '昨天' : fmtMD(yd)}消耗 <b>${fmt(wy.kcal)}</b> kcal</span>` : ''}${!isToday && (w.strain != null || w.kcal != null) ? `<span class="small muted">（${dl}自己的全天：${w.strain != null ? 'Strain ' + w.strain : ''}${w.strain != null && w.kcal != null ? '，' : ''}${w.kcal != null ? '消耗 ' + fmt(w.kcal) : ''}，在 ${fmtMD(addDays(D, 1))} 的卡片里改）</span>` : ''}</div>
       <div class="wq-foot"><span class="pill ok">✓ 已记录</span><button class="btn ghost" type="button" id="wqEdit">修改</button><span class="small muted">其他日子：在最上面的日期栏换日期</span></div>`;
     return;
   }
@@ -3414,14 +3414,11 @@ function renderWhoopQuick() {
       <label>HRV（ms）<input id="wqHrv" type="number" inputmode="numeric" min="5" max="250" value="${v(w.hrv)}" placeholder="例如 55"></label>
       <label>静息心率<input id="wqRhr" type="number" inputmode="numeric" min="30" max="120" value="${v(w.rhr)}" placeholder="例如 58"></label>
       <label>睡眠时长<input id="wqSleep" type="text" inputmode="decimal" value="${sleepTxt(w.sleepMin)}" placeholder="7:20 或 7.3"></label>
-      ${isToday ? `<span class="grp">昨天全天（早上看 WHOOP 时顺手填）</span>
+      <span class="grp">${isToday ? '昨天' : fmtMD(yd)}全天（${dl}早上 WHOOP 显示的前一天 Strain 和消耗）</span>
       <label>Strain<input id="wqYStrain" type="number" inputmode="decimal" step="0.1" min="0" max="21" value="${v(wy.strain)}" placeholder="例如 11.4"></label>
-      <label>消耗 kcal<input id="wqYKcal" type="number" inputmode="numeric" min="800" max="6000" value="${v(wy.kcal)}" placeholder="例如 2050"></label>` : ''}
-      ${isToday ? '' : `<span class="grp">${dl}全天</span>
-      <label>Strain<input id="wqStrain" type="number" inputmode="decimal" step="0.1" min="0" max="21" value="${v(w.strain)}" placeholder="例如 11.4"></label>
-      <label>消耗 kcal<input id="wqKcal" type="number" inputmode="numeric" min="800" max="6000" value="${v(w.kcal)}" placeholder="例如 2050"></label>`}
+      <label>消耗 kcal<input id="wqYKcal" type="number" inputmode="numeric" min="800" max="6000" value="${v(wy.kcal)}" placeholder="例如 2050"></label>
     </div>
-    <div class="wq-foot"><button class="btn primary" type="button" id="wqSave">确认保存</button>${has ? '<button class="btn ghost" type="button" id="wqCancel">取消</button>' : ''}<span class="small muted" id="wqMsg" role="status">${isToday ? '今天的全天数据明早在「昨天全天」里填，那时才完整' : '全天消耗会用来算那天的热量差'}</span></div>`;
+    <div class="wq-foot"><button class="btn primary" type="button" id="wqSave">确认保存</button>${has ? '<button class="btn ghost" type="button" id="wqCancel">取消</button>' : ''}<span class="small muted" id="wqMsg" role="status">早上看到什么就填什么；${dl}自己的全天数据，在 ${fmtMD(addDays(D, 1))} 的卡片里填</span></div>`;
 }
 $('wq').addEventListener('click', e => {
   if (e.target.id === 'wqEdit') { wqEdit = true; renderWhoopQuick(); return; }
@@ -3430,9 +3427,9 @@ $('wq').addEventListener('click', e => {
   const D = logDate, isToday = D === TODAY, yd = addDays(D, -1);
   // '' = the box is empty (remove the number), NaN = out of range
   const n = (id, lo, hi, dec) => { const el = $(id); if (!el) return undefined; const t = el.value.trim(); if (!t) return ''; const x = Number(t); return x >= lo && x <= hi ? (dec ? +x.toFixed(1) : Math.round(x)) : NaN; };
-  const day = { recovery: n('wqRec', 0, 100), hrv: n('wqHrv', 5, 250), rhr: n('wqRhr', 30, 120), strain: n('wqStrain', 0, 21, true), kcal: n('wqKcal', 800, 6000) };
+  const day = { recovery: n('wqRec', 0, 100), hrv: n('wqHrv', 5, 250), rhr: n('wqRhr', 30, 120) };
   const sleepRaw = $('wqSleep').value.trim(); day.sleepMin = sleepRaw ? parseSleep(sleepRaw) : '';
-  const prev = isToday ? { strain: n('wqYStrain', 0, 21, true), kcal: n('wqYKcal', 800, 6000) } : null;
+  const prev = { strain: n('wqYStrain', 0, 21, true), kcal: n('wqYKcal', 800, 6000) };
   const all = Object.values(day).concat(prev ? Object.values(prev) : []);
   if (all.some(x => Number.isNaN(x)) || day.sleepMin === null) { $('wqMsg').textContent = '有个数字看起来不对，检查一下范围（恢复 0–100，Strain 0–21，消耗 800–6000，睡眠像 7:20）。'; return; }
   const snap = JSON.stringify(state), W = state.whoop || (state.whoop = {});
