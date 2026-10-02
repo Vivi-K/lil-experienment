@@ -1336,7 +1336,7 @@ const DEFAULT_PROFILE = { height: 163, weight: 55, age: 28, act: 1.2, goal: -300
 let baseRev = 0;
 let sumMode = 'week';   // analysis → 总结 view (the date is the global logDate)
 const BK = 'moon-energy-bk-';
-const APP_VER = 'v42';
+const APP_VER = 'v43';
 const CLOUD = { db: null, col: null, ready: false, status: 'off', at: 0, sent: {}, timer: null, busy: false, again: false, msg: '', pulledAt: 0, count: null, uid: null, backups: [] };
 let state = load();
 dailyBackup();
@@ -2013,17 +2013,30 @@ async function ask(input, opts = {}) {
   if (AI.mode === 'key') return callKeyAPI(input, opts);
   throw { code: 'not_granted' };
 }
+// every error code the AI capability can return, in plain words; the code itself is shown small so it can be reported
 function errCopy(code) {
-  return ({
-    not_granted: '你没有允许这个页面使用 Claude，AI 功能已关闭。刷新页面可以重新选择。',
-    sampling_disabled: '你的账号暂时不能在页面里使用 Claude。',
-    rate_limited: '请求太频繁或额度用完了，稍后再试。',
-    session_expired: '登录已过期，请重新登录 claude.ai。',
+  const msg = ({
+    not_granted: '你没有允许这个页面使用 Claude，AI 功能已关闭。刷新页面可以重新选择允许。',
+    sampling_disabled: '你的账号或组织目前不能在页面里使用 Claude。',
+    not_declared: '这个页面版本没有开启 AI，请告诉 Claude。',
+    capability_disabled: '这个 App / 浏览器里用不了页面 AI。换成浏览器打开 claude.ai 里的这个链接试试。',
+    capability_removed: '这个 App 版本太旧，用不了页面 AI。更新 App，或用浏览器打开 claude.ai。',
+    rate_limited: '问得太频繁，或者 Claude 的用量额度暂时用完了。过一会儿再试。',
+    session_expired: '登录过期了，请重新登录 claude.ai 后刷新页面。',
     refused: 'AI 没有回答这个问题，换个问法试试。',
+    empty_completion: 'AI 这次没有给出回答，换个说法或问得具体一点再试。',
+    prompt_too_large: '这次要读的内容超出了 AI 一次能读的量。问得具体一点（比如只问某一天）再试。',
+    invalid_request: '页面发出的请求格式有问题（是 app 的问题，不是你的问题），请截图告诉 Claude。',
+    transform_error: '页面发出的请求格式有问题（是 app 的问题，不是你的问题），请截图告诉 Claude。',
+    queue_overflow: '同时发出的请求太多了，刷新页面再试。',
+    upstream_error: '回答中断了：网络或 Claude 服务暂时不稳定（手机锁屏、切到别的 App 也会这样）。点「重试」再问一次。',
     bad_key: 'API Key 无效，请检查后重新保存。',
+    upstream: '回答中断了：网络或 Claude 服务暂时不稳定。点「重试」再问一次。',
     image_rejected: '这张图片没法识别，换一张清晰的照片试试。',
-    invalid_json: '识别结果格式不对，再试一次。'
-  })[code] || '连接中断了，再试一次。';
+    invalid_json: '这次的结果格式不对，再试一次。',
+    cancelled: '已停止。'
+  })[code] || '出错了，点「重试」再试一次。';
+  return code && code !== 'cancelled' ? `${msg}（错误代码：${code}）` : msg;
 }
 
 function addMsg(role, text, meta, cls) {
@@ -2131,10 +2144,15 @@ async function run(label, prompt, { tier = 'default', live = false, chat = false
   if (!AI.mode || AI.busy) return;
   AI.busy = true; setAIEnabled(true); $('aiStop').hidden = false;
   const ctl = new AbortController(); AI.ctl = ctl;
-  if (logDate !== TODAY) label = `${fmtMD(logDate)} · ${label || '问答'}`;
+  if (logDate !== TODAY && !String(label || '').startsWith(fmtMD(logDate))) label = `${fmtMD(logDate)} · ${label || '问答'}`;
   const body = addMsg('ai', '思考中…', label, live ? 'live' : '');
   let input;
-  if (chat) { AI.turns.push({ role: 'user', content: prompt }); input = [{ role: 'user', content: RULES + '\n\n' + context() }, ...AI.turns.slice(-12)]; }
+  if (chat) {
+    AI.turns.push({ role: 'user', content: prompt });
+    let hist = AI.turns.slice(-12); while (hist.length && hist[0].role !== 'user') hist = hist.slice(1);
+    // the background goes into the first user turn, so turns strictly alternate user / assistant
+    input = hist.map((t, i) => i === 0 ? { role: 'user', content: `${RULES}\n\n${context()}\n\n【问题】${t.content}` } : t);
+  }
   else input = `${RULES}\n\n${context()}\n\n【任务】${prompt}`;
   try {
     const opts = { signal: ctl.signal, modelTier: tier, onText: ({ text }) => { body.textContent = text; $('feed').scrollTop = $('feed').scrollHeight; } };
@@ -2146,8 +2164,15 @@ async function run(label, prompt, { tier = 'default', live = false, chat = false
     if (chat) AI.turns.pop();
     if (e && e.code === 'cancelled') body.textContent = (e.text || '') + '（已停止）';
     else {
-      body.textContent = e && e.text ? e.text : '';
-      addMsg('ai', errCopy(e && e.code), null, 'err');
+      const partial = e && e.text ? e.text : (body.textContent !== '思考中…' ? body.textContent : '');
+      body.textContent = partial ? partial + '\n（回答到这里中断了）' : '';
+      if (!partial) body.closest('.msg') && body.closest('.msg').remove();
+      const err = addMsg('ai', errCopy(e && e.code), null, 'err');
+      if (!(e && ['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed', 'session_expired', 'invalid_request', 'transform_error'].includes(e.code))) {
+        const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'btn ghost'; btn.textContent = '重试';
+        btn.addEventListener('click', () => { if (AI.busy) return; btn.disabled = true; if (chat) addMsg('me', prompt); run(label, prompt, { tier, live, chat }); });
+        (err.closest('.msg') || err.parentNode || err).append(btn);
+      }
       if (e && ['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled'].includes(e.code)) { AI.mode = null; setStatus('AI 不可用', false); }
     }
   } finally {
